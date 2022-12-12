@@ -1,0 +1,11 @@
+# Build systems
+cmake ninja-build meson
+
+# Build tools
+icecream ccache
+
+# Debugging / profiling / tracing
+valgrind rr perf-tools-unstable
+
+# Documentation
+asciidoc doxygen doxygen-latex doxygen-doxyparse graphviz python3-sphinx

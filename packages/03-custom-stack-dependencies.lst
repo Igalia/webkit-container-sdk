@@ -1,0 +1,2 @@
+# Dependencies to compile libjxl from Git
+libpng-dev zlib1g-dev libgif-dev libgimp2.0-dev libgmock-dev libgoogle-perftools-dev libgtest-dev libhwy-dev 

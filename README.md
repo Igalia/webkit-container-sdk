@@ -1,92 +1,213 @@
-# wkdev-sdk
+## Introduction to ``wkdev SDK``
 
+NOTE: This documents covers _using_ the SDK. Creating the images is coverd in BUILDING.md.
 
+The ``wkdev SDK`` provides a hassle-free environment to perform WebKit Gtk/WPE development.
+It is distributed in form of an **OCI image**, a standardized container format that allows
+any OCI-compatible container system, such as **Docker** and **podman**, to run the SDK.
+The same image can also be used within the WebKit Early Warning System (EWS) to provide
+an environment in which tests can be executed in a reliable & reproducible way.
 
-## Getting started
+By utilizing the ``wkdev SDK``, a vanilla Linux installation can be turned into a fully
+functional WebKit development / debugging environment within minutes. After the initial
+setup procedure, the ``wkdev SDK`` user (hereafter: the **developer**) can either directly
+run commands within the **wkdev** container or launch one or more interactive shell
+sessions, in which you can compile WebKit / run tests / etc.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+To run CLI applications within a container, requires no effort: it works out of the box.
+Runing graphical applications, that utilize e.g. [Wayland](https://wayland.freedesktop.org)
+for screen presentation, need [D-Bus](https://freedesktop.org/wiki/Software/dbus) to communicate
+with other system components, or use [SystemD](https://freedesktop.org/wiki/Software/systemd)
+APIs to query network / power / etc. information, require a substantial amount of configuration
+to allow the containerized GUI application to integrate seamlessly within the host desktop
+environment.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+To overcome the tedious setup procedure, wrapper tools were created, such as [toolbx](https://containertoolbx.org)
+and [distrobox](https://distrobox.privatedns.org), that greatly simplify the setup procedure.
+Therefore we recommend to use any of these wrappers to create and run the ``wkdev SDK`` containers.
 
-## Add your files
+**distrobox** and **toolbx** both allow you to run GUI applications out of the box, the former supports
+both **Docker** and **podman** as backends, where **toolbx** is tied to **podman** only. Both also support
+to share the current host user and its **\$HOME directory** with the container, replacing any other
+\$HOME directory that might reside in the OCI container image. **toolbx** only supports that operation mode,
+whereas **distrobox** allows for fine-grained control about what files/directories to share with the container.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+If you only want to quickly run **MiniBrowser** / **cog**, etc. using **toolbx** is the most convenient way,
+as it requires no configuration. However it is *impossible to isolate* a container launched with **toolbx**
+from the **host system**. For exampe, compiling WebKit within the container, places **ccache** object files
+in the ``~/.ccache`` directory, unless manually configured to be a different location. Installing **Python**
+packages (per-user mode) within the container, usually places them in your ``~/.local`` directory. However
+they might NOT be usuable from the **host** system - or vice-versa: you might install a package that requires
+an already fulfilled dependency (due to a previous installation of that package, executed on the host system)
+that in the end, doesn't work (depending on other C libraries with different ABI, version, etc.).
+Furthermore all configuration for the developer tools, such as ``~/.gdbinit`` needs to reside in your regular
+\$HOME directory -- again not immune to side effects, when mutating these files on the host system. Therefore
+using **distrobox** is a wise choice to setup a stable, sustainable development environment!
 
+### Setup procedure
+
+On your **host system** ensure that **podman** is installed and either **toolbx**, **distrobox**, or both.
+
+* [podman](https://podman.io)
+  * Fedora: [podman](https://packages.fedoraproject.org/pkgs/podman/podman)
+  * Debian (sid): [podman](https://packages.debian.org/sid/podman)
+  * Ubuntu (starting from 22.04): [podman](https://packages.ubuntu.com/jammy/podman)
+  * macOS: [podman](https://formulae.brew.sh/formula/podman)
+
+* [toolbx](https://containertoolbx.org)
+  * Fedora: [toolbox](https://packages.fedoraproject.org/pkgs/toolbox/toolbox/)
+  * Debian (sid): [podman-toolbox](https://packages.debian.org/sid/podman-toolbox)
+  * Ubuntu (starting from 22.04): [podman-toolbox](https://packages.ubuntu.com/jammy/podman-toolbox)
+
+* [distrobox](https://distrobox.privatedns.org)
+  * Fedora: [distrobox](https://packages.fedoraproject.org/pkgs/distrobox/distrobox/)
+  * Debian (sid): [distrobox](https://packages.debian.org/sid/distrobox)
+  * Ubuntu (before 22.10): [distrobox](https://snapcraft.io/install/distrobox/ubuntu) (snap-only)
+  * Ubuntu (starting from 22.10): [distrobox](https://packages.ubuntu.com/kinetic/distrobox)
+  * macOS: [distrobox](https://formulae.brew.sh/formula/distrobox)
+
+That's all you need to install on your host system. Now it's the time to get a fresh WebKit source
+checkout, or update/clean an existing one.
+
+```sh
+$ cd ~/path/to/home/subdirectory/with/git/checkout/of/
+$ git clone https://github.com/WebKit/WebKit.git
 ```
-cd existing_repo
-git remote add origin https://gitlab.igalia.com/teams/webkit/wkdev-sdk.git
-git branch -M main
-git push -uf origin main
+
+That can take several hours, depending on your internet connection.
+Now either proceed with the **Quick testing** instructions or skip to the **Full-fledget setup**
+section.
+
+### 1) Quick testing instructions using **toolbx**
+
+This method requires no configuration of the container creation process
+and shares your local \$HOME directory with the container, breaking the isolation
+between host system and container for the sake of convenience.
+
+1. Create the container
+
+```sh
+$ toolbox create -i docker.io/nikolaszimmermann/wkdev-sdk:latest wkdev-quick
 ```
 
-## Integrate with your tools
+2. Enter the container
 
-- [ ] [Set up project integrations](https://gitlab.igalia.com/teams/webkit/wkdev-sdk/-/settings/integrations)
+```sh
+$ toolbox enter wkdev-quick
+```
 
-## Collaborate with your team
+3. You're ready to compile WebKit - move to next section.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+### 2) Full-fledged setup
 
-## Test and Deploy
+This method will create a dedicated \$HOME directory for the current user \$USER
+within the container file system, bind-mounted to any directory you want on the
+host side. The true \$HOME directory is available in **\$DISTROBOX_HOST_HOME** within
+the container. The main benefit is that the container is not affected by any changes
+in the host system XDG standard directories such as **~/.local/**, **~/.cache/**,
+**~/.share/**, etc. Neither can the container pollute anything in the host system
+\$HOME directory.
 
-Use the built-in continuous integration in GitLab.
+However the setup procedure is more complex: you need to think about where to store
+e.g. GDB settings -- do you want e.g. **~/.gdbinit** shared with the host system?
+Do you want a specific one only with WebKit related settings for the container
+environment?
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+Using the the **toolbx** approach you have no choice but you have to alter configuration
+files in your host \$HOME directory to change e.g. GDBs behavior within the container.
+That is awkward and should be avoided for a day-by-day hacking environment, which
+should be stable and hard to break, no matter what happens on the host side.
 
-***
+Finally, the steps to execute are:
 
-# Editing this README
+1. Create a home directory for the wkdev container
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+Let's assume you want to create the container home directory inside your host \$HOME
+directory, e.g.: **~/wkdev-home**:
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```sh
+cd /path/to/this/checkout
+scripts/helpers/create-home-directory.sh ${HOME}/wkdev-home
+```
 
-## Name
-Choose a self-explaining name for your project.
+The helper script checks permissions, ownership, copies shell configuration skeleton
+files and handles shell specific quirks.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+2. Create the container
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```sh
+$ distrobox create --name wkdev --image docker.io/nikolaszimmermann/wkdev-sdk:latest --home ${HOME}/wkdev-home
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+This pulls the latest revision of the **wkdev-sdk** from the [docker.io](https://docker.io)
+container registry and creates a new local container named **wkdev** with a custom \$HOME
+directory, isolated from the host home directory.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+3. Enter the container
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+When entering the container the first time, distrobox will further customize the container
+to be suitable for the developer: it tries to install the same shell as in the host system
+and enables various other helper to work properly (sudo, etc.).
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+```sh
+$ distrobox enter wkdev
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+You should see the installation procedure from distrobox. Be sure to inspect the log files,
+as advised by distrobox: ``podman --remote logs -f wkdev`` is interessting to follow, to
+see what is happening behind the scenes.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+4. Customize your container
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Most importantly, your shell needs to be configured. Other utilities, such as **gdb**,
+that ship with the ``wkdev SDK`` need to be tuned as well. To aid the bootstrapping
+procedure launch the **setup-wkdev-sdk.sh** scripts from this Git repository.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+```sh
+wkdev% cd /path/to/this/checkout
+wkdev% scripts/helpers/setup-wkdev-sdk.sh
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Follow the instructions and interactive setup wizard. After that the initial setup
+procedure is finished.
 
-## License
-For open source projects, say how it is licensed.
+5. You're ready to compile WebKit - move to next section.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## Compiling WebKit in the wkdev container
+
+1. Enter the previously setup container (wkdev / wkdev-quick).
+
+Use ``distrobox enter wkdev`` or ``toolbox enter wkdev-quick``.
+
+2. Move to WebKit Git checkout
+
+Now move to the place where you cloned the WebKit Git checkout:
+
+```sh
+cd ~/path/to/home/subdirectory/with/git/checkout/of/
+```
+
+3. Compile WebKit, run MiniBrowser and tests
+
+Compile WebKit using the ``build-webkit`` command. Development builds currently
+require a small quirk ('DENABLE_THUNDER=OFF') that will be resolved soon.
+Running **MiniBrowser** or running the layout tests is just a matter of
+launching the right WebKit helper script: ``run-minibrowser`` or ``run-webkit-tests``.
+
+Gtk debug build (CMake Debug buld):
+
+```sh
+Tools/Scripts/build-webkit --gtk --debug --cmakeargs "-DENABLE_THUNDER=OFF"
+Tools/Scripts/run-minibrowser --gtk --debug
+Tools/Scripts/run-webkit-tests --gtk --debug
+```
+
+Gtk release build (CMake RelWithDebInfo build):
+
+```sh
+Tools/Scripts/build-webkit --gtk --release
+Tools/Scripts/run-minibrowser --gtk --release
+Tools/Scripts/run-webkit-tests --gtk --release
+```
+
+That's it -- the ``wkdev SDK`` makes it trivial to compile & run & debug WebKit.

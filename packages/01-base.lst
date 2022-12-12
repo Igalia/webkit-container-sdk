@@ -1,0 +1,5 @@
+# Low-level tools
+debuginfod libcap2-bin locate lsb-release 
+
+# General utilities
+atop emacs git htop iotop nano sudo unzip vim wget

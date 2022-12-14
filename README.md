@@ -1,6 +1,6 @@
 ## Introduction to ``wkdev SDK``
 
-NOTE: This documents covers _using_ the SDK. Creating the images is coverd in BUILDING.md.
+NOTE: This documents covers _using_ the SDK. Creating the images is covered in BUILDING.md.
 
 The ``wkdev SDK`` provides a hassle-free environment to perform WebKit Gtk/WPE development.
 It is distributed in form of an **OCI image**, a standardized container format that allows
@@ -192,7 +192,9 @@ cd ~/path/to/home/subdirectory/with/git/checkout/of/
 Compile WebKit using the ``build-webkit`` command. Development builds currently
 require a small quirk ('DENABLE_THUNDER=OFF') that will be resolved soon.
 Running **MiniBrowser** or running the layout tests is just a matter of
-launching the right WebKit helper script: ``run-minibrowser`` or ``run-webkit-tests``.
+launching the right WebKit helper script: ``run-minibrowser`` or ``run-webkit-tests``. In
+case you are using a directory where you have compiled WebKit with flatpak in the past
+you need to remove the ``WebKitBuild`` directory to start with a clean compilation.
 
 Gtk debug build (CMake Debug buld):
 

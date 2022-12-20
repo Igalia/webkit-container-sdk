@@ -213,3 +213,17 @@ Tools/Scripts/run-webkit-tests --gtk --release
 ```
 
 That's it -- the ``wkdev SDK`` makes it trivial to compile & run & debug WebKit.
+
+## Updating your container environment
+
+If you want to update your development container to the latest revision, you
+have to recreate it.
+
+```
+distrobox stop wkdev
+distrobox rm wkdev
+distrobox create --name wkdev --image docker.io/nikolaszimmermann/wkdev-sdk:latest --home ${HOME}/wkdev-home --pull
+distrobox enter wkdev
+```
+
+That's it -- your \$HOME directory is re-used, no need to execute any other configuration.

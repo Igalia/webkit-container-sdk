@@ -140,5 +140,37 @@ RUN git clone --recursive --shallow-submodules https://github.com/libjxl/libjxl.
     cd .. && \
     rm -rf build
 
+# Install recent valgrind (build & install 3.20 from Git)
+
+# The Ubuntu 22.10 included valgrind 3.18 fails to parse the DWARF information
+# from WebKit builds, leading to following error message:
+#
+# $ valgrind --leak-check=full --show-leak-kinds=all WebKitBuild/Debug/bin/MiniBrowser
+# ==90449== Memcheck, a memory error detector
+# ==90449== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+# ==90449== Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
+# ==90449== Command: WebKitBuild/Debug/bin/MiniBrowser --read-inline-info=no --read-var-info=no --allow-mismatched-debuginfo=yes --keep-debuginfo=yes --help
+# ==90449==
+# ==90449== Valgrind: debuginfo reader: ensure_valid failed:
+# ==90449== Valgrind:   during call to ML_(img_get_UChar)
+# ==90449== Valgrind:   request for range [324009, +1) exceeds
+# ==90449== Valgrind:   valid image size of 324008 for image:
+# ==90449== Valgrind:   "/home/nzimmermann/Software/GitRepositories/WebKit/WebKitBuild/Debug/bin/MiniBrowser"
+# ==90449==
+# ==90449== Valgrind: debuginfo reader: Possibly corrupted debuginfo file.
+# ==90449== Valgrind: I can't recover.  Giving up.  Sorry.
+#
+# valgrind > 3.18 includes fixes related to parsing DWARF5 information, attempting
+# to fix debuginfo reading for binaries built using clang >= 14, where DWARF5 is
+# enabled by default. As side-effect it also fixes the issue we have, so let's
+# just switch to valgrind 3.20 and move on.
+RUN git clone git://sourceware.org/git/valgrind.git && \
+    cd valgrind && \
+    git checkout VALGRIND_3_20_0 && \
+    ./autogen.sh && \
+    ./configure --prefix=/usr && \
+    make -j${NUMBER_OF_PARALLEL_BUILDS} && \
+    make install
+
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

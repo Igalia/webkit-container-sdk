@@ -47,7 +47,7 @@ dpkg-source --extract "${PACKAGE}"_*.dsc
 check_exit_code_and_popd "\"dpkg-source -x ${PACKAGE}_*.dsc\" failed. Aborting!"
 
 # 4) Apply custom patches, if necessary.
-PATCHES_DIRECTORY="${WKDEV_SDK}/packages/sources/custom/${PACKAGE}/patches"
+PATCHES_DIRECTORY="/wkdev-sdk/packages/sources/custom/${PACKAGE}/patches"
 if [[ -d "${PATCHES_DIRECTORY}" ]]; then
     PATCHES=$(find "${PATCHES_DIRECTORY}/" -type f -name "*.patch" | sort -n)
     for PATCH in "${PATCHES}"; do

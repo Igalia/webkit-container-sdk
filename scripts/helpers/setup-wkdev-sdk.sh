@@ -3,12 +3,6 @@
 DIALOG_OPTIONS="--keep-tite --colors"
 LAST_RADIO_CHOICE=""
 
-WKDEV_SDK=${PWD}
-if [ ! -d "${WKDEV_SDK}/defaults" ]; then
-  echo "You have to launch setup-wkdev-sdk.sh from the root of the wkdev-sdk Git repository: scripts/helpers/setup-wkdev-sdk.sh"
-  exit 1
-fi
-
 function dialog_show_message_box {
   message=${1}
   height=${2}
@@ -33,7 +27,7 @@ function prompt_user_for_choice {
   [ ! -f "${host_home_file_location}" ]
   has_host_home_file=$?
 
-  sdk_default_file_location="${WKDEV_SDK}/defaults/${file_name}"
+  sdk_default_file_location="/wkdev-sdk/defaults/${file_name}"
   [ ! -f "${sdk_default_file_location}" ]
   has_sdk_default_file=$?
 
@@ -78,6 +72,8 @@ function prompt_user_for_choice {
 
 SHELL_NAME=$(basename ${SHELL})
 
+pushd /wkdev-sdk &> /dev/null
+
 # 1) Shell settings
 if [ "${SHELL_NAME}" == "bash" ] || [ "${SHELL_NAME}" == "zsh" ]; then
   message="Starting shell configuration, for your shell \Z2\Zb${SHELL_NAME}\Zn.\n\n\
@@ -113,3 +109,4 @@ fi
 prompt_user_for_choice ".gdbinit"
 
 # TODO: Extend for other things.
+popd &> /dev/null

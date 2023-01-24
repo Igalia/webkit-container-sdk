@@ -170,3 +170,6 @@ RUN git clone git://sourceware.org/git/valgrind.git && \
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog
+
+# Keep snapshot of wkdev-sdk in container image
+COPY . /wkdev-sdk

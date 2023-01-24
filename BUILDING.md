@@ -8,4 +8,4 @@ podman login docker.io
 podman push docker.io/nikolaszimmermann/wkdev-sdk:latest
 ```
 
-See bootstrap.sh, that encapsulates the building / deployment / testing steps.
+See bootstrap.sh, that encapsulates the building / testing steps.

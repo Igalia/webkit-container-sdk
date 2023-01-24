@@ -161,11 +161,10 @@ see what is happening behind the scenes.
 
 Most importantly, your shell needs to be configured. Other utilities, such as **gdb**,
 that ship with the ``wkdev SDK`` need to be tuned as well. To aid the bootstrapping
-procedure launch the **setup-wkdev-sdk.sh** scripts from this Git repository.
+procedure launch the **setup-wkdev-sdk.sh** scripts stored in the container image.
 
 ```sh
-wkdev% cd /path/to/this/checkout
-wkdev% scripts/helpers/setup-wkdev-sdk.sh
+wkdev% /wkdev-sdk/container_scripts/setup-wkdev-sdk.sh
 ```
 
 Follow the instructions and interactive setup wizard. After that the initial setup

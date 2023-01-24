@@ -127,7 +127,7 @@ directory, e.g.: **~/wkdev-home**:
 
 ```sh
 cd /path/to/this/checkout
-scripts/helpers/create-home-directory.sh ${HOME}/wkdev-home
+host_scripts/create-home-directory.sh ${HOME}/wkdev-home
 ```
 
 The helper script checks permissions, ownership, copies shell configuration skeleton

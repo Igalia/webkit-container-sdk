@@ -15,7 +15,7 @@ if [[ ${STATUS} -ne 0 ]]; then
 fi
 
 # 3) Test creation of full-fledged distrobox containers
-scripts/helpers/create-home-directory.sh /tmp/wkdev-bootstrap-home
+host_scripts/create-home-directory.sh /tmp/wkdev-bootstrap-home
 STATUS=$?
 if [[ ${STATUS} -ne 0 ]]; then
     exit ${STATUS}

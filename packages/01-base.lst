@@ -1,5 +1,5 @@
 # Low-level tools
-debuginfod libcap2-bin locate lsb-release 
+debuginfod libcap2-bin locate lsb-release apt-file
 
 # GPG certificates for Debian package verification
 debian-keyring

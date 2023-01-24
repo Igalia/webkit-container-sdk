@@ -27,7 +27,7 @@ function prompt_user_for_choice {
   [ ! -f "${host_home_file_location}" ]
   has_host_home_file=$?
 
-  sdk_default_file_location="/wkdev-sdk/defaults/${file_name}"
+  sdk_default_file_location="/wkdev-sdk/defaults/${file_name/\./dot-}"
   [ ! -f "${sdk_default_file_location}" ]
   has_sdk_default_file=$?
 

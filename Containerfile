@@ -17,6 +17,9 @@ ENV DEBIAN_FRONTEND noninteractive
 #       ever contains unncessary stuff that never appears in the final image, only in deeper layers, and
 #       thus increases the whole image size no gain, except an "easier to read" Dockerfile.
 
+# Enable source packages
+RUN sed -i -e "s/^# deb-src/deb-src/" /etc/apt/sources.list
+
 # Upgrade to latest Ubuntu revision
 RUN apt-get update && \
     apt-get -y install apt-utils dialog libterm-readline-gnu-perl && \
@@ -95,6 +98,10 @@ RUN apt-get update && \
 #     apt-get -y autoremove && \
 #     apt-get -y clean && \
 #     rm -rf /var/lib/apt/lists/*
+
+# Install python packages
+RUN python3 -m pip install --upgrade pip && \
+    pip3 install hotdoc
 
 # Install fonts needed for running WebKit layout tests
 RUN git clone https://github.com/WebKitGTK/webkitgtk-test-fonts.git && \

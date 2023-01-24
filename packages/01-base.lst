@@ -1,5 +1,8 @@
 # Low-level tools
 debuginfod libcap2-bin locate lsb-release 
 
+# GPG certificates for Debian package verification
+debian-keyring
+
 # General utilities
 atop emacs git htop iotop nano sudo unzip vim wget

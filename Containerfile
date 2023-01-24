@@ -11,7 +11,7 @@ ENV LANG C.UTF-8
 ARG NUMBER_OF_PARALLEL_BUILDS=4
 ARG APT_UPDATE="apt-get update"
 ARG APT_UPGRADE="apt-get upgrade -y"
-ARG APT_INSTALL="apt-get install -y"
+ARG APT_INSTALL="apt-get install -y --no-install-recommends"
 ARG APT_CLEANUP="apt-get -y autoremove && apt-get -y clean && rm -rf /var/lib/apt/lists/*"
 
 # Disable prompt during package configuration

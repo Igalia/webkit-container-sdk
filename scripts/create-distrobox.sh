@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/usr/bin/bash -x
 CONTAINER_HOME_DIRECTORY=${1}
 
 # Get rid of existing 'wkdev' containers, if present.

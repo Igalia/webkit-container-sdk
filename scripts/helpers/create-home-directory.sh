@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/usr/bin/bash -x
 CONTAINER_HOME_DIRECTORY=${1}
 
 # Create home directory, if not present.

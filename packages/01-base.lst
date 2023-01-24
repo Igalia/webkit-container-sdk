@@ -2,7 +2,7 @@
 debuginfod libcap2-bin locate lsb-release apt-file
 
 # GPG certificates for Debian package verification
-debian-keyring
+pbuilder debian-keyring
 
 # General utilities
 atop emacs git htop iotop nano sudo unzip vim wget

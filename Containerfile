@@ -9,10 +9,13 @@ LABEL description="Provides a complete WebKit Gtk/WPE development environment ba
 ENV TERM linux
 ENV LANG C.UTF-8
 ARG NUMBER_OF_PARALLEL_BUILDS=4
+
 ARG APT_UPDATE="apt-get update"
-ARG APT_UPGRADE="apt-get upgrade -y"
-ARG APT_INSTALL="apt-get install -y --no-install-recommends"
-ARG APT_CLEANUP="apt-get -y autoremove && apt-get -y clean && rm -rf /var/lib/apt/lists/*"
+ARG APT_UPGRADE="apt-get --assume-yes upgrade"
+ARG APT_INSTALL="apt-get --assume-yes install --no-install-recommends"
+ARG APT_AUTOREMOVE="apt-get --assume-yes autoremove"
+ARG APT_CLEAN="apt-get --assume-yes clean"
+ARG APT_DELETE_LISTS="rm -rf /var/lib/apt/lists/*"
 
 # Disable prompt during package configuration
 ENV DEBIAN_FRONTEND noninteractive
@@ -27,14 +30,13 @@ RUN sed -i -e "s/^# deb-src/deb-src/" /etc/apt/sources.list
 # Upgrade to latest Ubuntu revision
 RUN ${APT_UPDATE} && \
     ${APT_INSTALL} apt-utils dialog libterm-readline-gnu-perl && \
-    ${APT_UPGRADE} && \
-    ${APT_CLEANUP}
+    ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 # Install and configure locale support (use 'en_US.UTF-8' as fixed locale).
 RUN ${APT_UPDATE} && \
     ${APT_INSTALL} locales && \
     localedef --inputfile=en_US --force --charmap=UTF-8 --alias-file=/usr/share/locale/locale.alias en_US.UTF-8 && \
-    ${APT_CLEANUP}
+    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 # Switch to newly installed en_US.UTF-8 locale.
 ENV LC_ALL en_US.UTF-8
@@ -47,27 +49,27 @@ WORKDIR /tmp
 COPY /packages/01-base.lst .
 RUN ${APT_UPDATE} && \
     ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 01-base.lst) && \
-    ${APT_CLEANUP}
+    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 COPY /packages/02-gcc.lst .
 RUN ${APT_UPDATE} && \
     ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 02-gcc.lst) && \
-    ${APT_CLEANUP}
+    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 COPY /packages/03-custom-stack-dependencies.lst .
 RUN ${APT_UPDATE} && \
     ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 03-custom-stack-dependencies.lst) && \
-    ${APT_CLEANUP}
+    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 COPY /packages/04-devtools.lst .
 RUN ${APT_UPDATE} && \
     ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 04-devtools.lst) && \
-    ${APT_CLEANUP}
+    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 # Cleanup and perform closure check (the whole block should do nothing)
 RUN ${APT_UPDATE} && \
     ${APT_UPGRADE} && \
-    ${APT_CLEANUP}
+    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 # Install WebKitGtk/WPE dependencies
 RUN ${APT_UPDATE} && \
@@ -79,14 +81,13 @@ RUN ${APT_UPDATE} && \
     yes | ./Tools/wpe/install-dependencies && \
     cd .. && \
     rm -rf WebKit && \
-    ${APT_CLEANUP}
+    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 # FIXME: Uninstalls important packages such as libunwind-dev, breaking other things.
 # COPY /packages/05-llvm.lst .
-# RUN ${APT_UPDATE} && ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 05-llvm.lst) && apt-get -y autoremove
-#     apt-get -y autoremove && \
-#     apt-get -y clean && \
-#     rm -rf /var/lib/apt/lists/*
+# RUN ${APT_UPDATE} && \
+#     ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 05-llvm.lst) && \
+#     ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 # Install python packages
 RUN python3 -m pip install --upgrade pip && \

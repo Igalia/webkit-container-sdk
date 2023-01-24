@@ -9,6 +9,10 @@ LABEL description="Provides a complete WebKit Gtk/WPE development environment ba
 ENV TERM linux
 ENV LANG C.UTF-8
 ARG NUMBER_OF_PARALLEL_BUILDS=4
+ARG APT_UPDATE="apt-get update"
+ARG APT_UPGRADE="apt-get upgrade -y"
+ARG APT_INSTALL="apt-get install -y"
+ARG APT_CLEANUP="apt-get -y autoremove && apt-get -y clean && rm -rf /var/lib/apt/lists/*"
 
 # Disable prompt during package configuration
 ENV DEBIAN_FRONTEND noninteractive
@@ -21,22 +25,19 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN sed -i -e "s/^# deb-src/deb-src/" /etc/apt/sources.list
 
 # Upgrade to latest Ubuntu revision
-RUN apt-get update && \
-    apt-get -y install apt-utils dialog libterm-readline-gnu-perl && \
-    apt-get -y upgrade && \
-    apt-get -y autoremove && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN ${APT_UPDATE} && \
+    ${APT_INSTALL} apt-utils dialog libterm-readline-gnu-perl && \
+    ${APT_UPGRADE} && \
+    ${APT_CLEANUP}
 
 # Install and configure locale support (use 'en_US.UTF-8' as fixed locale).
-RUN apt-get update && \
-    apt-get -y install locales && \
-    localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
-    apt-get -y autoremove && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN ${APT_UPDATE} && \
+    ${APT_INSTALL} locales && \
+    localedef --inputfile=en_US --force --charmap=UTF-8 --alias-file=/usr/share/locale/locale.alias en_US.UTF-8 && \
+    ${APT_CLEANUP}
 
 # Switch to newly installed en_US.UTF-8 locale.
+ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
 
 # Bootstrapping is done, switch to working directory /tmp to continue setup.
@@ -44,42 +45,32 @@ WORKDIR /tmp
 
 # Install package groups in defined order.
 COPY /packages/01-base.lst .
-RUN apt-get update && \
-    apt-get -y install $(sed -e "s/.*#.*//; /^$/d" 01-base.lst) && \
-    apt-get -y autoremove && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN ${APT_UPDATE} && \
+    ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 01-base.lst) && \
+    ${APT_CLEANUP}
 
 COPY /packages/02-gcc.lst .
-RUN apt-get update && \
-    apt-get -y install $(sed -e "s/.*#.*//; /^$/d" 02-gcc.lst) && \
-    apt-get -y autoremove && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN ${APT_UPDATE} && \
+    ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 02-gcc.lst) && \
+    ${APT_CLEANUP}
 
 COPY /packages/03-custom-stack-dependencies.lst .
-RUN apt-get update && \
-    apt-get -y install $(sed -e "s/.*#.*//; /^$/d" 03-custom-stack-dependencies.lst) && \
-    apt-get -y autoremove && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN ${APT_UPDATE} && \
+    ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 03-custom-stack-dependencies.lst) && \
+    ${APT_CLEANUP}
 
 COPY /packages/04-devtools.lst .
-RUN apt-get update && \
-    apt-get -y install $(sed -e "s/.*#.*//; /^$/d" 04-devtools.lst) && \
-    apt-get -y autoremove && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN ${APT_UPDATE} && \
+    ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 04-devtools.lst) && \
+    ${APT_CLEANUP}
 
 # Cleanup and perform closure check (the whole block should do nothing)
-RUN apt-get update && \
-    apt-get -y upgrade && \
-    apt-get -y autoremove && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN ${APT_UPDATE} && \
+    ${APT_UPGRADE} && \
+    ${APT_CLEANUP}
 
 # Install WebKitGtk/WPE dependencies
-RUN apt-get update && \
+RUN ${APT_UPDATE} && \
     git clone --filter=blob:none --no-checkout --depth=1 https://github.com/WebKit/WebKit.git && \
     cd WebKit && \
     git sparse-checkout set Tools/ && \
@@ -88,13 +79,11 @@ RUN apt-get update && \
     yes | ./Tools/wpe/install-dependencies && \
     cd .. && \
     rm -rf WebKit && \
-    apt-get -y autoremove && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
+    ${APT_CLEANUP}
 
 # FIXME: Uninstalls important packages such as libunwind-dev, breaking other things.
 # COPY /packages/05-llvm.lst .
-# RUN apt-get update && apt-get -y install $(sed -e "s/.*#.*//; /^$/d" 05-llvm.lst) && apt-get -y autoremove
+# RUN ${APT_UPDATE} && ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 05-llvm.lst) && apt-get -y autoremove
 #     apt-get -y autoremove && \
 #     apt-get -y clean && \
 #     rm -rf /var/lib/apt/lists/*

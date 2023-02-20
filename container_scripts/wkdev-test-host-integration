@@ -1,0 +1,80 @@
+#!/usr/bin/bash
+
+application_path=${0}
+application_name=$(basename ${application_path})
+printf "${application_name}: Test host system integration.\n"
+printf "Timestamp: $(date)\n"
+
+# Prevent to run this script from the host
+if [ ! -f /run/.containerenv ]; then
+    printf "\nThe script '${application_name}' is intended to run from within the container only.\n"
+    exit 1
+fi
+
+printf "\n-> Install required packages:\n"
+sudo apt-get install --assume-yes epiphany-browser gedit glmark2 glmark2-drm glmark2-wayland iputils-ping libnotify-bin mesa-utils x11-apps
+
+printf "\n-> Dump of all environment variables:\n"
+env
+
+printf "\n-> Ping wpewebkit.org: (should work in rootless container)\n"
+ping -c 4 wpewebkit.org
+
+read -p "Press any key to start tests...."
+printf "\n-> Access to system dbus: (should be forbidden!)\n"
+busctl --no-pager list
+
+read -p "Press any key to continue.."
+printf "\n-> Access to systemd session: (should be forbidden!)\n"
+systemctl --no-pager status
+
+read -p "Press any key to continue.."
+printf "\n-> Access to user dbus: (should be allowed!)\n"
+busctl --no-pager --user list
+
+read -p "Press any key to continue.."
+printf "\n-> Accesus to systemd user session: (should be allowed!)\n"
+systemctl --no-pager --user status
+
+read -p "Press any key to continue.."
+printf "\n-> Access to system journal: (should be allowed!)\n"
+journalctl --no-pager --boot=0 --lines=10
+
+read -p "Press any key to continue.."
+printf "\n-> Access to user journal: (should be allowed!)\n"
+journalctl --no-pager --user --boot=0 --lines=10
+
+read -p "Press any key to continue.."
+printf "\n-> Launching podman in podman container: (only works in priviliged session for now!)\n"
+podman info
+
+printf "\n-> Launching podman from host in podman container: (only works in priviliged session for now!)\n"
+podman-host info
+
+read -p "Press any key to continue.."
+printf "\n-> Desktop notifications should appear:\n"
+notify-send "Hello from wkdev-sdk!"
+
+read -p "Press any key to continue.."
+printf "\n-> Run X11 application, xeyes: (should work if X11/Xwayland is activate on host)\n"
+xeyes
+
+read -p "Press any key to continue.."
+printf "\n-> Run Gtk/Wayland application, gedit: (should work if Wayland is activate on host)\n"
+gedit
+
+read -p "Press any key to continue.."
+printf "\n-> Run glxgears OpenGL application: (should work if it works on the host)\n"
+glxgears -info
+
+read -p "Press any key to continue.."
+printf "\n-> Run glmark2 benchmark: (should work if it works on the host)\n"
+glmark2
+
+read -p "Press any key to continue.."
+printf "\n-> Test PulseAudio: (should work if it works on the host)\n"
+pactl info
+
+read -p "Press any key to continue.."
+printf "\n-> Test Epiphany browser: (try youtube.com, CSS 3D demos, WebGL, etc.)\n"
+epiphany

@@ -1,13 +1,11 @@
 ## Building the container
 
-There are only three steps to build _and_ deploy a new ``wkdev SDK``:
+There are two scripts available that encapsulate the build and deployment process of the ``wkdev SDK``:
 
 ```sh
-podman build --build-arg NUMBER_OF_PARALLEL_BUILDS=<XXX> --tag docker.io/nikolaszimmermann/wkdev-sdk:latest .
-podman login docker.io
-podman push docker.io/nikolaszimmermann/wkdev-sdk:latest
+host_scripts/wkdev-sdk-build
+host_scripts/wkdev-sdk-deploy
 ```
 
-See bootstrap.sh, that encapsulates the building / testing steps.
-
+See bootstrap.sh that builds the SDK and then tests it using wkdev-create.
 NOTE: In future deployment should run via CI, to avoid having a single person with acess to the private key, or sharing keys.

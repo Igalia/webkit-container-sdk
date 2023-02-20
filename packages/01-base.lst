@@ -1,8 +1,8 @@
-# Low-level tools
-debuginfod libcap2-bin locate lsb-release apt-file
+# Daemon providing dynamic access to debug symbols (/ sources, not yet available on Ubuntu)
+debuginfod
 
-# GPG certificates for Debian package verification
-pbuilder debian-keyring
+# Container/capabilities support tools
+iptables libcap2-bin libyajl2 uidmap
 
 # General utilities
-atop emacs git htop iotop nano sudo unzip vim wget
+apt-file aptly atop emacs git htop iotop iputils-ping less locate man-db nano openssh-client strace sudo unzip vim wget

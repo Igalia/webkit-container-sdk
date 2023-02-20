@@ -1,0 +1,50 @@
+# Keep 1000 lines of history within the shell and save it to ~/.zsh_history:
+HISTSIZE=1000
+SAVEHIST=1000
+HISTFILE=~/.zsh_history
+
+# Additional options
+setopt PROMPT_SUBST
+setopt extendedglob
+setopt nonomatch
+setopt autopushd pushdminus pushdsilent pushdtohome
+setopt autocd
+setopt hist_ignore_dups
+setopt share_history
+setopt append_history
+setopt correct
+
+# Colors
+autoload -U colors && colors
+
+# Completion
+autoload -U compinit && compinit
+
+# VCs
+autoload -Uz vcs_info
+autoload -Uz run-help-git
+precmd() { vcs_info }
+zstyle ':vcs_info:*' enable git cvs
+zstyle ':vcs_info:*' check-for-changes true
+zstyle ':vcs_info:*' get-revision true
+zstyle ':vcs_info:*' stagedstr "%F{green}+%f"
+zstyle ':vcs_info:*' unstagedstr "%F{red}*%f"
+zstyle ':vcs_info:*' formats "[%F{cyan}%b%f%u%c]"
+zstyle ':vcs_info:*' actionformats "%u%c[%F{red}%a%f]"
+
+# Word style
+autoload -U select-word-style
+select-word-style bash
+
+# Setup prompt
+PROMPT='📦 %{$fg[white]%}%B%n@%m%b%{$reset_color%}:%{$fg[blue]%}%B%~/%b%{$reset_color%}%(!.#.$) '
+RPROMPT='${vcs_info_msg_0_}%{$fg[red]%}%(?.. [%?])%{$reset_color%} [%*]'
+
+# enable color support for grep/ls
+alias grep='grep --color=auto'
+alias ls='ls --color=auto'
+
+# rm, cp and mv aliases
+alias rm='rm -i'
+alias cp='cp -i -v'
+alias mv='mv -i -v'

@@ -1,5 +1,5 @@
 # Build systems
-cmake ninja-build meson
+build-essential cmake ninja-build meson
 
 # Build tools
 icecream ccache

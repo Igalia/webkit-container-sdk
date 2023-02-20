@@ -1,8 +1,11 @@
-# Dependencies to compile libjxl from Git
-libpng-dev zlib1g-dev libgif-dev libgimp2.0-dev libgmock-dev libgoogle-perftools-dev libgtest-dev libhwy-dev
+# Dependencies to run wkdev-setup-dependency-work-tree
+debian-archive-keyring debian-keyring git-buildpackage
+
+# Dependencies to compile WebKit
+flite1-dev libopenxr-dev qtbase5-dev qtbase5-dev-tools qtbase5-private-dev qtdeclarative5-dev
+
+# Dependencies to compile libjxl
+libgif-dev libgimp2.0-dev libgmock-dev libgoogle-perftools-dev libgtest-dev libhwy-dev libpng-dev zlib1g-dev
 
 # Dependencies to build hotdoc python wheel
 python3-dev
-
-# Dependencies to build gstreamer
-qttools5-dev-tools

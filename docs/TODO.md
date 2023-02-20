@@ -9,12 +9,4 @@
 - Document VSCode + podman-container usage
   --> Should work out-of-the-box, if clangd is there....
 
-- Fix issues with LLVM toolchain (currently cannot be installed as-is, though it's prepared)
-
-- Test valgrind
-
-- Test rr
-
-- Perform real than basic gdb testing
-
-- Finish debuginfod support
+- Fix issues with LLVM toolchain (currently cannot be installed as-is)

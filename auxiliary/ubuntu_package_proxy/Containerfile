@@ -1,0 +1,57 @@
+FROM ubuntu:22.10
+
+LABEL maintainer="nzimmermann@igalia.com"
+LABEL version="0.1"
+LABEL description="Serves as local proxy server to avoid downloading .deb packages twice -- squid caches them after first usage."
+
+# Container environment hardcoded settings
+ARG CONTAINER_LOCALE=en_US.UTF-8
+
+# No need to modify these
+ARG APT_UPDATE="apt-get update"
+ARG APT_UPGRADE="apt-get --assume-yes upgrade"
+ARG APT_INSTALL="apt-get --assume-yes install"
+ARG APT_AUTOREMOVE="apt-get --assume-yes autoremove"
+ARG APT_CLEAN="apt-get --assume-yes clean"
+
+# Disable prompt during package configuration
+ENV DEBIAN_FRONTEND noninteractive
+
+# NOTE: All RUN commands contain the (autoremove / clean / rm step to ensure that no intermediate layer
+#       ever contains unncessary stuff that never appears in the final image, only in deeper layers, and
+#       thus increases the whole image size no gain, except an "easier to read" Containerfile.
+
+# Update package list, upgrade to latest version, install necessary packages for
+# early bootstrapping: .deb package configuration + locale generation.
+RUN ${APT_UPDATE} && \
+    ${APT_INSTALL} apt-utils dialog libterm-readline-gnu-perl locales && \
+    ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
+
+# Switch to fixed locale
+RUN locale-gen ${CONTAINER_LOCALE}
+ENV LC_ALL ${CONTAINER_LOCALE}
+ENV LANG ${CONTAINER_LOCALE}
+
+# Bootstrapping is done, continue package setup
+RUN ${APT_UPDATE} && \
+    ${APT_INSTALL} squid-deb-proxy && \
+    ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN}
+
+# Redirect squid access/cache/store logs to stdout for easy interception
+RUN ln --symbolic --force /dev/stdout /var/log/squid-deb-proxy/access.log && \
+    ln --symbolic --force /dev/stdout /var/log/squid-deb-proxy/cache.log && \
+    ln --symbolic --force /dev/stdout /var/log/squid-deb-proxy/store.log
+
+# Expose squid cache directory under /data
+RUN ln --symbolic --force /data /var/cache/squid-deb-proxy
+
+# Change port to 8765 and expose it
+RUN sed --in-place --expression "s/http_port 8000/http_port 8765/" /etc/squid-deb-proxy/squid-deb-proxy.conf
+EXPOSE 8765
+
+# Outsource /data in a persistent volume
+VOLUME ["/data"]
+
+# Define entry point
+COPY ./entrypoint.sh /entrypoint.sh
+CMD ["/entrypoint.sh"]

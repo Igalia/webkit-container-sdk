@@ -1,0 +1,63 @@
+FROM ubuntu:22.10
+
+LABEL maintainer="nzimmermann@igalia.com"
+LABEL version="0.1"
+LABEL description="Used to build Ubuntu 22.10 custom packages in a container instead of chroot environment"
+
+# Container environment hardcoded settings
+ARG CONTAINER_LOCALE=en_US.UTF-8
+
+# No need to modify these.
+ARG APT_UPDATE="apt-get update"
+ARG APT_UPGRADE="apt-get --assume-yes upgrade"
+ARG APT_INSTALL="eatmydata apt-get --assume-yes install"
+ARG APT_AUTOREMOVE="apt-get --assume-yes autoremove"
+ARG APT_CLEAN="apt-get --assume-yes clean"
+
+# Disable prompt during package configuration
+ENV DEBIAN_FRONTEND noninteractive
+
+# NOTE: All RUN commands contain the (autoremove / clean / rm step to ensure that no intermediate layer
+#       ever contains unncessary stuff that never appears in the final image, only in deeper layers, and
+#       thus increases the whole image size no gain, except an "easier to read" Dockerfile.
+
+# Disable sandboxing (dropping privileges to _apt user during apt-get update/install/... fails when using
+# podman in podman if both are rootless; since it's no gain in security in the container anyhow, disable it.
+RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/no-sandbox
+
+# Update package list, upgrade to latest version, install necessary packages for
+# early bootstrapping: .deb package configuration + locale generation.
+RUN ${APT_UPDATE} && \
+    apt-get --assume-yes install apt-utils dialog eatmydata libterm-readline-gnu-perl locales && \
+    ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN}
+
+# Switch to fixed locale.
+RUN locale-gen ${CONTAINER_LOCALE}
+ENV LC_ALL ${CONTAINER_LOCALE}
+ENV LANG ${CONTAINER_LOCALE}
+
+# Bootstrapping is done, switch to working directory /tmp to continue setup.
+RUN ${APT_UPDATE} &&\
+    ${APT_INSTALL} build-essential ccache cmake curl debian-archive-keyring debian-keyring equivs fakeroot fdupes git git-buildpackage gnupg golang-1.19 man-db ubuntu-dev-tools ubuntu-keyring && \
+    ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN}
+
+# Build hotdoc documentation
+RUN ${APT_INSTALL} libglib2.0-dev libjson-glib-dev libxml2-dev python3-dev python3-pip && \
+    ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN} && \
+    python3 -m pip install --upgrade pip && \
+    pip3 install hotdoc
+
+# Switch back to interactive prompt, when using apt.
+ENV DEBIAN_FRONTEND dialog
+
+# Debian package build settings
+ENV DEBEMAIL "nzimmermann@igalia.com"
+ENV DEBFULLNAME "Nikolas Zimmermann"
+
+# Git setup (sometimes the pristine-tar branch needs to be created, and committed)
+RUN git config --global user.email "${DEBFULLNAME}" && git config --global user.name "${DEBEMAIL}"
+
+COPY ./build-package.sh /builder/
+COPY ./setup-container.sh /builder/
+
+ENTRYPOINT ["/bin/bash"]

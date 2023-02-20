@@ -1,2 +1,0 @@
-# LLVM Toolchain (current version: 15)
-llvm-15 clang-15 clangd-15 lld-15 lldb-15 libc++-15-dev libunwind-15-dev

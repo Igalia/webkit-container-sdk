@@ -32,7 +32,6 @@ work_directory=""
 settings=""
 
 apt_repository_name="wkdev-sdk-packages"
-packages_directory="${work_directory}/packages"
 apt_repository_source_list="/etc/apt/sources.list.d/${apt_repository_name}.list"
 container_image_name="docker.io/nikolaszimmermann/wkdev-sdk"
 dependency_settings="${sdk_directory}/dependencies/wkdev-dependencies.yaml"
@@ -150,7 +149,9 @@ run() {
     printf "\n-> Create work tree in '${work_directory}' directory...\n"
     mkdir -p "${work_directory}/sources" &>/dev/null
     mkdir -p "${work_directory}/builds" &>/dev/null
-    mkdir -p "${work_directory}/packages" &>/dev/null
+
+    local packages_directory="${work_directory}/packages"
+    mkdir -p "${packages_directory}" &>/dev/null
 
     if [ -f "/run/.containerenv" ]; then
         printf "\n-> Create local APT repository '${apt_repository_name}'...\n"
@@ -255,19 +256,19 @@ run() {
             fi
 
             printf "    -> Generating Makefile for package '${package_name}' in '${result_directory}/Makefile'...\n"
-            cat "${package_makefile_template}" | apt_repository_name="${apt_repository_name}" debuild_options="${gbp_dsc_options[@]}" sdk_directory="${sdk_directory}" work_directory="${work_directory}" package_full_name="${package_group_name}/${package_name}" envsubst '${apt_repository_name},${sdk_directory},${work_directory},${package_full_name}'> "${result_directory}"/Makefile
+            cat "${package_makefile_template}" | apt_repository_name="${apt_repository_name}" debuild_options="${gbp_dsc_options[@]}" sdk_directory="${sdk_directory}" work_directory="${work_directory}" package_full_name="${package_group_name}/${package_name}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${sdk_directory},${work_directory},${package_full_name},${packages_directory}'> "${result_directory}"/Makefile
             popd &>/dev/null
         done
 
         local result_directory="${work_directory}/builds/${package_group_name}"
         printf "\n-> Generating Makefile for package group '${package_group_name}' in '${result_directory}/Makefile'...\n"
-        cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages_directory="${packages_directory}" packages="${packages_in_group[@]}" envsubst '${apt_repository_name},${packages}'> "${result_directory}"/Makefile
+        cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages="${packages_in_group[@]}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${packages},${packages_directory}'> "${result_directory}"/Makefile
     done
 
     local result_directory="${work_directory}/builds"
     printf "\n-> Generating Makefile for all package groups in '${result_directory}/Makefile'...\n"
     printf "   NOTE: Use 'make' / 'make install' in '${result_directory}' to compile/install all packages in all package groups or descend into a specific package group or single package to build exactly what's needed for the current task.\n"
-    cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages="${package_groups[@]}" envsubst '${apt_repository_name},${packages}' > "${result_directory}"/Makefile
+    cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages="${package_groups[@]}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${packages},${packages_directory}' > "${result_directory}"/Makefile
 
     printf "\n-> Finished.\n"
     printf "NOTE: Remember to 'make repo-publish' once before installing one or multiple using 'make install'.\n"

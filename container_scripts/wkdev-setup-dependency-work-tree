@@ -208,12 +208,13 @@ run() {
                 dget ${dget_options[@]} --download-only "${package_url}"
             fi
 
+            # Change epoch to a fixed value of 666, to indicate our packages.
             dsc_file=$(ls -1 *${package_name}*.dsc | head --lines 1)
             old_version=$(grep "^Version:" "${dsc_file}")
-            sed --in-place --expression "s/Version: \([0-9.:~a-zA-Z]*\)-\(.*\)/Version: \1-1000\2/" "${dsc_file}"
+            sed --in-place --expression 's/^Version: \([0-9.]*:\)\?\(.*\)/Version: 666:\2/' "${dsc_file}"
             new_version=$(grep "^Version:" "${dsc_file}")
 
-            printf "\n    -> Injected -1000' as prefix for the distribution specific part of the dsc file version (to assure the packages have the same name, but a _higher_ revision).\n"
+            printf "\n    -> Injected debian package epoch '666:' prefix for the package version inthe dsc file, to assure they are prefered over system packages of the same name/version.\n"
             printf "       Old version: ${old_version}\n"
             printf "       New version: ${new_version}\n"
 

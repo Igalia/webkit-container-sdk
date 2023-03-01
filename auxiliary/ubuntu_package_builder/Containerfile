@@ -38,7 +38,7 @@ ENV LANG ${CONTAINER_LOCALE}
 
 # Bootstrapping is done, switch to working directory /tmp to continue setup.
 RUN ${APT_UPDATE} &&\
-    ${APT_INSTALL} build-essential ccache cmake curl debian-archive-keyring debian-keyring equivs fakeroot fdupes git git-buildpackage gnupg golang-1.19 man-db ubuntu-dev-tools ubuntu-keyring && \
+    ${APT_INSTALL} build-essential ccache cmake curl debian-archive-keyring debian-keyring equivs fakeroot fdupes git git-buildpackage gnupg man-db ubuntu-dev-tools ubuntu-keyring && \
     ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN}
 
 # Build hotdoc documentation

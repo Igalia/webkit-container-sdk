@@ -1,7 +1,7 @@
 FROM ubuntu:22.10
 
-LABEL maintainer="nzimmermann@igalia.com"
-LABEL version="0.1"
+LABEL maintainer="webkit-gtk@lists.webkit.org"
+LABEL version="1.0"
 LABEL description="Used to build Ubuntu 22.10 custom packages in a container instead of chroot environment"
 
 # Container environment hardcoded settings
@@ -50,9 +50,9 @@ RUN ${APT_INSTALL} libglib2.0-dev libjson-glib-dev libxml2-dev python3-dev pytho
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog
 
-# Debian package build settings
-ENV DEBEMAIL "nzimmermann@igalia.com"
-ENV DEBFULLNAME "Nikolas Zimmermann"
+# Debian package build setting
+ENV DEBEMAIL "webkit-gtk@lists.webkit.org"
+ENV DEBFULLNAME "Igalia"
 
 # Git setup (sometimes the pristine-tar branch needs to be created, and committed)
 RUN git config --global user.email "${DEBFULLNAME}" && git config --global user.name "${DEBEMAIL}"

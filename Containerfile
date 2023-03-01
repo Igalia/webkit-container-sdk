@@ -1,7 +1,7 @@
 FROM ubuntu:22.10
 
 LABEL maintainer="webkit-gtk@lists.webkit.org"
-LABEL version="0.1"
+LABEL version="1.0"
 LABEL description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 22.10"
 
 # Tweakable "make -j <x>" setting.
@@ -101,5 +101,5 @@ COPY ./container_files/podman-host /usr/bin/podman-host
 ENV DEBIAN_FRONTEND dialog
 
 # Debian package build settings
-ENV DEBEMAIL "nzimmermann@igalia.com"
-ENV DEBFULLNAME "Nikolas Zimmermann"
+ENV DEBEMAIL "webkit-gtk@lists.webkit.org"
+ENV DEBFULLNAME "Igalia"

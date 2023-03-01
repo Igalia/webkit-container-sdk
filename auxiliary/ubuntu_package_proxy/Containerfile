@@ -1,7 +1,7 @@
 FROM ubuntu:22.10
 
-LABEL maintainer="nzimmermann@igalia.com"
-LABEL version="0.1"
+LABEL maintainer="webkit-gtk@lists.webkit.org"
+LABEL version="1.0"
 LABEL description="Serves as local proxy server to avoid downloading .deb packages twice -- squid caches them after first usage."
 
 # Container environment hardcoded settings

@@ -3,6 +3,12 @@ package_groups:
   - package_group:
     name: podman
     entities:
+      - name: golang-1.20 # Go programming language
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/golang-1.20_1.20.1-1.dsc'
+        options:
+          dget: '--allow-unauthenticated'
+          debuild: '--build=binary'
+
       - name: crun # OCI runtime written in C
         url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/crun_1.8-1.dsc'
         options:
@@ -14,13 +20,14 @@ package_groups:
         options:
           dget: '--allow-unauthenticated'
           debuild: '--build=binary'
-        depends_on: ['./crun*.deb']
+        depends_on: ['./golang-1.20*.deb', './crun*.deb']
 
       - name: containers-storage # Configuration files storage to github.com/containers
         url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/containers-storage_1.45.4-1.dsc'
         options:
           dget: '--allow-unauthenticated'
           debuild: '--build=binary'
+        depends_on: ['./golang-1.20*.deb', './crun*.deb']
 
       - name: catatonit # A signal-forwarding process manager for containers
         url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/catatonit_0.1.7-1.dsc'
@@ -39,27 +46,28 @@ package_groups:
         options:
           dget: '--allow-unauthenticated'
           debuild: '--build=binary'
+        depends_on: ['./golang-1.20*.deb']
 
       - name: containernetworking-plugins # Libraries for writing CNI plugin
         url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/containernetworking-plugins_1.2.0-1.dsc'
         options:
           dget: '--allow-unauthenticated'
           debuild: '--build=binary'
-        depends_on: ['./containernetworking*.deb']
+        depends_on: ['./golang-1.20*.deb']
 
       - name: buildah # Tool for building OCI containers
         url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/buildah_1.29.1-1.dsc'
         options:
           dget: '--allow-unauthenticated'
           debuild: '--build=binary'
-        depends_on: ['./containers-common*.deb', './crun*.deb']
+        depends_on: ['./golang-1.20*.deb']
 
       - name: skopeo # Container image repository tool
         url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/skopeo_1.11.1-1.dsc'
         options:
           dget: '--allow-unauthenticated'
           debuild: '--build=binary'
-        depends_on: ['./containers-common*.deb']
+        depends_on: ['./golang-1.20*.deb']
 
       - name: libslirp # General purpose TCP-IP emulator library
         url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/libslirp_4.7.0-1.dsc'
@@ -72,18 +80,17 @@ package_groups:
         options:
           dget: '--allow-unauthenticated'
           debuild: '--build=binary'
-        depends_on: ['./libslirp0*.deb']
+        depends_on: ['./libslirp*.deb']
 
       - name: podman # Daemon-less container engine for managing containers, pods and images
         url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/podman_4.4.2-1.dsc'
         options:
           dget: '--allow-unauthenticated'
           debuild: '--build=binary'
-        depends_on: ['./containers-common*.deb', './crun*.deb', './containernetworking-plugins*.deb', './conmon*.deb', './catatonit*.deb']
+        depends_on: ['./golang-1.20*.deb']
 
       - name: podman-netavark # OCI network stack
         url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/podman-netavark_1.5.0-1.dsc'
         options:
           debuild: '--build=binary'
           dget: '--allow-unauthenticated'
-        depends_on: ['./podman*.deb']

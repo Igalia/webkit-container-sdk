@@ -65,5 +65,6 @@ for dsc_url in "${dsc_urls[@]}"; do
 
     printf "\n   -> Package name:  ${package_name}"
     printf "\n      Package desc.: $(apt-cache search ${package_name} | grep \^${package_name}\ )"
-    printf "\n      Package URL:   ${dsc_url}\n"
+    printf "\n      Package URL:   ${dsc_url}"
+    printf "\n      Build deps.:   $(curl --silent "${dsc_url}" | grep Build-Depends)\n"
 done

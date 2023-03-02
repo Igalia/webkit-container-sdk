@@ -6,6 +6,8 @@ sdk_directory=$(readlink -f "${application_directory}/..")
 printf "${application_name}: Setup SDK dependencies build environment.\n"
 
 # Verify pre-requisite: shyaml needs to be installed.
+# Make sure 'shyaml' is in the path -- python3 user bin directory needs to be in $PATH.
+export PATH="$(python3 -m site --user-base)/bin:${PATH}"
 if ! command -v shyaml > /dev/null; then
     printf "Cannot find 'shyaml' executable.\n"
     exit 1

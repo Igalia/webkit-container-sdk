@@ -36,7 +36,7 @@ settings=""
 apt_repository_name="wkdev-sdk-packages"
 apt_repository_source_list="/etc/apt/sources.list.d/${apt_repository_name}.list"
 container_image_name="docker.io/nikolaszimmermann/wkdev-sdk"
-dependency_settings="${sdk_directory}/dependencies/wkdev-dependencies.yaml"
+dependency_settings="${sdk_directory}/dependencies/wkdev-webkit-dependencies.yaml"
 package_makefile_template="${sdk_directory}/dependencies/Makefile.package.template"
 group_makefile_template="${sdk_directory}/dependencies/Makefile.group.template"
 

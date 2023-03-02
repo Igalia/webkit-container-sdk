@@ -9,6 +9,7 @@ build:
 	fi
 
 clean:
+	rm -f "$(build_directory)"/build.log
 	rm -f "$(build_directory)"/*.build
 	rm -f "$(build_directory)"/*.buildinfo
 	rm -f "$(build_directory)"/*.changes
@@ -16,7 +17,7 @@ clean:
 	rm -f "$(build_directory)"/*.deb
 	rm -f "$(build_directory)"/*.dsc
 	rm -f "$(build_directory)"/*.tar.*
-	rm -rf "$(build_directory)"/$(package_name)
+	rm -rf "$(build_directory)"/$(package_name)*
 
 install: build
 	sudo apt install "$(package_name)"

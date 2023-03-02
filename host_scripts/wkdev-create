@@ -521,7 +521,6 @@ print_host_settings() {
     printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${XDG_SESSION_TYPE}" "${XDG_SESSION_TYPE}")"
     printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${WAYLAND_DISPLAY}" "${WAYLAND_DISPLAY}")"
     printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${DISPLAY}" "${DISPLAY}")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "Unprivileged user-namespace clone?" "$(cat /proc/sys/kernel/unprivileged_userns_clone)")"
     set -o nounset
 
     # Do not attempt to validate the /etc/sub?id files for printing purposes, assume no duplicates are present and

@@ -19,7 +19,27 @@ if ! command -v gbp > /dev/null; then
     exit 1
 fi
 
+source "${sdk_directory}/utilities/debian-version-parser.sh"
+
+# Package naming convention.
+# Debian package number version format: [epoch:]upstream-version[-debian-revision]
+# By convention, we always enforce the presence of a "debian-revision" suffix, that
+# encodes the origin of the package and makes it easy to reason about the state of
+# the SDK by only inspecting the list of installed packages (e.g. using 'dpkg -l').
+#
+# Summary: '${override_package_debian_revision}' indicates the debian revision to use.
+# +-----------------+--------------------------------------------------------------------+
+# | debian-revision | Package origin                                                     |
+# +-----------------+--------------------------------------------------------------------+
+# | <any>           | System packages                                                    |
+# | 111wkdev-sdk111 | Self-compiled package, during SDK image creation (on host!)        |
+# | 222wkdev-sdk222 | Self-compiled package, during SDK image _usage_ (in container!)    |
+# +-----------------+--------------------------------------------------------------------+
+
+override_package_debian_revision='111wkdev-sdk111'
 if [ -f "/run/.containerenv" ]; then
+    override_package_debian_revision='222wkdev-sdk222'
+
     # Verify pre-requisite: aptly needs to be installed.
     if ! command -v aptly > /dev/null; then
         printf "Cannot find 'aptly' executable.\n"
@@ -156,8 +176,13 @@ run() {
     mkdir -p "${packages_directory}" &>/dev/null
 
     if [ -f "/run/.containerenv" ]; then
-        printf "\n-> Create local APT repository '${apt_repository_name}'...\n"
-        aptly repo create -distribution=kinetic -component=main "${apt_repository_name}"
+        show_output=$(aptly repo show "${apt_repository_name}")
+        if [ ${?} -ne 0 ]; then
+            printf "\n-> Create local APT repository '${apt_repository_name}'...\n"
+            aptly repo create -distribution=kinetic -component=main "${apt_repository_name}"
+        else
+            printf "\n-> Reusing existing local APT repository '${apt_repository_name}'. Statistics:\n${show_output}\n"
+        fi
 
         if [ ! -f "${apt_repository_source_list}" ]; then
             echo "deb [trusted=yes] file:///${apt_repository_name}/public/ kinetic main" | sudo tee "${apt_repository_source_list}" >/dev/null
@@ -204,30 +229,38 @@ run() {
             pushd "${work_directory}/sources/${package_group_name}/${package_name}" &>/dev/null
 
             # Download DSC file
-            printf "\n    -> Downloading dsc file from URL '${package_url}' (dget options: '${dget_options[@]}')...\n"
+            printf "\n    -> Downloading DSC file from URL '${package_url}' (dget options: '${dget_options[@]}')...\n"
             if [ ${verbose} -eq 0 ]; then
                 dget ${dget_options[@]} --quiet --download-only "${package_url}" &>/dev/null
             else
                 dget ${dget_options[@]} --download-only "${package_url}"
             fi
 
-            # Change epoch to a fixed value of 666, to indicate our packages.
+            # Change epoch to a fixed value of ${package_epoch}, to indicate our packages.
             dsc_file=$(ls -1 *${package_name}*.dsc | head --lines 1)
-            old_version=$(grep "^Version:" "${dsc_file}")
-            sed --in-place --expression 's/^Version: \([0-9.]*:\)\?\(.*\)/Version: 666:\2/' "${dsc_file}"
-            new_version=$(grep "^Version:" "${dsc_file}")
+            old_version=$(grep "^Version:" "${dsc_file}" | sed -e "s/Version: //")
 
-            printf "\n    -> Injected debian package epoch '666:' prefix for the package version in the dsc file, to assure they are prefered over system packages of the same name/version.\n"
+            local package_epoch=0
+            local package_upstream_version=""
+            local package_debian_revision=""
+            parse_debian_version_string "${old_version}" package_epoch package_upstream_version package_debian_revision
+
+            local new_version=""
+            compose_debian_version_string new_version ${package_epoch} "${package_upstream_version}" "${override_package_debian_revision}"
+
+            sed --in-place --expression "s/^Version: \([0-9.]*:\)\?\(.*\)/Version: ${new_version}/" "${dsc_file}"
+            new_version=$(grep "^Version:" "${dsc_file}" | sed -e "s/Version: //")
+
+            printf "\n    -> Override debian package version string 'debian-revision' for the package version in the local copy '${dsc_file}' of the DSC file:\n"
             printf "       Old version: ${old_version}\n"
             printf "       New version: ${new_version}\n"
 
             # Create a local git repository to manage the package + patches on top
-
             printf "\n    -> Importing package in local Git repository (gbp-dsc options: '${gbp_dsc_options[@]}')...\n"
             if [ ${verbose} -eq 0 ]; then
-                gbp import-dsc ${gbp_dsc_options[@]} *${package_name}*.dsc &>/dev/null
+                gbp import-dsc ${gbp_dsc_options[@]} "${dsc_file}" &>/dev/null
             else
-                gbp import-dsc ${gbp_dsc_options[@]} *${package_name}*.dsc
+                gbp import-dsc ${gbp_dsc_options[@]} "${dsc_file}"
             fi
 
             # Create directories for result files and dependency packages

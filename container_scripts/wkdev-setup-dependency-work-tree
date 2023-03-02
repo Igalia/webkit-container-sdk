@@ -256,7 +256,7 @@ run() {
             fi
 
             printf "    -> Generating Makefile for package '${package_name}' in '${result_directory}/Makefile'...\n"
-            cat "${package_makefile_template}" | apt_repository_name="${apt_repository_name}" debuild_options="${gbp_dsc_options[@]}" sdk_directory="${sdk_directory}" work_directory="${work_directory}" package_full_name="${package_group_name}/${package_name}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${sdk_directory},${work_directory},${package_full_name},${packages_directory}'> "${result_directory}"/Makefile
+            cat "${package_makefile_template}" | apt_repository_name="${apt_repository_name}" debuild_options="${debuild_options[@]}" sdk_directory="${sdk_directory}" work_directory="${work_directory}" package_full_name="${package_group_name}/${package_name}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${debuild_options},${sdk_directory},${work_directory},${package_full_name},${packages_directory}'> "${result_directory}"/Makefile
             popd &>/dev/null
         done
 

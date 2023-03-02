@@ -215,7 +215,7 @@ run() {
             sed --in-place --expression 's/^Version: \([0-9.]*:\)\?\(.*\)/Version: 666:\2/' "${dsc_file}"
             new_version=$(grep "^Version:" "${dsc_file}")
 
-            printf "\n    -> Injected debian package epoch '666:' prefix for the package version inthe dsc file, to assure they are prefered over system packages of the same name/version.\n"
+            printf "\n    -> Injected debian package epoch '666:' prefix for the package version in the dsc file, to assure they are prefered over system packages of the same name/version.\n"
             printf "       Old version: ${old_version}\n"
             printf "       New version: ${new_version}\n"
 

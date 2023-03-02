@@ -66,7 +66,14 @@ DEB_BUILD_OPTIONS=nocheck gbp buildpackage \
     --git-export-dir="${build_directory}" --git-no-purge --git-ignore-branch --git-ignore-new --git-pristine-tar-commit &> "${build_directory}/build.log" &
 
 build_pid=${!}
-tail --follow --pid=${build_pid} "${build_directory}/build.log"
+tail --follow --pid=${build_pid} "${build_directory}/build.log" &
+
+wait ${build_pid}
+build_status=${?}
+
+if [ ${build_status} -ne 0 ]; then
+    printf "\n-> Build failed. Aborting with exit code ${build_status}.\n"
+fi
 
 popd &>/dev/null
 
@@ -82,4 +89,4 @@ done
 
 popd &>/dev/null
 
-printf "\n-> Finished!"
+printf "\n-> Finished!\n"

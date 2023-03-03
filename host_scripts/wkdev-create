@@ -262,7 +262,7 @@ try_process() {
     local test_condition=${3}
     shift 3
     local -a key_value_pair=(${@})
-    if [ ${test_condition} ]; then
+    if [ ${test_condition} -eq 1 ]; then
         printf "     [x] ${operation}\n"
         arguments+=(${key_value_pair[@]})
     else
@@ -281,13 +281,13 @@ try_process_user() {
     # only for the initial bootstrapping (executing wkdev-init).
     podman_argument+=("--user" "root:root")
 
-    try_process ${1} "Map host user UID/GID unmodified into user namespace" true ${podman_argument[@]}
+    try_process ${1} "Map host user UID/GID unmodified into user namespace" 1 ${podman_argument[@]}
 }
 
 try_process_groups() {
     # Map secondary GIDS into container user namespace as well.
     local podman_argument=("--group-add" "keep-groups")
-    try_process ${1} "Map host user secondary GIDs into user namespace" true ${podman_argument[@]}
+    try_process ${1} "Map host user secondary GIDs into user namespace" 1 ${podman_argument[@]}
 }
 
 try_process_home_directory() {
@@ -296,17 +296,17 @@ try_process_home_directory() {
     podman_argument+=("--env" "HOST_CONTAINER_HOME_PATH=${container_user_home}")
     podman_argument+=("--mount" "type=bind,source=${container_user_home},destination=/home/${container_user_name},rslave")
     podman_argument+=("--mount" "type=bind,source=${HOME},destination=/host/home/${container_user_name},rslave")
-    try_process ${1} "Expose both host & container home directory" true ${podman_argument[@]}
+    try_process ${1} "Expose both host & container home directory" 1 ${podman_argument[@]}
 }
 
 try_process_timezone() {
     local podman_argument=("--tz" "local")
-    try_process ${1} "Share host timezone settings with container" true ${podman_argument[@]}
+    try_process ${1} "Share host timezone settings with container" 1 ${podman_argument[@]}
 }
 
 try_process_ulimit() {
     local podman_argument=("--ulimit" "host")
-    try_process ${1} "Share host ulimit settings with container" true ${podman_argument[@]}
+    try_process ${1} "Share host ulimit settings with container" 1 ${podman_argument[@]}
 }
 
 try_process_journal() {

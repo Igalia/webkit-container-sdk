@@ -1,9 +1,9 @@
 #!/usr/bin/bash
-
 trap '[ "$?" -ne 0 ] && printf "[ERROR] A fatal error occurred. Aborting!\n"' EXIT
 
-package_full_name=${1}
-debuild_options=${2}
+build_profile=${1}
+package_full_name=${2}
+debuild_options=${3}
 
 package_name=$(basename "${package_full_name}")
 work_directory="/builder/work"
@@ -61,8 +61,31 @@ mk-build-deps --install --remove --tool "${APT_GET} -o Debug::pkgProblemResolver
 printf "\n-> Building package using 'gbp buildpackage'...\n"
 printf "   Build log location: ${build_directory}/build.log\n"
 
-DEB_BUILD_OPTIONS=nocheck gbp buildpackage \
-    --git-builder="debuild --prepend-path='/usr/lib/ccache' --preserve-envvar='CCACHE_*' --no-sign ${debuild_options}" \
+# Choose 'DEB_BUILD_OPTIONS' and 'debuild_options' according to build profile.
+# Build profile: fast (do not generate documentation, do not run tests after build, do not run lintian -- used for _development_ (all packages built _in_ the container are built in 'fast' mode)
+# Build profile: full (generate documentation, run tests after build, run lintian -- used for the self-compiled packages that got created during SDK image creation (all packages built on the host use 'full')
+DEB_BUILD_OPTIONS_fast="nocheck nodoc"
+DEB_BUILD_OPTIONS_full=""
+DEB_BUILD_OPTIONS_selected=DEB_BUILD_OPTIONS_${build_profile}
+
+use_debuild_options_fast="--no-lintian"
+if [ ! -z "${debuild_options}" ]; then
+    use_debuild_options_fast="${use_debuild_options_fast} ${debuild_options}"
+fi
+use_debuild_options_full="${debuild_options}"
+use_debuild_options_selected=use_debuild_options_${build_profile}
+
+if [ "${build_profile}" == "fast" ] || [ "${build_profile}" == "full" ]; then
+    printf "\n-> Selected build profile '${build_profile}':\n"
+    printf "   DEB_BUILD_OPTIONS=\"${!DEB_BUILD_OPTIONS_selected}\" -- passed as environment variable to 'gbp buildpackage'\"\n"
+    printf "   debuild_options=\"${!use_debuild_options_selected}\" -- passed as aditional options to 'debuild'\n\n"
+else
+    printf "\n-> Unknown build profile '${build_profile}'. Please either pass 'fast' or 'full'.\n"
+    exit 1
+fi
+
+DEB_BUILD_OPTIONS="${!DEB_BUILD_OPTIONS_selected}" gbp buildpackage \
+    --git-builder="debuild ${!use_debuild_options_selected} --prepend-path='/usr/lib/ccache' --preserve-envvar='CCACHE_*' --no-sign" \
     --git-export-dir="${build_directory}" --git-no-purge --git-ignore-branch --git-ignore-new --git-pristine-tar-commit &> "${build_directory}/build.log" &
 
 build_pid=${!}

@@ -6,8 +6,6 @@ application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 
 sdk_directory=$(readlink -f "${application_directory}/../")
 printf "${application_name}: Build wkdev-sdk image.\n"
 
-verbose=1
-
 # Prevent to run this script from the container
 if [ -f /run/.containerenv ]; then
     printf "\nThe script '${application_name}' is not intended to run from within the container.\n"
@@ -20,9 +18,71 @@ if ! command -v podman > /dev/null; then
     exit 1
 fi
 
-# Bash scripting recommendations
-set -o errexit # Exit upon command failure
-set -o nounset # Warn about unset variables
+# Command line argument handling - defaults.
+trace=0
+verbose=0
+
+show_help_message() {
+    cat << EOF
+<< Purpose >>
+
+    Builds the wkdev-sdk image including all necessary auxiliary images / packages.
+
+<< Usage >>
+
+    $ ${application_name} (options)?
+
+    See below for a list of possible options.
+
+    Example:
+
+    $ ${application_name} --verbose
+    ...
+
+<< Options >>
+
+    -h / --help:        show this help message
+    -t / --trace:       enable tracing for bash script
+    -v / --verbose:     increase verbosity for ${application_name}
+EOF
+}
+
+parse_command_line_arguments() {
+    while :; do
+        case ${1} in
+            -h | --help)
+                show_help_message
+                exit 0
+                ;;
+            -t | --trace)
+                trace=1
+                shift
+                ;;
+            -v | --verbose)
+                verbose=1
+                shift
+                ;;
+            -*)
+                printf "Invalid option '${1}'.\n"
+                show_help_message
+                exit 1
+                ;;
+            *)
+                break ;;
+        esac
+    done
+}
+
+handle_command_line_arguments() {
+    # Bash scripting recommendations
+    set -o errexit # Exit upon command failure
+    set -o nounset # Warn about unset variables
+
+    # Enable tracing, if desired.
+    if [ ${trace} -eq 1 ]; then
+        set -o xtrace
+    fi
+}
 
 # Helper functions
 build_auxiliary_image() {
@@ -39,42 +99,74 @@ build_auxiliary_image() {
 
 build_packages_defined_in_yaml() {
     local packages_flavour="${1}"
-    if [ ! -f "${sdk_directory}/.build-done_${packages_flavour}" ]; then
+    local build_done_file="${sdk_directory}/.build-done_${packages_flavour}"
+    if [ ! -f "${build_done_file}" ]; then
         printf "\n-> Building packages denoted in '${packages_flavour}.yaml' configuration for inclusion in 'wkdev-sdk' image...\n"
 
         temporary_directory=$(mktemp -d)
         pushd "${temporary_directory}" &>/dev/null
 
-        ${sdk_directory}/container_scripts/wkdev-setup-dependency-work-tree --settings "${sdk_directory}/dependencies/${packages_flavour}.yaml" --workdir "${PWD}"
-        cd builds && make && cp --archive --verbose --dereference ${temporary_directory}/packages/*.*eb "${sdk_directory}/packages/binaries/${packages_flavour}/"
+        local extra_options=()
+        if [ ${verbose} -ne 0 ]; then
+            extra_options+=("--verbose")
+        fi
+        if [ ${trace} -ne 0 ]; then
+            extra_options+=("--trace")
+        fi
 
-        touch "${sdk_directory}/.build-done_${packages_flavour}"
+        ${sdk_directory}/container_scripts/wkdev-setup-dependency-work-tree \
+            --settings "${sdk_directory}/dependencies/${packages_flavour}.yaml" \
+            --work-directory "${PWD}" \
+            --packages-directory "${sdk_directory}/packages/binaries/${packages_flavour}" ${extra_options[@]}
+
+        cd builds
+
+        make
+        exit_code=${?}
+
+        if [ ${exit_code} -ne 0 ]; then
+            printf "\n-> Build failed with exit code ${?}. Please inspect the build work directory '${temporary_directory}' and remove it manually.\n"
+            exit ${exit_code}
+        fi
+
+        touch "${build_done_file}"
         popd &>/dev/null
+        rm -rf "${temporary_directory}" &>/dev/null
+    else
+        printf "\n-> Skipping building packages denoted in '${packages_flavour}.yaml' configuration. (To force rebuilding, remove '${build_done_file}').\n"
     fi
 }
 
-# 1) Build ubuntu_package_proxy auxiliary image
-build_auxiliary_image "ubuntu_package_proxy"
+# Main functionality
+run() {
+    parse_command_line_arguments ${@}
+    handle_command_line_arguments
 
-# 2) Build ubuntu_package_builder auxiliary image
-build_auxiliary_image "ubuntu_package_builder"
+    # 1) Build ubuntu_package_proxy auxiliary image
+    build_auxiliary_image "ubuntu_package_proxy"
 
-# 3) Build podman4 & friends for Ubuntu 22.10
-build_packages_defined_in_yaml "wkdev-podman4-ubuntu-kinetic"
+    # 2) Build ubuntu_package_builder auxiliary image
+    build_auxiliary_image "ubuntu_package_builder"
 
-# 4) Build WebKit dependencies (libjpegxl, gstreamer, ...)
-build_packages_defined_in_yaml "wkdev-webkit-dependencies"
+    # 3) Build podman4 & friends for Ubuntu 22.10
+    build_packages_defined_in_yaml "wkdev-podman4-ubuntu-kinetic"
 
-# 5) Build wkdev-sdk image
-pushd "${sdk_directory}" &>/dev/null
-printf "\n-> Building 'wkdev-sdk' image...\n"
+    # 4) Build WebKit dependencies (libjpegxl, gstreamer, ...)
+    build_packages_defined_in_yaml "wkdev-webkit-dependencies"
 
-if [ ${verbose} -eq 1 ]; then
-    printf "   Build log:\n"
-    podman build --jobs $(nproc --ignore=2) --tag docker.io/nikolaszimmermann/wkdev-sdk:latest ${@} .
-else
-    podman build --jobs $(nproc --ignore=2) --tag docker.io/nikolaszimmermann/wkdev-sdk:latest ${@} . &>/dev/null
-fi
+    # 5) Build wkdev-sdk image
+    pushd "${sdk_directory}" &>/dev/null
+    printf "\n-> Building 'wkdev-sdk' image...\n"
 
-popd &>/dev/null
-printf "\n-> Finished building images!\n"
+    if [ ${verbose} -eq 0 ]; then
+        podman build --jobs $(nproc --ignore=2) --tag docker.io/nikolaszimmermann/wkdev-sdk:latest . &>/dev/null
+    else
+        printf "   Build log:\n"
+        podman build --jobs $(nproc --ignore=2) --tag docker.io/nikolaszimmermann/wkdev-sdk:latest .
+    fi
+
+    popd &>/dev/null
+    printf "\n-> Finished building images!\n"
+}
+
+run ${@}

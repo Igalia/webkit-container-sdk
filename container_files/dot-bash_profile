@@ -1,1 +1,2 @@
 export DEBUGINFOD_URLS="https://debuginfod.ubuntu.com"
+export PATH="$(python3 -m site --user-base)/bin:${PATH}"

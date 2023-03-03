@@ -17,7 +17,7 @@ clean:
 	done
 
 install: build
-	@echo "NOTE: Remember to 'make repo-publish' once before installing one or multiple using 'make install'."
+	@echo "NOTE: Remember to 'make repo-publish' once before installing one or multiple packages using 'make install'."
 	@for package in $(packages); do \
 		cd "$${package}" || exit 1 ;\
 		make install || exit 1 ;\

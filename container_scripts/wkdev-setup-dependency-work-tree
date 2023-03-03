@@ -6,7 +6,6 @@ sdk_directory=$(readlink -f "${application_directory}/..")
 printf "${application_name}: Setup SDK dependencies build environment.\n"
 
 # Verify pre-requisite: shyaml needs to be installed.
-# Make sure 'shyaml' is in the path -- python3 user bin directory needs to be in $PATH.
 export PATH="$(python3 -m site --user-base)/bin:${PATH}"
 if ! command -v shyaml > /dev/null; then
     printf "Cannot find 'shyaml' executable.\n"
@@ -19,26 +18,23 @@ if ! command -v gbp > /dev/null; then
     exit 1
 fi
 
-source "${sdk_directory}/utilities/debian-version-parser.sh"
-
 # Package naming convention.
 # Debian package number version format: [epoch:]upstream-version[-debian-revision]
 # By convention, we always enforce the presence of a "debian-revision" suffix, that
 # encodes the origin of the package and makes it easy to reason about the state of
 # the SDK by only inspecting the list of installed packages (e.g. using 'dpkg -l').
 #
-# Summary: '${override_package_debian_revision}' indicates the debian revision to use.
+# Summary: '${package_version_suffix}' indicates the suffix to use for .deb package names.
 # +-----------------+--------------------------------------------------------------------+
 # | debian-revision | Package origin                                                     |
 # +-----------------+--------------------------------------------------------------------+
 # | <any>           | System packages                                                    |
-# | 111wkdev-sdk111 | Self-compiled package, during SDK image creation (on host!)        |
-# | 222wkdev-sdk222 | Self-compiled package, during SDK image _usage_ (in container!)    |
+# | wkdevsdk        | Self-compiled package, during SDK image creation (on host!)        |
+# | wkdevlocalsdk   | Self-compiled package, during SDK image _usage_ (in container!)    |
 # +-----------------+--------------------------------------------------------------------+
-
-override_package_debian_revision='111wkdev-sdk111'
+package_version_suffix="wkdevsdk"
 if [ -f "/run/.containerenv" ]; then
-    override_package_debian_revision='222wkdev-sdk222'
+    package_version_suffix="wkdevlocalsdk"
 
     # Verify pre-requisite: aptly needs to be installed.
     if ! command -v aptly > /dev/null; then
@@ -51,14 +47,21 @@ fi
 trace=0
 verbose=0
 work_directory=""
+packages_directory=""
 settings=""
 
-apt_repository_name="wkdev-sdk-packages"
+apt_repository_name="wkdevsdk-packages"
 apt_repository_source_list="/etc/apt/sources.list.d/${apt_repository_name}.list"
-container_image_name="docker.io/nikolaszimmermann/wkdev-sdk"
+container_image_name="docker.io/nikolaszimmermann/wkdevsdk"
 dependency_settings="${sdk_directory}/dependencies/wkdev-webkit-dependencies.yaml"
 package_makefile_template="${sdk_directory}/dependencies/Makefile.package.template"
 group_makefile_template="${sdk_directory}/dependencies/Makefile.group.template"
+package_debian_branch="ubuntu/latest"
+package_upstream_branch="upstream/latest"
+package_distribution="kinetic"
+package_component="main"
+package_maintainer_name="Igalia"
+package_maintainer_email="webkit-gtk@lists.webkit.org"
 
 # Command line argument handling - help message.
 show_help_message() {
@@ -75,7 +78,7 @@ show_help_message() {
 
     Example:
 
-    $ ${application_name} --workdir \${HOME}/wkdeps
+    $ ${application_name} --work-directory \${HOME}/wkdeps
     ...
 
 << Options >>
@@ -84,8 +87,9 @@ show_help_message() {
     -t / --trace:       enable tracing for bash script
     -v / --verbose:     increase verbosity for ${application_name}
 
-    -w / --workdir:     path to work directory in which the new work tree will be setup
-    -s / --settings:    path to settings file in YAML format (default: ${dependency_settings})
+    -w / --work-directory:     path to work directory in which the new work tree will be setup
+    -p / --packages-directory: path to packages directory in which resulting .(d)deb packages will be stored / queried for dependency resolving (default: <work-directory>/packages)
+    -s / --settings:           path to settings file in YAML format (default: ${dependency_settings})
 EOF
 }
 
@@ -104,9 +108,17 @@ parse_command_line_arguments() {
                 verbose=1
                 shift
                 ;;
-            -w | --workdir)
+            -w | --work-directory)
                 if [ -n "${2}" ]; then
                     work_directory="${2}"
+                    shift 2
+                else
+                    shift
+                fi
+                ;;
+            -p | --packages-directory)
+                if [ -n "${2}" ]; then
+                    packages_directory="${2}"
                     shift 2
                 else
                     shift
@@ -129,8 +141,6 @@ parse_command_line_arguments() {
                 break ;;
         esac
     done
-
-    trap '[ "$?" -ne 0 ] && printf "[ERROR] A fatal error occurred. Aborting!\n"' EXIT
 }
 
 handle_command_line_arguments() {
@@ -144,12 +154,22 @@ handle_command_line_arguments() {
     fi
 
     if [ -z "${work_directory}" ]; then
-        printf "You have to pass a work directory using the --workdir option.\n"
+        printf "You have to pass a work directory using the --work-directory option.\n"
         exit 1
     fi
 
     if [ ! -d "${work_directory}" ]; then
-        printf "You have to pass a valid directory to the --workdir option.\n"
+        printf "You have to pass a valid directory to the --work-directory option.\n"
+        exit 1
+    fi
+
+    if [ -z "${packages_directory}" ]; then
+        printf "You have to pass a packages directory using the --packages-directory option.\n"
+        exit 1
+    fi
+
+    if [ ! -d "${packages_directory}" ]; then
+        printf "You have to pass a valid directory to the --packages-directory option.\n"
         exit 1
     fi
 
@@ -172,23 +192,20 @@ run() {
     mkdir -p "${work_directory}/sources" &>/dev/null
     mkdir -p "${work_directory}/builds" &>/dev/null
 
-    local packages_directory="${work_directory}/packages"
-    mkdir -p "${packages_directory}" &>/dev/null
-
     if [ -f "/run/.containerenv" ]; then
         show_output=$(aptly repo show "${apt_repository_name}")
         if [ ${?} -ne 0 ]; then
             printf "\n-> Create local APT repository '${apt_repository_name}'...\n"
-            aptly repo create -distribution=kinetic -component=main "${apt_repository_name}"
+            aptly repo create -distribution="${package_distribution}" -component="${package_component}" "${apt_repository_name}"
         else
             printf "\n-> Reusing existing local APT repository '${apt_repository_name}'. Statistics:\n${show_output}\n"
         fi
 
         if [ ! -f "${apt_repository_source_list}" ]; then
-            echo "deb [trusted=yes] file:///${apt_repository_name}/public/ kinetic main" | sudo tee "${apt_repository_source_list}" >/dev/null
+            echo "deb [trusted=yes] file:///${apt_repository_name}/public/ ${package_distribution} ${package_component}" | sudo tee "${apt_repository_source_list}" >/dev/null
         fi
     else
-        printf "\n-> Local APT repository creation disabled -- we are running on the host, not in the container where this is necessary.\n"
+        printf "\n-> Local APT repository creation disabled -- we are running on the host, not in the container where this is useful.\n"
     fi
 
     local package_groups=()
@@ -210,8 +227,9 @@ run() {
 
             local package_url=$(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.url)
             local dget_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.dget))
-            local gbp_dsc_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.gbp_dsc))
-            local debuild_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.debuild))
+            local gbp_import_dsc_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.gbp_import_dsc))
+            local deb_build_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.deb_build))
+            local dpkg_buildpackage_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.dpkg_buildpackage))
 
             local dependencies_count=$(cat ${settings} | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on)
             if [ -z "${dependencies_count}" ]; then
@@ -238,30 +256,38 @@ run() {
 
             # Change epoch to a fixed value of ${package_epoch}, to indicate our packages.
             dsc_file=$(ls -1 *${package_name}*.dsc | head --lines 1)
-            old_version=$(grep "^Version:" "${dsc_file}" | sed -e "s/Version: //")
-
-            local package_epoch=0
-            local package_upstream_version=""
-            local package_debian_revision=""
-            parse_debian_version_string "${old_version}" package_epoch package_upstream_version package_debian_revision
-
-            local new_version=""
-            compose_debian_version_string new_version ${package_epoch} "${package_upstream_version}" "${override_package_debian_revision}"
-
-            sed --in-place --expression "s/^Version: \([0-9.]*:\)\?\(.*\)/Version: ${new_version}/" "${dsc_file}"
-            new_version=$(grep "^Version:" "${dsc_file}" | sed -e "s/Version: //")
-
-            printf "\n    -> Override debian package version string 'debian-revision' for the package version in the local copy '${dsc_file}' of the DSC file:\n"
-            printf "       Old version: ${old_version}\n"
-            printf "       New version: ${new_version}\n"
+            orig_tarball=$(ls -1 ${package_name}*.orig.* | head --lines 1)
 
             # Create a local git repository to manage the package + patches on top
-            printf "\n    -> Importing package in local Git repository (gbp-dsc options: '${gbp_dsc_options[@]}')...\n"
+            printf "\n    -> Importing package in local Git repository (gbp import-dsc options: '${gbp_import_dsc_options[@]}')...\n"
             if [ ${verbose} -eq 0 ]; then
-                gbp import-dsc ${gbp_dsc_options[@]} "${dsc_file}" &>/dev/null
+                gbp import-dsc ${gbp_import_dsc_options[@]} --debian-branch="${package_debian_branch}" --upstream-branch="${package_upstream_branch}" "${dsc_file}" &>/dev/null
             else
-                gbp import-dsc ${gbp_dsc_options[@]} "${dsc_file}"
+                gbp import-dsc ${gbp_import_dsc_options[@]} --debian-branch="${package_debian_branch}" --upstream-branch="${package_upstream_branch}" "${dsc_file}"
             fi
+
+            # Create pristine-tar branch
+            package_git_directory=$(find . -type d -name "*${package_name}*" | head --lines 1)
+            pushd "${package_git_directory}" &>/dev/null
+
+            # Override debian revision in package version string
+            printf "\n    -> Incrementing local package version and appending '${package_version_suffix}' suffix to package name...\n"
+            if [ ${verbose} -eq 0 ]; then
+                DEBFULLNAME="${package_maintainer_name}" DEBEMAIL="${package_maintainer_email}" gbp dch --local="${package_version_suffix}" --distribution="${package_distribution}" --debian-branch="${package_debian_branch}" &>/dev/null
+                DEBFULLNAME="${package_maintainer_name}" DEBEMAIL="${package_maintainer_email}" gbp dch --nmu --distribution="${package_distribution}" --debian-branch="${package_debian_branch}" --commit &>/dev/null
+            else
+                DEBFULLNAME="${package_maintainer_name}" DEBEMAIL="${package_maintainer_email}" gbp dch --local="${package_version_suffix}" --distribution="${package_distribution}" --debian-branch="${package_debian_branch}"
+                DEBFULLNAME="${package_maintainer_name}" DEBEMAIL="${package_maintainer_email}" gbp dch --nmu --distribution="${package_distribution}" --debian-branch="${package_debian_branch}" --commit
+            fi
+
+            printf "\n    -> Create 'pristine-tar' branch for upstream branch '${package_upstream_branch}' and orig tarball '${orig_tarball}'...\n"
+            if [ ${verbose} -eq 0 ]; then
+                gbp pristine-tar commit --upstream-tag="${package_upstream_branch}" "../${orig_tarball}" &>/dev/null
+            else
+                gbp pristine-tar commit --upstream-tag="${package_upstream_branch}" "../${orig_tarball}"
+            fi
+
+            popd &>/dev/null
 
             # Create directories for result files and dependency packages
             local result_directory="${work_directory}/builds/${package_group_name}/${package_name}"
@@ -291,7 +317,7 @@ run() {
             fi
 
             printf "    -> Generating Makefile for package '${package_name}' in '${result_directory}/Makefile'...\n"
-            cat "${package_makefile_template}" | apt_repository_name="${apt_repository_name}" debuild_options="${debuild_options[@]}" sdk_directory="${sdk_directory}" work_directory="${work_directory}" package_full_name="${package_group_name}/${package_name}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${debuild_options},${sdk_directory},${work_directory},${package_full_name},${packages_directory}'> "${result_directory}"/Makefile
+            cat "${package_makefile_template}" | apt_repository_name="${apt_repository_name}" deb_build_options="${deb_build_options[@]}" dpkg_buildpackage_options="${dpkg_buildpackage_options[@]}" sdk_directory="${sdk_directory}" work_directory="${work_directory}" package_full_name="${package_group_name}/${package_name}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${deb_build_options},${dpkg_buildpackage_options},${sdk_directory},${work_directory},${package_full_name},${packages_directory}'> "${result_directory}"/Makefile
             popd &>/dev/null
         done
 
@@ -306,7 +332,7 @@ run() {
     cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages="${package_groups[@]}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${packages},${packages_directory}' > "${result_directory}"/Makefile
 
     printf "\n-> Finished.\n"
-    printf "NOTE: Remember to 'make repo-publish' once before installing one or multiple using 'make install'.\n"
+    printf "NOTE: Remember to 'make repo-publish' once before installing one or multiple packages using 'make install'.\n"
 }
 
 run ${@}

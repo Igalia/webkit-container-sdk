@@ -41,11 +41,11 @@ RUN ${APT_UPDATE} &&\
     ${APT_INSTALL} build-essential ccache cmake curl debian-archive-keyring debian-keyring equivs fakeroot fdupes git git-buildpackage gnupg man-db ubuntu-dev-tools ubuntu-keyring && \
     ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN}
 
-# Build hotdoc documentation
+# Build hotdoc / sphinx documentation
 RUN ${APT_INSTALL} libglib2.0-dev libjson-glib-dev libxml2-dev python3-dev python3-pip && \
     ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN} && \
     python3 -m pip install --upgrade pip && \
-    pip3 install hotdoc
+    pip3 install hotdoc sphinx
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

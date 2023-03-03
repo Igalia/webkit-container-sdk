@@ -1,4 +1,4 @@
-# Definition of packages in SDK
+# wkdev-webkit-dependencies: useful applications + self-compiled dependencies used to compile WebKit
 package_groups:
   - package_group:
     name: applications
@@ -24,6 +24,7 @@ package_groups:
     entities:
       - name: gstreamer1.0 # Core GStreamer libraries and elements
         url: 'http://archive.ubuntu.com/ubuntu/pool/main/g/gstreamer1.0/gstreamer1.0_1.20.3-1.dsc'
+        options: {deb_build: nocheck}
 
       - name: gst-plugins-base1.0 # GStreamer plugins from the "base" set
         url: 'http://archive.ubuntu.com/ubuntu/pool/main/g/gst-plugins-base1.0/gst-plugins-base1.0_1.20.3-2.dsc'
@@ -31,6 +32,7 @@ package_groups:
 
       - name: gst-plugins-good1.0 # GStreamer plugins from the "base" set
         url: 'http://archive.ubuntu.com/ubuntu/pool/main/g/gst-plugins-good1.0/gst-plugins-good1.0_1.20.3-1ubuntu1.dsc'
+        options: {deb_build: nocheck}
         depends_on: ['./*gstreamer*.deb', './*gst*plugins*base*.deb']
 
       - name: gst-plugins-bad1.0 # GStreamer plugins from the "bad" set
@@ -41,4 +43,4 @@ package_groups:
       - name: gst-plugins-ugly1.0 # GStreamer plugins from the "ugly" set
         url: 'http://archive.ubuntu.com/ubuntu/pool/universe/g/gst-plugins-ugly1.0/gst-plugins-ugly1.0_1.20.3-1.dsc'
         options: {dget: '--allow-unauthenticated'}
-        depends_on: ['./*gstreamer*.deb', './*gst*plugins*base*.deb']
+        depends_on: ['./*gstreamer*.deb', './*gst*plugins*base*.deb', './*gir1.2-gst-plugins-bad-1.0*.deb']

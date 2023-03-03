@@ -257,7 +257,7 @@ handle_command_line_arguments() {
 }
 
 try_process() {
-   local -n arguments=${1}
+    local -n arguments=${1}
     local operation=${2}
     local test_condition=${3}
     shift 3

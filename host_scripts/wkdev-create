@@ -296,6 +296,10 @@ try_process_home_directory() {
     podman_argument+=("--env" "HOST_CONTAINER_HOME_PATH=${container_user_home}")
     podman_argument+=("--mount" "type=bind,source=${container_user_home},destination=/home/${container_user_name},rslave")
     podman_argument+=("--mount" "type=bind,source=${HOME},destination=/host/home/${container_user_name},rslave")
+
+    # systemctl --user is-enabled <some-service> relies on the accessibility of ~/.config/systemd/user, map it into the container.
+    podman_argument+=("--mount" "type=bind,source=${HOME}/.config/systemd/user,destination=/home/${container_user_name}/.config/systemd/user,rslave")
+
     try_process ${1} "Expose both host & container home directory" 1 ${podman_argument[@]}
 }
 
@@ -574,13 +578,30 @@ print_settings() {
     print_user_namespace_settings
 }
 
-try_enable_lingering() {
-    linger_status=$(loginctl show-user ${host_user_name} | grep Linger | sed -e s/Linger=//)
+try_enable_lingering_on_host() {
+    local linger_status=$(loginctl show-user "${host_user_name}" | grep Linger | sed -e s/Linger=//)
     if [ "${linger_status}" == "no" ]; then
-        printf "\n-> Enable lingering for ${host_user_name} user on host system...\n"
+        printf "\n-> Enable lingering for user '${host_user_name}' on host system...\n"
         loginctl enable-linger ${host_user_name}
     else
         printf "\n-> Lingering for user '${host_user_name}' is already activated.\n"
+    fi
+}
+
+try_enable_user_podman_socket_service_on_host() {
+    local service="podman.socket"
+    local socket_status=$(systemctl --user is-enabled ${service})
+    if [ "${socket_status}" == "disabled" ]; then
+        printf "\n-> Enable '${service}' systemd user service for user '${host_user_name}' on host system...\n"
+        systemctl --user enable ${service}
+        systemctl --user start ${service}
+    else
+        printf "\n-> The systemd user service '${service}' is already enabled.\n"
+    fi
+
+    if [ ${verbose} -ne 0 ]; then
+        printf "\nsystemctl --user status ${service}:\n"
+        systemctl --user status ${service}
     fi
 }
 
@@ -592,7 +613,8 @@ run() {
     printf "\n-> Preparing creation of rootless podman container...\n"
     print_settings
 
-    try_enable_lingering
+    try_enable_lingering_on_host
+    try_enable_user_podman_socket_service_on_host
 
     printf "\n-> Host integration features:\n\n"
     local podman_create_arguments=()

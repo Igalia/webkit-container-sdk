@@ -162,10 +162,10 @@ run() {
             printf "\n-> Creating & starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container...\n"
 
             if [ ${verbose} -eq 0 ]; then
-                podman run --rm --detach --publish 127.0.0.1:8765:8765 --volume ubuntu-package-proxy-22-10-data:/data \
+                podman run --rm --detach --tty --publish 127.0.0.1:8765:8765 --volume ubuntu-package-proxy-22-10-data:/data \
                            --name ${proxy_container_name} docker.io/nikolaszimmermann/ubuntu-package-proxy:22.10 &>/dev/null
             else
-                podman run --rm --detach --publish 127.0.0.1:8765:8765 --volume ubuntu-package-proxy-22-10-data:/data \
+                podman run --rm --detach --tty --publish 127.0.0.1:8765:8765 --volume ubuntu-package-proxy-22-10-data:/data \
                            --name ${proxy_container_name} docker.io/nikolaszimmermann/ubuntu-package-proxy:22.10
             fi
         elif [ "${proxy_container_status}" != "running" ]; then

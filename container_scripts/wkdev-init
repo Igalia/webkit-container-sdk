@@ -7,6 +7,7 @@ printf "Timestamp: $(date)\n"
 
 container_shell=${1}
 container_user_name=${2}
+container_user_group=${3}
 
 # Prevent to run this script from the host
 if [ ! -f /run/.containerenv ]; then
@@ -63,16 +64,24 @@ fi
 
 # 4) Hand-create /run/user/<uid> with correct permissions, since we are not using systemd
 #    inside the container, to provide a login service, that usually takes care of this job.
+printf "\n-> Initialize '/run/user/$(id --user --real ${container_user_name})' directory...\n"
 current_run_user_directory="/run/user/$(id --user --real ${container_user_name})"
-mkdir -p ${current_run_user_directory} &>/dev/null
-chmod 700 ${current_run_user_directory}
-chown ${container_user_name} ${current_run_user_directory} &>/dev/null
+mkdir -p "${current_run_user_directory}" &>/dev/null
+chmod 700 "${current_run_user_directory}"
+chown ${container_user_name}:${container_user_group} "${current_run_user_directory}" &>/dev/null
+
+printf "\nls -alh /run/user:\n"
+ls -alh /run/user
 
 # 5) Create place for SDK internal APT repository
-packages_directory=/wkdev-sdk-packages
-mkdir ${packages_directory} &>/dev/null
-chmod 750 ${packages_directory}
-chown ${container_user_name} ${packages_directory} &>/dev/null
+packages_directory="/wkdev-sdk-packages"
+printf "\n-> Initialize local '${packages_directory}' APT repository...\n"
+mkdir "${packages_directory}" &>/dev/null
+chmod 750 "${packages_directory}"
+chown ${container_user_name}:${container_user_group} "${packages_directory}" &>/dev/null
+
+printf "\nls -alh /:\n"
+ls -alh /
 
 # 6) Rest forever
 printf "\n-> Finished initialization - sleeping forever...\n"

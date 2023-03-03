@@ -157,7 +157,7 @@ run() {
     # Check if proxy server container is running, if not - start or create it.
     if [ ${proxy} -eq 1 ]; then
         proxy_container_status="unknown"
-        eval "$(podman inspect --type container "${proxy_container_name}" --format 'proxy_container_status={{.State.Status}};')"
+        eval "$(podman inspect --type container "${proxy_container_name}" --format 'proxy_container_status={{.State.Status}};' 2>/dev/null)"
         if [ "${proxy_container_status}" == "unknown" ]; then
             printf "\n-> Creating & starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container...\n"
 

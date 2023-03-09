@@ -26,7 +26,7 @@ show_help_message() {
     cat << EOF
 << Purpose >>
 
-    Builds the wkdev-sdk image including all necessary auxiliary images / packages.
+    Builds all necessary container images & software packages forming the 'wkdev-sdk' SDK.
 
 << Usage >>
 
@@ -85,15 +85,15 @@ handle_command_line_arguments() {
 }
 
 # Helper functions
-build_auxiliary_image() {
+build_container_image() {
     local image_flavour=${1}
 
-    printf "\n-> Building '${image_flavour}' auxiliary image...\n"
+    printf "\n-> Building '${image_flavour}' container image...\n"
     if [ ${verbose} -eq 1 ]; then
         printf "   Build log:\n"
-        ${sdk_directory}/auxiliary/${image_flavour}/build-image.sh
+        ${sdk_directory}/images/${image_flavour}/build-image.sh
     else
-        ${sdk_directory}/auxiliary/${image_flavour}/build-image.sh &>/dev/null
+        ${sdk_directory}/images/${image_flavour}/build-image.sh &>/dev/null
     fi
 }
 
@@ -142,11 +142,11 @@ run() {
     parse_command_line_arguments ${@}
     handle_command_line_arguments
 
-    # 1) Build ubuntu_package_proxy auxiliary image
-    build_auxiliary_image "ubuntu_package_proxy"
+    # 1) Build ubuntu_package_proxy container image
+    build_container_image "ubuntu_package_proxy"
 
-    # 2) Build ubuntu_package_builder auxiliary image
-    build_auxiliary_image "ubuntu_package_builder"
+    # 2) Build ubuntu_package_builder container image
+    build_container_image "ubuntu_package_builder"
 
     # 3) Build podman4 & friends for Ubuntu 22.10
     build_packages_defined_in_yaml "wkdev-podman4-ubuntu-kinetic"

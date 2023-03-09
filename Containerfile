@@ -82,7 +82,9 @@ RUN ${APT_UPDATE} && \
 
 # Install Podman4 + dependencies from external source
 COPY ./packages/binaries/*/*.*eb /tmp/packages/
-RUN cd /tmp/packages && dpkg --install *.*eb && rm -rf /tmp/packages
+RUN ${APT_UPDATE} && \
+    ${APT_INSTALL} /tmp/packages/*.*eb && \
+    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 # Install python packages
 RUN python3 -m pip install --upgrade pip && \

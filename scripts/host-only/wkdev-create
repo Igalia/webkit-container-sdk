@@ -3,7 +3,7 @@
 application_path=${0}
 application_name=$(basename ${application_path})
 application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
-sdk_directory=$(readlink -f "${application_directory}/../")
+sdk_directory=$(readlink -f "${application_directory}/../../")
 printf "${application_name}: Create a new podman container ready to use for WebKit GTK/WPE development.\n"
 
 # Prevent to run this script from the container
@@ -474,7 +474,7 @@ build_podman_create_arguments() {
     try_process_podman ${1}
     set +o nounset
 
-    arguments+=("${container_image_name}" "/wkdev-sdk/container_scripts/wkdev-init" "${container_shell}" "${container_user_name}" "${container_group_name}")
+    arguments+=("${container_image_name}" "/wkdev-sdk/scripts/container-only/wkdev-init" "${container_shell}" "${container_user_name}" "${container_group_name}")
 }
 
 build_podman_arguments() {

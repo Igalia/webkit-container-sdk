@@ -3,7 +3,7 @@
 application_path=${0}
 application_name=$(basename ${application_path})
 application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
-sdk_directory=$(readlink -f "${application_directory}/../")
+sdk_directory=$(readlink -f "${application_directory}/../../")
 printf "${application_name}: Deploy SDK.\n"
 
 # Prevent to run this script from the container

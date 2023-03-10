@@ -3,7 +3,7 @@
 application_path=${0}
 application_name=$(basename ${application_path})
 application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
-sdk_directory=$(readlink -f "${application_directory}/../")
+sdk_directory=$(readlink -f "${application_directory}/../../")
 printf "${application_name}: Build SDK.\n"
 
 # Prevent to run this script from the container
@@ -115,7 +115,7 @@ build_packages_defined_in_yaml() {
             extra_options+=("--trace")
         fi
 
-        ${sdk_directory}/container_scripts/wkdev-setup-dependency-work-tree \
+        ${sdk_directory}/scripts/wkdev-setup-dependency-work-tree \
             --settings "${sdk_directory}/images/wkdev_sdk/custom_built_packages/${packages_flavour}.yaml" \
             --work-directory "${PWD}" \
             --packages-directory "${sdk_directory}/images/wkdev_sdk/custom_built_packages/${packages_flavour}" ${extra_options[@]}

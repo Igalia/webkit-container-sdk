@@ -9,16 +9,16 @@ set -o nounset # Warn about unset variables
 
 # 1) Build SDK
 printf "\n-> Building SDK ...\n"
-host_scripts/wkdev-sdk-build --verbose
+scripts/host-only/wkdev-sdk-build --verbose
 
 # 2) Test creation of container
 printf "\n-> Creating '${test_container_name}' container with fresh home directory in '${test_home_directory}'...\n"
 rm -rf "${test_home_directory}" &>/dev/null
-host_scripts/wkdev-create --verbose --create-home --home "${test_home_directory}" "${test_container_name}"
+scripts/host-only/wkdev-create --verbose --create-home --home "${test_home_directory}" "${test_container_name}"
 
 # 3) Test entering container
 printf "\n-> Entering '${test_container_name}' container...\n"
-host_scripts/wkdev-enter --verbose "${test_container_name}" -e uptime
+scripts/host-only/wkdev-enter --verbose "${test_container_name}" -e uptime
 
 # 4) Cleanup
 printf "\n-> Stopping '${test_container_name}' container...\n"
@@ -29,4 +29,4 @@ podman rm "${test_container_name}" &>/dev/null
 rm -rf "${test_home_directory}" &>/dev/null
 
 # 4) Show instructions how to deploy new SDK image to docker.io
-printf "\n\nReady. If everything went well, use \"host_scripts/wkdev-sdk-deploy\" to push the new SDK image to the registry, once tested!\n"
+printf "\n\nReady. If everything went well, use \"scripts/host-only/wkdev-sdk-deploy\" to push the new SDK image to the registry, once tested!\n"

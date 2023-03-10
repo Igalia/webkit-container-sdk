@@ -1,19 +1,15 @@
 #!/usr/bin/bash
-work_directory=${1}
-packages_directory=${2}
-package_full_name=${3}
-deb_build_options=${4}
-dpkg_buildpackage_options=${5}
+sdk_directory=${1}
+work_directory=${2}
+packages_directory=${3}
+package_full_name=${4}
+deb_build_options=${5}
+dpkg_buildpackage_options=${6}
 
 build_directory="${work_directory}/builds/${package_full_name}"
 
-# Execute the podman conainer from within the host, not from within the container.
-# While this works fine for same cases, to build debian packages, it's too tricky,
-# so let's avoid rootless-podman-in-rootless-podman scenarios for the package builder.
-podman_executable=podman
 build_profile="full"
 if [ -f /run/.containerenv ]; then
-    podman_executable=podman-host
     build_profile="fast"
 
     # Translate from container home relative path to host path.
@@ -21,7 +17,13 @@ if [ -f /run/.containerenv ]; then
     packages_directory="${packages_directory/${HOME}/${HOST_CONTAINER_HOME_PATH}}"
 fi
 
-${podman_executable} run --network host --rm \
+source "${sdk_directory}/utilities/podman.sh"
+
+# Ensure the package proxy service is running...
+${sdk_directory}/scripts/wkdev-ensure-package-proxy-service --verbose
+
+# ... before invoking package builds.
+call_podman run --network host --rm \
        --mount type=bind,source=${work_directory},destination=/builder/work,rslave \
        --mount type=bind,source=${packages_directory},destination=/builder/packages,rslave \
        --mount type=volume,source=wkdev-package-builder-cache,destination=/builder/cache \

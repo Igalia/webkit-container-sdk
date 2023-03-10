@@ -16,18 +16,16 @@ setup_ccache() {
 setup_proxy() {
     local proxy_host="localhost"
     local proxy_port=8765
-    printf "\n-> Trying to reach proxy server '${proxy_host}'...\n"
-
     local proxy_url="http://${proxy_host}:${proxy_port}"
+    printf "\n-> Ensure proxy server is reachable at '${proxy_url}'...\n"
+
     set +o errexit
     curl --output /dev/null --silent "${proxy_url}"
     curl_status=${?}
     set -o errexit
     if [ ${curl_status} -eq 0 ]; then
         printf "\n-> Found proxy server - will cache .deb package downloads.\n"
-
         echo "Acquire::http::Proxy \"${proxy_url}\";" | sudo tee /etc/apt/apt.conf.d/squid-deb-proxy &>/dev/null
-        #export http_proxy="${proxy_url}"
     else
         printf "\n-> Cannot contact proxy server '${proxy_url}'. Proceeding without cached .deb package downloads.\n"
     fi

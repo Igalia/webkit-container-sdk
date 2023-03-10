@@ -1,0 +1,127 @@
+#!/usr/bin/bash
+application_path=${0}
+application_name=$(basename ${application_path})
+application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
+printf "${application_name}: Ensures that the 'wkdev-package-proxy' container is running.\n"
+
+source "${sdk_directory}/utilities/podman.sh"
+
+# Command line argument handling - defaults.
+debug=0
+trace=0
+verbose=0
+
+proxy_container_name="wkdev-package-proxy"
+
+# Command line argument handling - help message.
+show_help_message() {
+    cat << EOF
+<< Usage >>
+
+    $ ${application_name} (options)?
+
+    See below for a list of possible options.
+
+    Example:
+
+    $ ${application_name}
+    ...
+
+<< Options >>
+
+    -h / --help:      show this help message
+    -d / --debug:     set podman log level to debug
+    -t / --trace:     enable tracing for bash script
+    -v / --verbose:   increase verbosity for ${application_name}
+EOF
+}
+
+parse_command_line_arguments() {
+    while :; do
+        case ${1} in
+            -h | --help)
+                show_help_message
+                exit 0
+                ;;
+            -d | --debug)
+                debug=1
+                shift
+                ;;
+            -t | --trace)
+                trace=1
+                shift
+                ;;
+            -v | --verbose)
+                verbose=1
+                shift
+                ;;
+            -*)
+                printf "\nInvalid option '${1}'. Displaying --help instead:\n\n"
+                show_help_message
+                exit 1
+                ;;
+            *)
+                break ;;
+        esac
+    done
+}
+
+handle_command_line_arguments() {
+    # Bash scripting recommendations
+    set -o errexit # Exit upon command failure
+    set -o nounset # Warn about unset variables
+
+    # Enable bash script tracing, if desired.
+    if [ ${trace} -eq 1 ]; then
+        set -o xtrace
+    fi
+}
+
+build_podman_arguments() {
+    local -n intermediate_arguments=${1}
+
+    # Podman debug logging
+    if [ ${debug} -eq 1 ]; then
+        intermediate_arguments+=("--log-level debug")
+    fi
+}
+
+# Main functionality
+run() {
+    parse_command_line_arguments ${@}
+    handle_command_line_arguments
+
+    # Check if proxy server container is running, if not - start or create it.
+    last_container_status="unknown"
+    check_podman_container_status "${proxy_container_name}"
+
+    if [ "${last_container_status}" == "unknown" ]; then
+        # If the container isn't known, create it and run it - in one shot.
+        printf "\n-> Creating & starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container...\n"
+        call_podman run --rm --pull newer --detach --tty --publish 127.0.0.1:8765:8765 --volume wkdev-package-proxy-data:/data \
+                        --name "${proxy_container_name}" docker.io/nikolaszimmermann/wkdev-package-proxy:22.10
+    elif [ "${last_container_status}" != "running" ]; then
+        # If the container exists and isn't running, start it.
+        printf "\n-> Starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container...\n"
+        call_podman start "${proxy_container_name}"
+    else
+        if [ ${verbose} -ne 0 ]; then
+            printf "\n-> Local proxy server '${proxy_container_name}' already running, no need to spawn a new instance.\n"
+        fi
+
+        exit 0
+    fi
+
+    # Check if startup was successful.
+    last_container_status="unknown"
+    check_podman_container_status "${proxy_container_name}"
+
+    if [ "${last_container_status}" == "running" ]; then
+        exit 0
+    fi
+
+    printf "\n-> Proxy container status: '${last_container_status}'. Cannot start '${proxy_container_name}' container - please check logs using 'podman logs ${proxy_container_name}'.\n"
+    exit 1
+}
+
+run ${@}

@@ -20,12 +20,10 @@ fi
 
 # Command line argument handling - defaults.
 debug=0
-proxy=1
 trace=0
 verbose=0
 login_as_root=0
 container_name=""
-proxy_container_name="wkdev-deb-proxy"
 
 max_retries=10
 retry_wait_duration_in_seconds=5
@@ -54,7 +52,6 @@ show_help_message() {
     -t / --trace:     enable tracing for bash script
     -v / --verbose:   increase verbosity for ${application_name}
 
-    --no-proxy:       do not attempt to launch the proxy container to cache .deb packages
     -r / --root:      enter as root into container
     -e / --:          end option parsing, interpret the remaining arguments
                       as command to invoke in the container
@@ -78,10 +75,6 @@ parse_command_line_arguments() {
                 ;;
             -v | --verbose)
                 verbose=1
-                shift
-                ;;
-            --no-proxy)
-                proxy=0
                 shift
                 ;;
             -r | --root)
@@ -153,28 +146,6 @@ run() {
 
     parse_command_line_arguments ${@}
     handle_command_line_arguments
-
-    # Check if proxy server container is running, if not - start or create it.
-    if [ ${proxy} -eq 1 ]; then
-        proxy_container_status="unknown"
-        eval "$(podman inspect --type container "${proxy_container_name}" --format 'proxy_container_status={{.State.Status}};' 2>/dev/null)"
-        if [ "${proxy_container_status}" == "unknown" ]; then
-            printf "\n-> Creating & starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container...\n"
-
-            if [ ${verbose} -eq 0 ]; then
-                podman run --rm --detach --tty --publish 127.0.0.1:8765:8765 --volume wkdev-package-proxy-data:/data \
-                           --name ${proxy_container_name} docker.io/nikolaszimmermann/wkdev-package-proxy:22.10 &>/dev/null
-            else
-                podman run --rm --detach --tty --publish 127.0.0.1:8765:8765 --volume wkdev-package-proxy-data:/data \
-                           --name ${proxy_container_name} docker.io/nikolaszimmermann/wkdev-package-proxy:22.10
-            fi
-        elif [ "${proxy_container_status}" != "running" ]; then
-            printf "\n-> Starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container...\n"
-            podman start ${proxy_container_name} &>/dev/null
-        elif [ ${verbose} -eq 1 ]; then
-            printf "\n-> Local proxy server '${proxy_container_name}' already running, no need to spawn a ew one.\n"
-        fi
-    fi
 
     container_status="unknown"
     eval "$(podman inspect --type container "${container_name}" --format 'container_status={{.State.Status}};')"

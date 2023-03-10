@@ -4,7 +4,7 @@ package_groups:
     name: podman
     entities:
       - name: golang-1.20 # Go programming language
-        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/golang-1.20_1.20.1-1.dsc'
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/golang-1.20_1.20.2-1.dsc'
         options:
           dget: '--allow-unauthenticated'
           dpkg_buildpackage: '--build=binary'
@@ -36,7 +36,7 @@ package_groups:
           dpkg_buildpackage: '--build=binary'
 
       - name: conmon # OCI container runtime monitor
-        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/conmon_2.1.6-1.dsc'
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/conmon_2.1.7-1.dsc'
         options:
           dget: '--allow-unauthenticated'
           dpkg_buildpackage: '--build=binary'

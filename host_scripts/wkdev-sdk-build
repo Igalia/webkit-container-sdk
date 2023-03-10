@@ -118,7 +118,7 @@ build_packages_defined_in_yaml() {
         ${sdk_directory}/container_scripts/wkdev-setup-dependency-work-tree \
             --settings "${sdk_directory}/images/wkdev_sdk/custom_built_packages/${packages_flavour}.yaml" \
             --work-directory "${PWD}" \
-            --packages-directory "${sdk_directory}/imags/wkdev_sdk/custom_built_packages/${packages_flavour}" ${extra_options[@]}
+            --packages-directory "${sdk_directory}/images/wkdev_sdk/custom_built_packages/${packages_flavour}" ${extra_options[@]}
 
         cd builds
 

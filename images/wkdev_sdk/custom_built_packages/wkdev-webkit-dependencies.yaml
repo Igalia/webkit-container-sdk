@@ -37,10 +37,10 @@ package_groups:
 
       - name: gst-plugins-bad1.0 # GStreamer plugins from the "bad" set
         url: 'http://archive.ubuntu.com/ubuntu/pool/universe/g/gst-plugins-bad1.0/gst-plugins-bad1.0_1.20.3-1ubuntu6.dsc'
-        options: {dget: '--allow-unauthenticated'}
+        options: {gbp_import_dsc: '--allow-unauthenticated'}
         depends_on: ['./*gstreamer*.deb', './*gst*plugins*base*.deb']
 
       - name: gst-plugins-ugly1.0 # GStreamer plugins from the "ugly" set
         url: 'http://archive.ubuntu.com/ubuntu/pool/universe/g/gst-plugins-ugly1.0/gst-plugins-ugly1.0_1.20.3-1.dsc'
-        options: {dget: '--allow-unauthenticated'}
+        options: {gbp_import_dsc: '--allow-unauthenticated'}
         depends_on: ['./*gstreamer*.deb', './*gst*plugins*base*.deb', './*gir1.2-gst-plugins-bad-1.0*.deb']

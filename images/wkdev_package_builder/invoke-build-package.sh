@@ -4,7 +4,6 @@ work_directory=${2}
 packages_directory=${3}
 package_full_name=${4}
 deb_build_options=${5}
-dpkg_buildpackage_options=${6}
 
 build_directory="${work_directory}/builds/${package_full_name}"
 
@@ -28,7 +27,7 @@ call_podman run --network host --rm \
        --mount type=bind,source=${packages_directory},destination=/builder/packages,rslave \
        --mount type=volume,source=wkdev-package-builder-cache,destination=/builder/cache \
        docker.io/nikolaszimmermann/wkdev-package-builder:22.10 /builder/build-package.sh \
-       "${build_profile}" "${package_full_name}" "${deb_build_options}" "${dpkg_buildpackage_options}" &> "${build_directory}/build.log" &
+       "${build_profile}" "${package_full_name}" "${deb_build_options}" &> "${build_directory}/build.log" &
 
 build_pid=${!}
 tail --follow --pid=${build_pid} "${build_directory}/build.log" &

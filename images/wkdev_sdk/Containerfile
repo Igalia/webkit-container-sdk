@@ -49,7 +49,7 @@ COPY /required_system_packages/*.lst .
 RUN ${APT_UPDATE} && \
     for list in *.lst; do \
         ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}"); \
-    done \
+    done; \
     ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 # Install WebKitGtk/WPE dependencies
@@ -81,6 +81,7 @@ RUN git clone https://github.com/WebKitGTK/webkitgtk-test-fonts.git && \
 
 # Podman proxy, connecting to host instance
 COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host
+COPY /rootfs/wkdev-sdk-packages /wkdev-sdk-packages/README.md
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

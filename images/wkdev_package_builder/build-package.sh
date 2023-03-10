@@ -3,7 +3,6 @@
 build_profile=${1}
 package_full_name=${2}
 deb_build_options=${3}
-dpkg_buildpackage_options=${4}
 
 package_name=$(basename "${package_full_name}")
 work_directory="/builder/work"
@@ -78,6 +77,7 @@ DEBUILD_LINTIAN_selected=DEBUILD_LINTIAN_${build_profile}
 
 if [ "${build_profile}" == "fast" ] || [ "${build_profile}" == "full" ]; then
     printf "\n-> Selected build profile '${build_profile}':\n"
+    printf "   deb_build_options=\"${deb_build_options}\" -- if set, overrides DEB_BUILD_OPTIONS.\"\n"
     printf "   DEB_BUILD_OPTIONS=\"${!DEB_BUILD_OPTIONS_selected}\" -- passed as environment variable to 'gbp buildpackage'\"\n"
     printf "   DEBUILD_LINTIAN=\"${!DEBUILD_LINTIAN_selected}\" -- passed as environment variable to 'gbp buildpackage'\"\n"
 else
@@ -85,9 +85,10 @@ else
     exit 1
 fi
 
-DEBUILD_LINTIAN="${!DEBUILD_LINTIAN_selected}" DEB_BUILD_OPTIONS="${!DEB_BUILD_OPTIONS_selected}" gbp buildpackage \
-    --git-builder="debuild --prepend-path='/usr/lib/ccache' --preserve-envvar='CCACHE_*' --no-sign ${dpkg_buildpackage_options}" \
-    --git-export-dir="${build_directory}" --git-no-purge --git-ignore-branch --git-ignore-new
+export DEBUILD_LINTIAN="${!DEBUILD_LINTIAN_selected}"
+export DEB_BUILD_OPTIONS="${!DEB_BUILD_OPTIONS_selected}"
+export GBP_CONF_FILES="${build_directory}/gbp.conf"
+gbp buildpackage
 
 popd &>/dev/null
 

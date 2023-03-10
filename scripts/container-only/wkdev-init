@@ -15,77 +15,135 @@ if [ ! -f /run/.containerenv ]; then
     exit 1
 fi
 
-# 1) Install same shell that current host user uses.
-container_shell_package=$(basename "${container_shell}")
-if [ $(dpkg-query -W -f='${Status}' ${container_shell_package} 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-    printf "\n-> Installing user shell package '${container_shell_package}'...\n"
-    apt-get update && apt-get --assume-yes install ${container_shell_package} && apt-get --assume-yes autoremove && apt-get --assume-yes clean
-else
-    printf "\n-> No need to install user shell package '${container_shell_package}' - it's already present.\n"
-fi
+try_update_apt_cache() {
+    printf "\n[1/7] Updating APT repositories...\n"
+    apt-get update
+    # Allow this to fail (e.g. no internet connectivity on host system)
+}
 
-# 2) Setup /etc/subgid and /etc/subuid to allow spawning rootless containers from within the container.
-printf "\n-> Setup /etc/subgid and /etc/subuid files for user '${container_user_name}'...\n\n"
+try_install_shell_package() {
+    container_shell_package=$(basename "${container_shell}")
+    if [ $(dpkg-query --show --showformat='${Status}' "${container_shell_package}" 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
+        printf "\n[2/7] Installing user shell package '${container_shell_package}'...\n"
+        apt-get --assume-yes install "${container_shell_package}"
 
-# FIXME: This assumes the host UID/GID subordinate range is 100000-200000. We should rather
-# find a free subordinate-range in the given host -> outer container mapping, to assign it
-# within the "outer container" /etc/sub?id files, defining the used mapping when spawning
-# podman containers ("inner container") from the "outer container" session.
-# Eventually the new 'auto' user-ns mode can be handy for this kind of situation to avoid
-# having to define a mapping at all in the outer container -- in theory podman should
-# be able to figure out exactly this 'free' subordinate-range. Needs some testing.
-usermod --add-subuids 50000-99999 --add-subgids 50000-99999 ${container_user_name}
-if [ ${?} -ne 0 ]; then
-    printf "Cannot add user '${container_user_name}' to /etc/subgid or /etc/subuid file: executing usermod failed.\n"
-    exit 1
-fi
+        if [ ${?} -ne 0 ]; then
+            printf "Cannot install package: executing 'apt-get' failed.\n"
+            exit 1
+        fi
 
-printf "   /etc/subgid contents: $(cat /etc/subgid)\n"
-printf "   /etc/subuid contents: $(cat /etc/subuid)\n"
+        apt-get --assume-yes autoremove && apt-get --assume-yes clean
+    else
+        printf "\n[2/7] No need to install user shell package '${container_shell_package}' - it's already present.\n"
+    fi
+}
 
-container_shell=$(which ${container_shell_package})
-printf "\n-> Switch shell for container user '${container_user_name}' to '${container_shell}'...\n"
-usermod --shell ${container_shell} ${container_user_name}
+try_switch_shell_for_user() {
+    container_shell=$(which ${container_shell_package})
+    if ! grep "${container_user_name}" /etc/passwd | grep --quiet "${container_shell}"; then
+        printf "\n[3/7] Switch shell to '${container_shell}' for container user '${container_user_name}'...\n"
+        usermod --shell "${container_shell}" "${container_user_name}"
 
-# 3) Setup sudo support (useful enough for sudo apt-get install...)
-printf "\n-> Allow passwordlesss sudo for user '${container_user_name}'...\n"
-mkdir -p /etc/sudoers.d &>/dev/null
-touch /etc/sudoers.d/sudoers &>/dev/null
+        if [ ${?} -ne 0 ]; then
+            printf "Cannot switch shell: executing 'usermod' failed.\n"
+            exit 1
+        fi
+    else
+        printf "\n[3/7] No need to switch shell to '${container_shell}' - it's already the default for user '${container_user_name}'.\n"
+    fi
+}
 
-# Suppress FQDN checks upon sudo invocation
-if ! grep -q 'Defaults !fqdn' /etc/sudoers.d/sudoers; then
-    printf "Defaults !fqdn\n" >> /etc/sudoers.d/sudoers
-fi
+try_setup_setgid_subuid_files() {
+    if ! grep --quiet "${container_user_name}" /etc/subuid; then
+        printf "\n[4/7] Setup /etc/sub{gid|uid} files for user '${container_user_name}'...\n\n"
 
-# Ensure passwordless sudo is set up for user
-if ! grep -q "${container_user_name} ALL = (root) NOPASSWD:ALL" /etc/sudoers.d/sudoers; then
-    printf "%s ALL = (root) NOPASSWD:ALL\n" "${container_user_name}" >> /etc/sudoers.d/sudoers
-fi
+        # FIXME: This assumes the host UID/GID subordinate range is 100000-200000. We should rather
+        # find a free subordinate-range in the given host outer container mapping, to assign it
+        # within the "outer container" /etc/sub?id files, defining the used mapping when spawning
+        # podman containers ("inner container") from the "outer container" session.
+        # Eventually the new 'auto' user-ns mode can be handy for this kind of situation to avoid
+        # having to define a mapping at all in the outer container -- in theory podman should
+        # be able to figure out exactly this 'free' subordinate-range. Needs some testing.
+        usermod --add-subuids 50000-99999 --add-subgids 50000-99999 "${container_user_name}"
 
-# 4) Hand-create /run/user/<uid> with correct permissions, since we are not using systemd
-#    inside the container, to provide a login service, that usually takes care of this job.
-printf "\n-> Initialize '/run/user/$(id --user --real ${container_user_name})' directory...\n"
-current_run_user_directory="/run/user/$(id --user --real ${container_user_name})"
-mkdir -p "${current_run_user_directory}" &>/dev/null
-chmod 700 "${current_run_user_directory}"
-chown ${container_user_name}:${container_user_group} "${current_run_user_directory}" &>/dev/null
+        if [ ${?} -ne 0 ]; then
+            printf "Cannot add user '${container_user_name}' to /etc/subgid or /etc/subuid file: executing usermod failed.\n"
+            exit 1
+        fi
+    else
+        printf "\n[4/7] No need to setup /etc/sub{gid|uid} -- UID/GID mapping for container user '${container_user_name}' already present.\n"
+    fi
 
-printf "\nls -alh /run/user:\n"
-ls -alh /run/user
+    printf "     -> /etc/subgid contents: $(cat /etc/subgid)\n"
+    printf "     -> /etc/subuid contents: $(cat /etc/subuid)\n"
+}
 
-# 5) Create place for SDK internal APT repository
-packages_directory="/wkdev-sdk-packages"
-printf "\n-> Initialize local '${packages_directory}' APT repository...\n"
-mkdir "${packages_directory}" &>/dev/null
-chmod 750 "${packages_directory}"
-chown ${container_user_name}:${container_user_group} "${packages_directory}" &>/dev/null
+try_setup_sudoers_file() {
+    local sudoers_directory="/etc/sudoers.d"
+    local sudoers_file="${sudoers_directory}/sudoers"
+    printf "\n[5/7] Setup sudoers file '${sudoers_file}' for user '${container_user_name}', if necessary...\n"
 
-printf "\nls -alh /:\n"
-ls -alh /
+    mkdir --parents "${sudoers_directory}" &>/dev/null
+    chmod 750 "${sudoers_directory}"
 
-# 6) Rest forever
-printf "\n-> Finished initialization - sleeping forever...\n"
-printf "   Timestamp: $(date)\n"
+    if [ ! -f "${sudoers_file}" ]; then
+        touch "${sudoers_file}"
+    fi
+
+    # Suppress FQDN checks upon sudo invocation
+    if ! grep --quiet "Defaults !fqdn" "${sudoers_file}"; then
+        printf "Defaults !fqdn\n" >> "${sudoers_file}"
+    fi
+
+    # Ensure passwordless sudo is set up for user
+    if ! grep --quiet "${container_user_name} ALL = (root) NOPASSWD:ALL" "${sudoers_file}"; then
+        printf "%s ALL = (root) NOPASSWD:ALL\n" "${container_user_name}" >> "${sudoers_file}"
+    fi
+}
+
+try_setup_run_user_directory() {
+    local container_user_id=$(id --user --real "${container_user_name}")
+    local current_run_user_directory="/run/user/${container_user_id}"
+    printf "\n[6/7] Initialize systemd-style /run/user/ user session directory '${current_run_user_directory}', if necessary...\n"
+
+    mkdir --parents "${current_run_user_directory}" &>/dev/null
+    chmod 700 "${current_run_user_directory}"
+    chown "${container_user_name}:${container_user_group}" "${current_run_user_directory}" &>/dev/null
+}
+
+try_setup_local_sdk_repository() {
+    local packages_directory="/wkdev-sdk-packages"
+    printf "\n[7/7] Initialize local '${packages_directory}' APT repository, if necessary...\n"
+
+    mkdir --parents "${packages_directory}" &>/dev/null
+    chmod 750 "${packages_directory}"
+    chown "${container_user_name}:${container_user_group}" "${packages_directory}" &>/dev/null
+}
+
+# 1) Update APT package cache.
+try_update_apt_cache
+
+# 2) Install shell associated with host user account.
+try_install_shell_package
+
+# 3) Switch shell for container user, if needed.
+try_switch_shell_for_user
+
+# 4) Setup /etc/subgid and /etc/subuid to allow spawning rootless containers from within the container.
+try_setup_setgid_subuid_files
+
+# 5) Setup sudo support (useful enough for sudo apt-get install).
+try_setup_sudoers_file
+
+# 6) Hand-create /run/user/<uid> with correct permissions, since we are not using systemd.
+try_setup_run_user_directory
+
+# 7) Create place for SDK internal APT repository.
+try_setup_local_sdk_repository
+
+# 8) Rest forever
+printf "\nFinished initialization - sleeping forever...\n"
+printf "Timestamp: $(date)\n"
 
 touch /run/.wkdev-init-done
 exec tail -f /dev/null

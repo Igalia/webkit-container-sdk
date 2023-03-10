@@ -56,9 +56,9 @@ container_image_name="docker.io/nikolaszimmermann/wkdevsdk"
 dependency_settings="${sdk_directory}/images/wkdev_sdk/custom_built_packages/wkdev-webkit-dependencies.yaml"
 package_makefile_template="${sdk_directory}/images/wkdev_sdk/custom_built_packages/templates/Makefile.package.template"
 group_makefile_template="${sdk_directory}/images/wkdev_sdk/custom_built_packages/templates/Makefile.group.template"
-package_debian_branch="ubuntu/latest"
-package_upstream_branch="upstream/latest"
+gbp_conf_template="${sdk_directory}/images/wkdev_sdk/custom_built_packages/templates/gbp.conf.template"
 package_distribution="kinetic"
+package_debian_branch="ubuntu/${package_distribution}"
 package_component="main"
 package_maintainer_name="Igalia"
 package_maintainer_email="webkit-gtk@lists.webkit.org"
@@ -226,9 +226,9 @@ run() {
             packages_in_group+=("${package_name}")
 
             local package_url=$(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.url)
-            local dget_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.dget))
             local gbp_import_dsc_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.gbp_import_dsc))
             local deb_build_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.deb_build))
+            local debuild_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.debuild))
             local dpkg_buildpackage_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.dpkg_buildpackage))
 
             local dependencies_count=$(cat ${settings} | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on)
@@ -241,59 +241,55 @@ run() {
                 system_dependencies_count=0
             fi
 
+            printf "\n  -> Processing package '${package_name}' with URL '${package_url}':\n"
+            printf "     Options:\n"
+            printf "     - gbp_import_dsc_options=\"${gbp_import_dsc_options[@]}\"\n"
+            printf "     - deb_build_options=\"${deb_build_options[@]}\"\n"
+            printf "     - debuild_options=\"${debuild_options[@]}\"\n"
+            printf "     - dpkg_buildpackage_options=\"${dpkg_buildpackage_options[@]}\"\n"
+
+            # Create directories for result files and dependency packages
+            local build_directory="${work_directory}/builds/${package_group_name}/${package_name}"
+            mkdir -p "${build_directory}"
+
+            # Prepare gbp.conf configuration file
+            # NOTE: Remember that paths are resolved within the 'wkdev_package_builder' container rootfs.
+            # The work directory - ${work_directory} within this script - is bind-mounted to '/builder/work'
+            # within the 'wkdev_package_builder' container (see images/wkdev_package_builder/invoke-build-package.sh).
+            # Therefore export_directory needs to start with '/builder/work' and follow the same directory naming scheme.
+            local export_directory="/builder/work/builds/${package_group_name}/${package_name}"
+            cat "${gbp_conf_template}" | export_directory="${export_directory}" debuild_options="${debuild_options[@]}" dpkg_buildpackage_options="${dpkg_buildpackage_options[@]}" envsubst '${export_directory},${debuild_options},${dpkg_buildpackage_options}'> "${build_directory}/gbp.conf"
+
+            export GBP_CONF_FILES="${build_directory}/gbp.conf"
+            export DEBFULLNAME="${package_maintainer_name}"
+            export DEBEMAIL="${package_maintainer_email}"
+
             # Create package source directory
-            printf "\n  -> Processing package '${package_name}' with URL ${package_url}:\n"
             mkdir -p "${work_directory}/sources/${package_group_name}/${package_name}" &>/dev/null
             pushd "${work_directory}/sources/${package_group_name}/${package_name}" &>/dev/null
 
-            # Download DSC file
-            printf "\n    -> Downloading DSC file from URL '${package_url}' (dget options: '${dget_options[@]}')...\n"
-            if [ ${verbose} -eq 0 ]; then
-                dget ${dget_options[@]} --quiet --download-only "${package_url}" &>/dev/null
-            else
-                dget ${dget_options[@]} --download-only "${package_url}"
-            fi
-
-            # Change epoch to a fixed value of ${package_epoch}, to indicate our packages.
-            dsc_file=$(ls -1 *${package_name}*.dsc | head --lines 1)
-            orig_tarball=$(ls -1 ${package_name}*.orig.* | head --lines 1)
-
             # Create a local git repository to manage the package + patches on top
-            printf "\n    -> Importing package in local Git repository (gbp import-dsc options: '${gbp_import_dsc_options[@]}')...\n"
+            printf "\n    -> Creating local Git repository based on DSC file '${package_url}'...\n"
             if [ ${verbose} -eq 0 ]; then
-                gbp import-dsc ${gbp_import_dsc_options[@]} --debian-branch="${package_debian_branch}" --upstream-branch="${package_upstream_branch}" "${dsc_file}" &>/dev/null
+                gbp import-dsc ${gbp_import_dsc_options[@]} "${package_url}" &>/dev/null
             else
-                gbp import-dsc ${gbp_import_dsc_options[@]} --debian-branch="${package_debian_branch}" --upstream-branch="${package_upstream_branch}" "${dsc_file}"
+                gbp import-dsc ${gbp_import_dsc_options[@]} "${package_url}"
             fi
 
-            # Create pristine-tar branch
             package_git_directory=$(find . -type d -name "*${package_name}*" | head --lines 1)
             pushd "${package_git_directory}" &>/dev/null
 
             # Override debian revision in package version string
             printf "\n    -> Incrementing local package version and appending '${package_version_suffix}' suffix to package name...\n"
             if [ ${verbose} -eq 0 ]; then
-                DEBFULLNAME="${package_maintainer_name}" DEBEMAIL="${package_maintainer_email}" gbp dch --local="${package_version_suffix}" --distribution="${package_distribution}" --debian-branch="${package_debian_branch}" &>/dev/null
-                DEBFULLNAME="${package_maintainer_name}" DEBEMAIL="${package_maintainer_email}" gbp dch --nmu --distribution="${package_distribution}" --debian-branch="${package_debian_branch}" --commit &>/dev/null
+                gbp dch --local "${package_version_suffix}" --distribution "${package_distribution}" --debian-branch "${package_debian_branch}" --commit &>/dev/null
             else
-                DEBFULLNAME="${package_maintainer_name}" DEBEMAIL="${package_maintainer_email}" gbp dch --local="${package_version_suffix}" --distribution="${package_distribution}" --debian-branch="${package_debian_branch}"
-                DEBFULLNAME="${package_maintainer_name}" DEBEMAIL="${package_maintainer_email}" gbp dch --nmu --distribution="${package_distribution}" --debian-branch="${package_debian_branch}" --commit
-            fi
-
-            printf "\n    -> Create 'pristine-tar' branch for upstream branch '${package_upstream_branch}' and orig tarball '${orig_tarball}'...\n"
-            if [ ${verbose} -eq 0 ]; then
-                gbp pristine-tar commit --upstream-tag="${package_upstream_branch}" "../${orig_tarball}" &>/dev/null
-            else
-                gbp pristine-tar commit --upstream-tag="${package_upstream_branch}" "../${orig_tarball}"
+                gbp dch --local="${package_version_suffix}" --distribution "${package_distribution}" --debian-branch "${package_debian_branch}" --commit
             fi
 
             popd &>/dev/null
 
-            # Create directories for result files and dependency packages
-            local result_directory="${work_directory}/builds/${package_group_name}/${package_name}"
-            mkdir -p "${result_directory}"
-
-            local dependencies_file="${result_directory}/.dependencies"
+            local dependencies_file="${build_directory}/.dependencies"
             touch "${dependencies_file}" &>/dev/null
 
             # Handle 'depends_on' field to depend on all build artifacts (.deb/.ddeb) files of a previously built package.
@@ -316,20 +312,20 @@ run() {
                 done
             fi
 
-            printf "    -> Generating Makefile for package '${package_name}' in '${result_directory}/Makefile'...\n"
-            cat "${package_makefile_template}" | apt_repository_name="${apt_repository_name}" deb_build_options="${deb_build_options[@]}" dpkg_buildpackage_options="${dpkg_buildpackage_options[@]}" sdk_directory="${sdk_directory}" work_directory="${work_directory}" package_full_name="${package_group_name}/${package_name}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${deb_build_options},${dpkg_buildpackage_options},${sdk_directory},${work_directory},${package_full_name},${packages_directory}'> "${result_directory}"/Makefile
+            printf "    -> Generating Makefile for package '${package_name}' in '${build_directory}/Makefile'...\n"
+            cat "${package_makefile_template}" | apt_repository_name="${apt_repository_name}" deb_build_options="${deb_build_options[@]}" sdk_directory="${sdk_directory}" work_directory="${work_directory}" package_full_name="${package_group_name}/${package_name}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${deb_build_options},${sdk_directory},${work_directory},${package_full_name},${packages_directory}'> "${build_directory}"/Makefile
             popd &>/dev/null
         done
 
-        local result_directory="${work_directory}/builds/${package_group_name}"
-        printf "\n-> Generating Makefile for package group '${package_group_name}' in '${result_directory}/Makefile'...\n"
-        cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages="${packages_in_group[@]}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${packages},${packages_directory}'> "${result_directory}"/Makefile
+        local build_directory="${work_directory}/builds/${package_group_name}"
+        printf "\n-> Generating Makefile for package group '${package_group_name}' in '${build_directory}/Makefile'...\n"
+        cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages="${packages_in_group[@]}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${packages},${packages_directory}'> "${build_directory}"/Makefile
     done
 
-    local result_directory="${work_directory}/builds"
-    printf "\n-> Generating Makefile for all package groups in '${result_directory}/Makefile'...\n"
-    printf "   NOTE: Use 'make' / 'make install' in '${result_directory}' to compile/install all packages in all package groups or descend into a specific package group or single package to build exactly what's needed for the current task.\n"
-    cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages="${package_groups[@]}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${packages},${packages_directory}' > "${result_directory}"/Makefile
+    local build_directory="${work_directory}/builds"
+    printf "\n-> Generating Makefile for all package groups in '${build_directory}/Makefile'...\n"
+    printf "   NOTE: Use 'make' / 'make install' in '${build_directory}' to compile/install all packages in all package groups or descend into a specific package group or single package to build exactly what's needed for the current task.\n"
+    cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages="${package_groups[@]}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${packages},${packages_directory}' > "${build_directory}"/Makefile
 
     printf "\n-> Finished.\n"
     printf "NOTE: Remember to 'make repo-publish' once before installing one or multiple packages using 'make install'.\n"

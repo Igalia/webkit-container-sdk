@@ -103,7 +103,7 @@ build_packages_defined_in_yaml() {
     if [ ! -f "${build_done_file}" ]; then
         printf "\n-> Building packages denoted in '${packages_flavour}.yaml' configuration for inclusion in 'wkdev-sdk' image...\n"
 
-        temporary_directory=$(mktemp -d)
+        temporary_directory=$(mktemp --tmpdir --directory wkdevsdk.XXXXXXXXXX)
         pushd "${temporary_directory}" &>/dev/null
 
         local extra_options=()
@@ -156,7 +156,7 @@ run() {
     build_packages_defined_in_yaml "wkdev-webkit-dependencies"
 
     # 5) Build wkdev-sdk container image
-    build_container_image "wkdev-sdk"
+    build_container_image "wkdev_sdk"
 
     printf "\n-> Finished!\n"
 }

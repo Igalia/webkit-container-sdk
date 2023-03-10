@@ -15,7 +15,7 @@ fi
 
 # Uses host podman no matter if executed within container or on host.
 call_podman() {
-    ${podman_executable} ${@}
+    ${podman_executable} "${@}"
 }
 
 # Queries the container status - stores result in global 'last_container_status' variable.

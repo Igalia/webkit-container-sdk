@@ -5,7 +5,7 @@ package_name=$$(basename "${package_full_name}")
 
 build:
 	@if [ $$(find "$(build_directory)"/ -maxdepth 1 -type f -name "*.*eb" | wc -l) -eq 0 ]; then \
-		${sdk_directory}/images/ubuntu_package_builder/invoke-build-package.sh "${work_directory}" "${packages_directory}" "${package_full_name}" "${deb_build_options}" "${dpkg_buildpackage_options}"; \
+		${sdk_directory}/images/wkdev_package_builder/invoke-build-package.sh "${work_directory}" "${packages_directory}" "${package_full_name}" "${deb_build_options}" "${dpkg_buildpackage_options}"; \
 		exit ${?}; \
 	fi
 

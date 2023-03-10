@@ -3,9 +3,7 @@
 application_path=${0}
 application_name=$(basename ${application_path})
 application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
-printf "${application_name}: Build ubuntu_package_builder image.\n\n"
-
-verbose=1
+printf "${application_name}: Build wkdev-package-builder image.\n\n"
 
 # Prevent to run this script from the container
 if [ -f /run/.containerenv ]; then
@@ -23,15 +21,10 @@ fi
 set -o errexit # Exit upon command failure
 set -o nounset # Warn about unset variables
 
-pushd ${application_directory} &>/dev/null
 printf "\n-> Building image...\n"
 
-if [ ${verbose} -eq 1 ]; then
-    printf "   Build log:\n"
-    podman build --jobs $(nproc --ignore=2) --tag docker.io/nikolaszimmermann/ubuntu-package-builder:22.10 ${@} .
-else
-    podman build --jobs $(nproc --ignore=2) --tag docker.io/nikolaszimmermann/ubuntu-package-builder:22.10 ${@} . &>/dev/null
-fi
-
+pushd "${application_directory}" &>/dev/null
+podman build --jobs $(nproc --ignore=2) --tag docker.io/nikolaszimmermann/wkdev-package-builder:22.10 ${@} .
 popd &>/dev/null
+
 printf "\n-> Finished building image!\n"

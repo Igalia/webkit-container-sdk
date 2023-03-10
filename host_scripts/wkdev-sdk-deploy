@@ -1,10 +1,117 @@
 #!/usr/bin/bash
 
-# FIXME: Make configurable
+application_path=${0}
+application_name=$(basename ${application_path})
+application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
+sdk_directory=$(readlink -f "${application_directory}/../")
+printf "${application_name}: Deploy SDK.\n"
 
-# Bash scripting recommendations
-set -o errexit # Exit upon command failure
-set -o nounset # Warn about unset variables
+# Prevent to run this script from the container
+if [ -f /run/.containerenv ]; then
+    printf "\nThe script '${application_name}' is not intended to run from within the container.\n"
+    exit 1
+fi
 
-podman login docker.io
-podman push docker.io/nikolaszimmermann/wkdev-sdk:latest
+# Verify pre-requisite: podman needs to be installed.
+if ! command -v podman > /dev/null; then
+    printf "\nCannot find podman executable.\n"
+    exit 1
+fi
+
+# Command line argument handling - defaults.
+trace=0
+verbose=0
+
+show_help_message() {
+    cat << EOF
+<< Purpose >>
+
+    Deploys all necessary container images forming the 'wkdev-sdk' SDK to docker.io.
+
+<< Usage >>
+
+    $ ${application_name} (options)?
+
+    See below for a list of possible options.
+
+    Example:
+
+    $ ${application_name} --verbose
+    ...
+
+<< Options >>
+
+    -h / --help:        show this help message
+    -t / --trace:       enable tracing for bash script
+    -v / --verbose:     increase verbosity for ${application_name}
+EOF
+}
+
+parse_command_line_arguments() {
+    while :; do
+        case ${1} in
+            -h | --help)
+                show_help_message
+                exit 0
+                ;;
+            -t | --trace)
+                trace=1
+                shift
+                ;;
+            -v | --verbose)
+                verbose=1
+                shift
+                ;;
+            -*)
+                printf "Invalid option '${1}'.\n"
+                show_help_message
+                exit 1
+                ;;
+            *)
+                break ;;
+        esac
+    done
+}
+
+handle_command_line_arguments() {
+    # Bash scripting recommendations
+    set -o errexit # Exit upon command failure
+    set -o nounset # Warn about unset variables
+
+    # Enable tracing, if desired.
+    if [ ${trace} -eq 1 ]; then
+        set -o xtrace
+    fi
+}
+
+# Helper functions
+deploy_container_image() {
+    local image_flavour=${1}
+
+    printf "\n-> Deploying '${image_flavour}' container image...\n"
+    if [ ${verbose} -eq 1 ]; then
+        printf "   Deployment log:\n"
+        ${sdk_directory}/images/${image_flavour}/deploy-image.sh
+    else
+        ${sdk_directory}/images/${image_flavour}/deploy-image.sh &>/dev/null
+    fi
+}
+
+# Main functionality
+run() {
+    parse_command_line_arguments ${@}
+    handle_command_line_arguments
+
+    # 1) Build wkdev_package_proxy container image
+    deploy_container_image "wkdev_package_proxy"
+
+    # 2) Build wkdev_package_deployer container image
+    deploy_container_image "wkdev_package_builder"
+
+    # 3) Build wkdev-sdk container image
+    deploy_container_image "wkdev-sdk"
+
+    printf "\n-> Finished!\n"
+}
+
+run ${@}

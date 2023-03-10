@@ -238,7 +238,7 @@ handle_command_line_arguments() {
             chown ${container_user_id}:${container_group_id} "${container_user_home}"
             chmod 750 ${container_user_home}
 
-            default_config_directory=$(readlink -f "${application_directory}/../container_files/")
+            default_config_directory=$(readlink -f "${sdk_directory}/images/wkdev_sdk/user_home_directory_defaults/")
             shell_type=$(basename ${SHELL})
             if [ "${shell_type}" == "bash" ]; then
                 cp --verbose "${default_config_directory}"/dot-bash_profile "${container_user_home}"/.bash_profile
@@ -247,7 +247,7 @@ handle_command_line_arguments() {
                 cp --verbose "${default_config_directory}"/dot-zshrc "${container_user_home}"/.zshrc
             else
                printf "\n-> Shell '${shell_type}' auto configuration is unsupported. Please setup the configuration files for your shell" \
-                      "on your own (see container_files/defaults/dot-* to examine the setting for other shells.\n"
+                      "on your own (see <wkdev-sdk-repo>/images/wkdev_sdk/user_home_directory_defaults/dot-* to examine the default settings for other shells.\n"
             fi
 
             cp --verbose "${default_config_directory}"/dot-gdbinit "${container_user_home}"/.gdbinit

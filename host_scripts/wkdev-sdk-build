@@ -4,7 +4,7 @@ application_path=${0}
 application_name=$(basename ${application_path})
 application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
 sdk_directory=$(readlink -f "${application_directory}/../")
-printf "${application_name}: Build wkdev-sdk image.\n"
+printf "${application_name}: Build SDK.\n"
 
 # Prevent to run this script from the container
 if [ -f /run/.containerenv ]; then
@@ -110,14 +110,15 @@ build_packages_defined_in_yaml() {
         if [ ${verbose} -ne 0 ]; then
             extra_options+=("--verbose")
         fi
+
         if [ ${trace} -ne 0 ]; then
             extra_options+=("--trace")
         fi
 
         ${sdk_directory}/container_scripts/wkdev-setup-dependency-work-tree \
-            --settings "${sdk_directory}/dependencies/${packages_flavour}.yaml" \
+            --settings "${sdk_directory}/images/wkdev_sdk/custom_built_packages/${packages_flavour}.yaml" \
             --work-directory "${PWD}" \
-            --packages-directory "${sdk_directory}/packages/binaries/${packages_flavour}" ${extra_options[@]}
+            --packages-directory "${sdk_directory}/imags/wkdev_sdk/custom_built_packages/${packages_flavour}" ${extra_options[@]}
 
         cd builds
 
@@ -142,11 +143,11 @@ run() {
     parse_command_line_arguments ${@}
     handle_command_line_arguments
 
-    # 1) Build ubuntu_package_proxy container image
-    build_container_image "ubuntu_package_proxy"
+    # 1) Build wkdev_package_proxy container image
+    build_container_image "wkdev_package_proxy"
 
-    # 2) Build ubuntu_package_builder container image
-    build_container_image "ubuntu_package_builder"
+    # 2) Build wkdev_package_builder container image
+    build_container_image "wkdev_package_builder"
 
     # 3) Build podman4 & friends for Ubuntu 22.10
     build_packages_defined_in_yaml "wkdev-podman4-ubuntu-kinetic"
@@ -154,19 +155,10 @@ run() {
     # 4) Build WebKit dependencies (libjpegxl, gstreamer, ...)
     build_packages_defined_in_yaml "wkdev-webkit-dependencies"
 
-    # 5) Build wkdev-sdk image
-    pushd "${sdk_directory}" &>/dev/null
-    printf "\n-> Building 'wkdev-sdk' image...\n"
+    # 5) Build wkdev-sdk container image
+    build_container_image "wkdev-sdk"
 
-    if [ ${verbose} -eq 0 ]; then
-        podman build --jobs $(nproc --ignore=2) --tag docker.io/nikolaszimmermann/wkdev-sdk:latest . &>/dev/null
-    else
-        printf "   Build log:\n"
-        podman build --jobs $(nproc --ignore=2) --tag docker.io/nikolaszimmermann/wkdev-sdk:latest .
-    fi
-
-    popd &>/dev/null
-    printf "\n-> Finished building images!\n"
+    printf "\n-> Finished!\n"
 }
 
 run ${@}

@@ -48,24 +48,11 @@ ENV LANG ${CONTAINER_LOCALE}
 WORKDIR /tmp
 
 # Install package groups in defined order.
-COPY /packages/01-base.lst .
+COPY /required_system_packages/*.lst .
 RUN ${APT_UPDATE} && \
-    ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 01-base.lst) && \
-    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
-
-COPY /packages/02-gcc.lst .
-RUN ${APT_UPDATE} && \
-    ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 02-gcc.lst) && \
-    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
-
-COPY /packages/03-custom-stack-dependencies.lst .
-RUN ${APT_UPDATE} && \
-    ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 03-custom-stack-dependencies.lst) && \
-    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
-
-COPY /packages/04-devtools.lst .
-RUN ${APT_UPDATE} && \
-    ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" 04-devtools.lst) && \
+    for list in *.lst; do \
+        ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}"); \
+    done \
     ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
 # Install WebKitGtk/WPE dependencies
@@ -80,8 +67,8 @@ RUN ${APT_UPDATE} && \
     rm -rf WebKit && \
     ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
-# Install Podman4 + dependencies from external source
-COPY ./packages/binaries/*/*.*eb /tmp/packages/
+# Install packages provided by external source
+COPY /custom_built_packages/*/*.*eb /tmp/packages/
 RUN ${APT_UPDATE} && \
     ${APT_INSTALL} /tmp/packages/*.*eb && \
     ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
@@ -96,7 +83,7 @@ RUN git clone https://github.com/WebKitGTK/webkitgtk-test-fonts.git && \
     rm -rf webkitgtk-test-fonts
 
 # Podman proxy, connecting to host instance
-COPY ./container_files/podman-host /usr/bin/podman-host
+COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

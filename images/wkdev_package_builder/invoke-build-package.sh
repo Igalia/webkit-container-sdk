@@ -24,8 +24,8 @@ fi
 ${podman_executable} run --network host --rm \
        --mount type=bind,source=${work_directory},destination=/builder/work,rslave \
        --mount type=bind,source=${packages_directory},destination=/builder/packages,rslave \
-       --mount type=volume,source=ubuntu-package-builder-22-10-cache,destination=/builder/cache \
-       docker.io/nikolaszimmermann/ubuntu-package-builder:22.10 /builder/build-package.sh \
+       --mount type=volume,source=wkdev-package-builder-cache,destination=/builder/cache \
+       docker.io/nikolaszimmermann/wkdev-package-builder:22.10 /builder/build-package.sh \
        "${build_profile}" "${package_full_name}" "${deb_build_options}" "${dpkg_buildpackage_options}" &> "${build_directory}/build.log" &
 
 build_pid=${!}

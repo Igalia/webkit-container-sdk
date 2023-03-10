@@ -27,9 +27,6 @@ ENV DEBIAN_FRONTEND noninteractive
 # podman in podman if both are rootless; since it's no gain in security in the container anyhow, disable it.
 RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/no-sandbox
 
-# Enable source packages
-RUN sed --in-place --regexp-extended "s/^# deb-src/deb-src/" /etc/apt/sources.list
-
 # Update package list, upgrade to latest version, install necessary packages for
 # early bootstrapping: .deb package configuration + locale generation.
 RUN ${APT_UPDATE} && \

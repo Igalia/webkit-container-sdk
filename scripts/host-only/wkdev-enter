@@ -2,7 +2,7 @@
 application_path=${0}
 application_name=$(basename ${application_path})
 application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
-printf "${application_name}: Spawn an interactive shell in a container previously created by 'wkdev-create'.\n"
+printf "${application_name}: Launch a command or spawn an interactive shell in a container previously created by 'wkdev-create'.\n"
 
 # No trap here on purpose (interfers with systemd-run + podman -it)
 
@@ -22,6 +22,8 @@ fi
 debug=0
 trace=0
 verbose=0
+execute_commands_mode=0
+execute_commands=()
 login_as_root=0
 container_name=""
 
@@ -42,7 +44,7 @@ show_help_message() {
 
     $ ${application_name} <container-name>
     $ ${application_name} --root <container-name>
-    $ ${application_name} --root <container-name> -e bash -l
+    $ ${application_name} --execute <container-name> <commands-to-execute>
     ...
 
 << Options >>
@@ -53,8 +55,7 @@ show_help_message() {
     -v / --verbose:   increase verbosity for ${application_name}
 
     -r / --root:      enter as root into container
-    -e / --:          end option parsing, interpret the remaining arguments
-                      as command to invoke in the container
+    -e / --execute:   interpret the remaining arguments after the <container-name> as command to invoke in the container
 EOF
 }
 
@@ -81,6 +82,10 @@ parse_command_line_arguments() {
                 login_as_root=1
                 shift
                 ;;
+            -e | --execute)
+                execute_commands_mode=1
+                shift
+               ;;
             -*)
                 printf "\nInvalid option '${1}'. Displaying --help instead:\n\n"
                 show_help_message
@@ -98,6 +103,13 @@ parse_command_line_arguments() {
     if [ -z "${container_name}" ]; then
         echo "-> You have to pass a container name as first positional argument, after possible options."
         exit 1
+    fi
+
+    if [ ${execute_commands_mode} -eq 1 ]; then
+        if [ ${#} -gt 0 ]; then
+            execute_commands=${@}
+            shift ${#}
+        fi
     fi
 }
 
@@ -190,7 +202,11 @@ run() {
     set -o errexit
 
     if [ ${verbose} -eq 1 ]; then
-        printf "\n-> Spawn interactive shell session in '${container_name}' container...\n"
+        if [ ${execute_commands_mode} -eq 1 ]; then
+            printf "\n-> Spawn non-interactive shell session in '${container_name}' container ('--execute' mode enabled)...\n"
+        else
+            printf "\n-> Spawn interactive shell session in '${container_name}' container...\n"
+        fi
     fi
 
     # Request interactive session with pseudo-tty allocation.
@@ -202,7 +218,12 @@ run() {
     else
         podman_exec_arguments+=("--user" "0:0")
     fi
-    podman_exec_arguments+=("${container_name}" "${SHELL}" "--login")
+
+    if [ ${execute_commands_mode} -eq 1 ]; then
+        podman_exec_arguments+=("${container_name}" "${execute_commands[@]}")
+    else
+        podman_exec_arguments+=("${container_name}" "${SHELL}" "--login")
+    fi
 
     podman ${podman_arguments[@]} exec ${podman_exec_arguments[@]}
 }

@@ -74,8 +74,8 @@ try_setup_setgid_subuid_files() {
         printf "\n[4/7] No need to setup /etc/sub{gid|uid} -- UID/GID mapping for container user '${container_user_name}' already present.\n"
     fi
 
-    printf "     -> /etc/subgid contents: $(cat /etc/subgid)\n"
-    printf "     -> /etc/subuid contents: $(cat /etc/subuid)\n"
+    printf "      -> /etc/subgid contents: $(cat /etc/subgid)\n"
+    printf "      -> /etc/subuid contents: $(cat /etc/subuid)\n"
 }
 
 try_setup_sudoers_file() {

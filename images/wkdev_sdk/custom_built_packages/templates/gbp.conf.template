@@ -1,7 +1,7 @@
 [DEFAULT]
 builder = debuild ${debuild_options} --prepend-path='/usr/lib/ccache' --preserve-envvar='CCACHE_*' --no-sign ${dpkg_buildpackage_options}
 upstream-branch = upstream/latest
-debian-branch = ubuntu/kinetic
+debian-branch = ubuntu/${package_distribution}
 pristine-tar = True
 
 [buildpackage]
@@ -9,7 +9,7 @@ export-dir = ${export_directory}
 ignore-new = True
 compression-level = best
 notify = auto
-dist = kinetic
+dist = ${package_distribution}
 purge = False
 
 [import-orig]
@@ -18,3 +18,8 @@ filter-pristine-tar = True
 
 [import-dsc]
 filter = [ '.gitignore' ]
+
+[dch]
+snapshot-number = 'snapshot + ${package_version_increment}'
+dch-opt = ['--local ${package_version_suffix}', '--distribution ${package_distribution}']
+commit = True

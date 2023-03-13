@@ -32,8 +32,14 @@ fi
 # | wkdevsdk        | Self-compiled package, during SDK image creation (on host!)        |
 # | wkdevlocalsdk   | Self-compiled package, during SDK image _usage_ (in container!)    |
 # +-----------------+--------------------------------------------------------------------+
+#
+# '${package_version_increment}' states how often debian-revision is incremented with respect
+# to the original upstream package .dsc file: once for pre-shipped SDK packages, twice for
+# local builds.
+package_version_increment=1
 package_version_suffix="wkdevsdk"
 if [ -f "/run/.containerenv" ]; then
+    package_version_increment=2
     package_version_suffix="wkdevlocalsdk"
 
     # Verify pre-requisite: aptly needs to be installed.
@@ -260,7 +266,7 @@ run() {
             # within the 'wkdev_package_builder' container (see images/wkdev_package_builder/invoke-build-package.sh).
             # Therefore export_directory needs to start with '/builder/work' and follow the same directory naming scheme.
             local export_directory="/builder/work/builds/${package_group_name}/${package_name}"
-            cat "${gbp_conf_template}" | export_directory="${export_directory}" debuild_options="${debuild_options[@]}" dpkg_buildpackage_options="${dpkg_buildpackage_options[@]}" envsubst '${export_directory},${debuild_options},${dpkg_buildpackage_options}'> "${build_directory}/gbp.conf"
+            cat "${gbp_conf_template}" | package_version_increment=${package_version_increment} package_version_suffix="${package_version_suffix}" package_distribution="${package_distribution}" export_directory="${export_directory}" debuild_options="${debuild_options[@]}" dpkg_buildpackage_options="${dpkg_buildpackage_options[@]}" envsubst '${package_version_increment},${package_version_suffix},${package_distribution},${export_directory},${debuild_options},${dpkg_buildpackage_options}'> "${build_directory}/gbp.conf"
 
             export GBP_CONF_FILES="${build_directory}/gbp.conf"
             export DEBFULLNAME="${package_maintainer_name}"
@@ -284,9 +290,9 @@ run() {
             # Override debian revision in package version string
             printf "\n    -> Incrementing local package version and appending '${package_version_suffix}' suffix to package name...\n"
             if [ ${verbose} -eq 0 ]; then
-                gbp dch --local "${package_version_suffix}" --distribution "${package_distribution}" --debian-branch "${package_debian_branch}" --commit &>/dev/null
+                gbp dch &>/dev/null
             else
-                gbp dch --local="${package_version_suffix}" --distribution "${package_distribution}" --debian-branch "${package_debian_branch}" --commit
+                gbp dch
             fi
 
             popd &>/dev/null

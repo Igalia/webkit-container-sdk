@@ -109,7 +109,7 @@ run() {
     deploy_container_image "wkdev_package_builder"
 
     # 3) Build wkdev-sdk container image
-    deploy_container_image "wkdev-sdk"
+    deploy_container_image "wkdev_sdk"
 
     printf "\n-> Finished!\n"
 }

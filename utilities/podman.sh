@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 
-# Verify pre-requisite: podman needs to be installed.
+source "${sdk_directory}/utilities/prerequisites.sh"
+
 podman_executable="/usr/bin/podman"
 if [ -f /run/.containerenv ]; then
     # Requires the presence of /usr/bin/podman-host in the container image.
@@ -8,10 +9,7 @@ if [ -f /run/.containerenv ]; then
     podman_executable="/usr/bin/podman-host"
 fi
 
-if ! command -v ${podman_executable} >/dev/null; then
-    printf "\nCannot find '${podman_executable}' executable.\n"
-    exit 1
-fi
+verify_executable_exists ${podman_executable}
 
 # Uses host podman no matter if executed within container or on host.
 call_podman() {

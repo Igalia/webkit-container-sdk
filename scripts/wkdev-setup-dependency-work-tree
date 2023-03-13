@@ -50,7 +50,7 @@ work_directory=""
 packages_directory=""
 settings=""
 
-apt_repository_name="wkdevsdk-packages"
+apt_repository_name="wkdev-sdk-packages"
 apt_repository_source_list="/etc/apt/sources.list.d/${apt_repository_name}.list"
 container_image_name="docker.io/nikolaszimmermann/wkdevsdk"
 dependency_settings="${sdk_directory}/images/wkdev_sdk/custom_built_packages/wkdev-webkit-dependencies.yaml"
@@ -164,13 +164,11 @@ handle_command_line_arguments() {
     fi
 
     if [ -z "${packages_directory}" ]; then
-        printf "You have to pass a packages directory using the --packages-directory option.\n"
-        exit 1
+        packages_directory="${work_directory}/packages"
     fi
 
     if [ ! -d "${packages_directory}" ]; then
-        printf "You have to pass a valid directory to the --packages-directory option.\n"
-        exit 1
+        mkdir --parents "${packages_directory}" &>/dev/null
     fi
 
     if [ -z "${settings}" ]; then
@@ -193,6 +191,8 @@ run() {
     mkdir -p "${work_directory}/builds" &>/dev/null
 
     if [ -f "/run/.containerenv" ]; then
+        set +o errexit
+
         show_output=$(aptly repo show "${apt_repository_name}")
         if [ ${?} -ne 0 ]; then
             printf "\n-> Create local APT repository '${apt_repository_name}'...\n"
@@ -204,6 +204,8 @@ run() {
         if [ ! -f "${apt_repository_source_list}" ]; then
             echo "deb [trusted=yes] file:///${apt_repository_name}/public/ ${package_distribution} ${package_component}" | sudo tee "${apt_repository_source_list}" >/dev/null
         fi
+
+        set -o errexit
     else
         printf "\n-> Local APT repository creation disabled -- we are running on the host, not in the container where this is useful.\n"
     fi

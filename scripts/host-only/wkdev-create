@@ -1,0 +1,646 @@
+#!/usr/bin/bash
+
+application_path=${0}
+application_name=$(basename ${application_path})
+application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
+sdk_directory=$(readlink -f "${application_directory}/../../")
+printf "${application_name}: Create a new podman container ready to use for WebKit GTK/WPE development.\n"
+
+# Prevent to run this script from the container
+if [ -f /run/.containerenv ]; then
+    printf "\nThe script '${application_name}' is not intended to run from within the container.\n"
+    exit 1
+fi
+
+# Verify pre-requisite: podman needs to be installed.
+if ! command -v podman > /dev/null; then
+    printf "\nCannot find podman executable.\n"
+    exit 1
+fi
+
+# Command line argument handling - defaults.
+debug=0
+trace=0
+verbose=0
+create_home_directory=0
+container_name=""
+container_shell=""
+container_user_home=""
+container_hostname=""
+container_user_name=""
+container_user_id=0
+container_group_name=""
+container_group_id=0
+settings_table_first_column_size=40
+settings_table_second_column_size=40
+print_prefix='         '
+
+container_image_name="docker.io/nikolaszimmermann/wkdev-sdk"
+host_hostname="$(hostname --short)"
+host_user_id=""
+host_user_name=""
+group_user_id=""
+group_user_name=""
+
+# Command line argument handling - help message.
+show_help_message() {
+    cat << EOF
+<< Purpose >>
+
+    It was build to launch the 'wkdev-sdk' container with approriate settings, offering tight
+    integration with the host system (but not blind!) in a secure way. The created podman container
+    is *rootless*, its runs under your regular user account (view of the host system). The container
+    is initially started as root user (in the user namespace == mapped to current user on host) to
+    perform initial setup tasks (see wkdev-init) before exec()'in "tail -f /dev/null" -- no-op.
+    The user shell for interaction is started as current user on the host, mapped into the container.
+    Becoming root in the user namespace is possible using 'sudo' or by directly logging in as root user.
+
+<< Usage >>
+
+    $ ${application_name} (options)? <container-name>
+
+    See below for a list of possible options.
+    Requires a single positional argument: the name of the container to create.
+
+    Example:
+
+<< Usage >>
+
+    $ ${application_name} --home \${HOME}/wkdev-home wkdev
+    $ ${application_name} --home \${HOME}/wkdev-home --trace wkdev
+    $ ${application_name} --home \${HOME}/wkdev-home --debug --shell /usr/bin/bash wkdev2
+    ...
+
+<< Options >>
+
+    -h / --help:        show this help message
+    -d / --debug:       set podman log level to debug
+    -t / --trace:       enable tracing for bash script
+    -v / --verbose:     increase verbosity for ${application_name}
+
+    -s / --shell:       shell to use for container (default: same as host \$SHELL=${SHELL})
+    -u / --user:        container account user name (default: $(id --user --name))
+    -g / --group:       container account group name (default: $(id --group --name))
+    -o / --home:        path to container home directory for new podman container (default: ~/<container-name>-home -- within user \$HOME)
+    -c / --create-home: path to container home directory for new podman container (default: ~/<container-name>-home -- within user \$HOME)
+    -m / --hostname:    hostname for container (default: <container-name>.$(hostname --short))
+EOF
+}
+
+parse_command_line_arguments() {
+    while :; do
+        case ${1} in
+            -h | --help)
+                show_help_message
+                exit 0
+                ;;
+            -d | --debug)
+                debug=1
+                shift
+                ;;
+            -d | --trace)
+                trace=1
+                shift
+                ;;
+            -v | --verbose)
+                verbose=1
+                shift
+                ;;
+            -s | --shell)
+                if [ -n "${2}" ]; then
+                    container_shell="${2}"
+                    shift 2
+                else
+                    shift
+                fi
+                ;;
+            -u | --user)
+                if [ -n "${2}" ]; then
+                    container_user_name="${2}"
+                    shift 2
+                else
+                    shift
+                fi
+                ;;
+            -g | --group)
+                if [ -n "${2}" ]; then
+                    container_group_name="${2}"
+                    shift 2
+                else
+                    shift
+                fi
+                ;;
+            -o | --home)
+                if [ -n "${2}" ]; then
+                    container_user_home="${2}"
+                    shift 2
+                else
+                    shift
+                fi
+                ;;
+            -c | --create-home)
+                create_home_directory=1
+                shift
+                ;;
+            -m | --hostname)
+                if [ -n "${2}" ]; then
+                    container_hostname="${2}"
+                    shift 2
+                else
+                    shift
+                fi
+                ;;
+            -*)
+                printf "Invalid option '${1}'.\n"
+                show_help_message
+                exit 1
+                ;;
+            *)
+                break ;;
+        esac
+    done
+
+    if [ -n "${1}" ]; then
+        container_name="${1}"
+        shift
+    fi
+
+    trap '[ "$?" -ne 0 ] && printf "[ERROR] A fatal error occurred. Aborting!\n"' EXIT
+}
+
+handle_command_line_arguments() {
+    # Bash scripting recommendations
+    set -o errexit # Exit upon command failure
+    set -o nounset # Warn about unset variables
+
+    # Enable debug tracing, if desired.
+    if [ ${trace} -eq 1 ]; then
+        set -o xtrace
+    fi
+
+    # Use host user shell for container, if not explicitely overriden.
+    if [ -z "${container_shell}" ]; then
+        container_shell=${SHELL}
+    fi
+
+    # Choose default container name, if unset.
+    if [ -z "${container_name}" ]; then
+        container_name=wkdev
+    fi
+
+    # Obtain and verify host user name / uid.
+    host_user_id="$(id --user --real)"
+    host_user_name="$(id --user --name)"
+    if [ -z "${host_user_name}" ]; then
+        printf "'id --user --name' returned an empty user name for the current user - that should not happen.\n"
+        exit 1
+    fi
+
+    host_group_id="$(id --group --real)"
+    host_group_name="$(id --group --name)"
+    if [ -z "${host_group_name}" ]; then
+        printf "'id --group --name' returned an empty group name for the curent user - that should not happen.\n"
+        exit 1
+    fi
+
+    # Use host user for container, if not explicitely overriden.
+    if [[ -z "${container_user_name}" || -z "${container_user_id}" ]]; then
+        container_user_name="${host_user_name}"
+        container_user_id=${host_user_id}
+    fi
+
+    # Use host group for container, if not explicitely overriden.
+    if [[ -z "${container_group_name}" || -z "${container_group_id}" ]]; then
+        container_group_name="${host_group_name}"
+        container_group_id=${host_group_id}
+    fi
+
+    # Use host user for container, if not explicitely overriden.
+    container_hostname="$(basename "${container_name}").${host_hostname}"
+
+    # Choose default container home directory, if unset.
+    if [ -z "${container_user_home}" ]; then
+        container_user_home=${HOME}/${container_name}-home
+    fi
+
+    # Verify the container home directory is accessible.
+    if [ ! -d "${container_user_home}" ]; then
+        if [ ${create_home_directory} -eq 0 ]; then
+            printf "\n-> The passed home directory '${container_user_home}' does not exist (pass --create-home, if you want to automatically create them).\n"
+            exit 1
+        else
+            printf "\n-> The passed home directory '${container_user_home}' does not exist, creating...\n\n"
+
+            # Copy shell configuration skeleton files from host.
+            cp --recursive --verbose /etc/skel "${container_user_home}"
+
+            # Set ownership / permissions
+            chown ${container_user_id}:${container_group_id} "${container_user_home}"
+            chmod 750 ${container_user_home}
+
+            default_config_directory=$(readlink -f "${sdk_directory}/images/wkdev_sdk/user_home_directory_defaults/")
+            shell_type=$(basename ${SHELL})
+            if [ "${shell_type}" == "bash" ]; then
+                cp --verbose "${default_config_directory}"/dot-bash_profile "${container_user_home}"/.bash_profile
+            elif [ "${shell_type}" == "zsh" ]; then
+                cp --verbose "${default_config_directory}"/dot-zprofile "${container_user_home}"/.zprofile
+                cp --verbose "${default_config_directory}"/dot-zshrc "${container_user_home}"/.zshrc
+            else
+               printf "\n-> Shell '${shell_type}' auto configuration is unsupported. Please setup the configuration files for your shell" \
+                      "on your own (see <wkdev-sdk-repo>/images/wkdev_sdk/user_home_directory_defaults/dot-* to examine the default settings for other shells.\n"
+            fi
+
+            cp --verbose "${default_config_directory}"/dot-gdbinit "${container_user_home}"/.gdbinit
+            cp --verbose "${default_config_directory}"/dot-aptly.conf "${container_user_home}"/.aptly.conf
+        fi
+    fi
+}
+
+try_process() {
+    local -n arguments=${1}
+    local operation=${2}
+    local test_condition=${3}
+    shift 3
+    local -a key_value_pair=(${@})
+    if [ ${test_condition} -eq 1 ]; then
+        printf "     [x] ${operation}\n"
+        arguments+=(${key_value_pair[@]})
+    else
+        printf "     [ ] ${operation}\n"
+    fi
+}
+
+try_process_user() {
+    # Map host UID/GIDs into container user namespace, unmodified!
+    # The 'keep-id' mode for user namespaces is mandatory, when the container shall
+    # be able to communicate with the host dbus session, while staying unprivileged.
+    # Reference: https://github.com/containers/podman/discussions/16772
+    local podman_argument=("--userns" "keep-id")
+
+    # root inside the container is mapped to the current host user. We need root access
+    # only for the initial bootstrapping (executing wkdev-init).
+    podman_argument+=("--user" "root:root")
+
+    try_process ${1} "Map host user UID/GID unmodified into user namespace" 1 ${podman_argument[@]}
+}
+
+try_process_groups() {
+    # Map secondary GIDS into container user namespace as well.
+    local podman_argument=("--group-add" "keep-groups")
+    try_process ${1} "Map host user secondary GIDs into user namespace" 1 ${podman_argument[@]}
+}
+
+try_process_home_directory() {
+    # Map given home directory path as container user home directory (eventually separated from host home directory).
+    local podman_argument=("--env" "HOST_HOME=/host/home/${container_user_name}")
+    podman_argument+=("--env" "HOST_CONTAINER_HOME_PATH=${container_user_home}")
+    podman_argument+=("--mount" "type=bind,source=${container_user_home},destination=/home/${container_user_name},rslave")
+    podman_argument+=("--mount" "type=bind,source=${HOME},destination=/host/home/${container_user_name},rslave")
+
+    # systemctl --user is-enabled <some-service> relies on the accessibility of ~/.config/systemd/user, map it into the container.
+    podman_argument+=("--mount" "type=bind,source=${HOME}/.config/systemd/user,destination=/home/${container_user_name}/.config/systemd/user,rslave")
+
+    try_process ${1} "Expose both host & container home directory" 1 ${podman_argument[@]}
+}
+
+try_process_timezone() {
+    local podman_argument=("--tz" "local")
+    try_process ${1} "Share host timezone settings with container" 1 ${podman_argument[@]}
+}
+
+try_process_ulimit() {
+    local podman_argument=("--ulimit" "host")
+    try_process ${1} "Share host ulimit settings with container" 1 ${podman_argument[@]}
+}
+
+try_process_journal() {
+    local journal_directory="/var/log/journal"
+    local journal_directory_exists=$([ -d "${journal_directory}" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=${journal_directory},destination=${journal_directory},ro,rslave")
+    try_process ${1} "Share system journal with container (read-only)" ${journal_directory_exists} ${podman_argument[@]}
+}
+
+try_process_keyring() {
+    local keyring_directory="${XDG_RUNTIME_DIR}/keyring"
+    local keyring_directory_exists=$([ -d "${keyring_directory}" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=${keyring_directory},destination=${keyring_directory},rslave")
+    podman_argument+=("--env" "SSH_AUTH_SOCK=${keyring_directory}/ssh")
+    try_process ${1} "Share keyring with container" ${keyring_directory_exists} ${podman_argument[@]}
+}
+
+try_process_dbus_user_session() {
+    local dbus_user_socket="${XDG_RUNTIME_DIR}/bus"
+    local dbus_user_socket_exists=$([ -S "${dbus_user_socket}" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=${dbus_user_socket},destination=${dbus_user_socket},rslave")
+    podman_argument+=("--env" "DBUS_SESSION_BUS_ADDRESS=unix:path=${dbus_user_socket}")
+    try_process ${1} "Share dbus user session with container" ${dbus_user_socket_exists} ${podman_argument[@]}
+}
+
+try_process_dconf() {
+    local dconf_directory="${XDG_RUNTIME_DIR}/dconf"
+    local dconf_directory_exists=$([ -d "${dconf_directory}" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=${dconf_directory},destination=${dconf_directory},rslave")
+    try_process ${1} "Share dconf settings with container" ${dconf_directory_exists} ${podman_argument[@]}
+}
+
+try_process_accessibility() {
+    local at_spi_directory="${XDG_RUNTIME_DIR}/at-spi"
+    local at_spi_directory_exists=$([ -d "${at_spi_directory}" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=${at_spi_directory},destination=${at_spi_directory},rslave")
+    try_process ${1} "Share accessibility bus with container" ${at_spi_directory_exists} ${podman_argument[@]}
+}
+
+try_process_themes() {
+    local themes_directory_exists=$([ -d "/usr/share/themes" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=/usr/share/themes,destination=/usr/local/share/themes,rslave")
+    try_process ${1} "Share host themes with container" ${themes_directory_exists} ${podman_argument[@]}
+}
+
+try_process_icons() {
+    local icons_directory_exists=$([ -d "/usr/share/icons" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=/usr/share/icons,destination=/usr/local/share/icons,rslave")
+    try_process ${1} "Share host icons with container" ${icons_directory_exists} ${podman_argument[@]}
+}
+
+try_process_fonts() {
+    local fonts_directory_exists=$([ -d "/usr/share/fonts" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=/usr/share/fonts,destination=/usr/local/share/fonts,rslave")
+    try_process ${1} "Share host fonts with container" ${fonts_directory_exists} ${podman_argument[@]}
+}
+
+try_process_dri() {
+    local is_dri_device_available=$([ -d "/dev/dri" ] && echo 1 || echo 0)
+    local podman_argument=("--device" "/dev/dri")
+    try_process ${1} "Access to host DRI devices" ${is_dri_device_available} ${podman_argument[@]}
+}
+
+try_process_wayland() {
+    local wayland_socket="${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}"
+    local wayland_socket_exists=$([ -S "${wayland_socket}" ] && echo 1 || echo 0)
+    local podman_argument=("--env" "WAYLAND_DISPLAY=${WAYLAND_DISPLAY}")
+    podman_argument+=("--env" "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}")
+    podman_argument+=("--env" "XDG_SESSION_TYPE=${XDG_SESSION_TYPE}")
+    podman_argument+=("--mount" "type=bind,source=${wayland_socket},destination=${wayland_socket},rslave")
+    try_process ${1} "Access to Wayland on host" ${wayland_socket_exists} ${podman_argument[@]}
+}
+
+try_process_x11() {
+    local is_x11_display_set=$([ -z "${DISPLAY}" ] && echo 0 || echo 1)
+    local podman_argument=("--env" "DISPLAY=${DISPLAY}")
+    podman_argument+=("--mount" "type=bind,source=/tmp/.X11-unix,destination=/tmp/.X11-unix,rslave")
+    try_process ${1} "Access to X11 on host" ${is_x11_display_set} ${podman_argument[@]}
+}
+
+try_process_pulseaudio() {
+    local pulseaudio_directory="${XDG_RUNTIME_DIR}/pulse"
+    local pulseaudio_directory_exists=$([ -d "${pulseaudio_directory}" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=${pulseaudio_directory},destination=${pulseaudio_directory},rslave")
+    podman_argument+=("--mount" "type=bind,source=/etc/machine-id,destination=/etc/machine-id,ro,rslave")
+    try_process ${1} "Access to PulseAudio on host" ${pulseaudio_directory_exists} ${podman_argument[@]}
+}
+
+try_process_podman() {
+    local podman_socket="${XDG_RUNTIME_DIR}/podman/podman.sock"
+    local podman_socket_exists=$([ -S "${podman_socket}" ] && echo 1 || echo 0)
+    local podman_argument=("--env" "HOST_PODMAN_SOCKET=${podman_socket}.host")
+    podman_argument+=("--mount" "type=bind,source=${podman_socket},destination=${podman_socket}.host,rslave")
+    try_process ${1} "Access to Podman on host" ${podman_socket_exists} ${podman_argument[@]}
+}
+
+build_podman_create_arguments() {
+
+    local -n arguments=${1}
+
+    # NOTE: Extra capabilities are needed to run podman in podman. We don't need it,
+    # since we command the host podman to run extra containers for us, when needed.
+    # arguments+=("--cap-add=CHOWN,DAC_OVERRIDE,FOWNER,FSETID,KILL,SETFCAP,SETGID,SETPCAP,SETUID") / arguments+=("--privileged")
+
+    # Map our SDK git repository into the container.
+    arguments+=("--mount" "type=bind,source=${sdk_directory},destination=/wkdev-sdk,rslave")
+
+    # Add 'SYS_PTRACE' support, to be able to use strace / gdb / ...
+    arguments+=("--cap-add=SYS_PTRACE")
+
+    # Set container name & hostname & workdir.
+    arguments+=("--name" "${container_name}")
+    arguments+=("--hostname" "${container_hostname}")
+    arguments+=("--workdir" "/home/${container_user_name}")
+
+    # Share pid namepace with host -- otherwise 'systemctl --user' won't work.
+    #
+    # Long story:
+    # PID 1 is assumed to be the systemd "system session" and systemctl communicates
+    # with PID 1 via dbus. Therefore one either has to provide a session within the
+    # container (use systemd init mechanism) or share the PID namespace with the host,
+    # and let 'systemctl --user' communicate with the host PID 1 (require systemd host).
+    arguments+=("--pid" "host")
+
+    # Share IPC namepace with host -- otherwise /dev/shm access (e.g. in glxgears) won't work.
+    arguments+=("--ipc" "host")
+
+    # Share network namepace with host.
+    arguments+=("--network" "host")
+
+    # Map /etc/{hosts|localtime|resolv.conf} into container.
+    arguments+=("--mount" "type=bind,source=/etc/hosts,destination=/etc/hosts,ro")
+    arguments+=("--mount" "type=bind,source=/etc/localtime,destination=/etc/localtime,ro")
+    arguments+=("--mount" "type=bind,source=/etc/resolv.conf,destination=/etc/resolv.conf,ro")
+
+    # Mount /dev/pts in container (pseudo-terminal support).
+    arguments+=("--mount" "type=devpts,destination=/dev/pts")
+
+    # TODO: SELinux support. Disable SELinux isolation for now.
+    arguments+=("--security-opt label=disable")
+
+    # Debugging: declare -p ${1}
+    set +o nounset
+    try_process_user ${1}
+    try_process_groups ${1}
+    try_process_home_directory ${1}
+    try_process_timezone ${1}
+    try_process_ulimit ${1}
+    try_process_journal ${1}
+    try_process_keyring ${1}
+    try_process_dbus_user_session ${1}
+    try_process_dconf ${1}
+    try_process_accessibility ${1}
+    try_process_themes ${1}
+    try_process_icons ${1}
+    try_process_fonts ${1}
+    try_process_dri ${1}
+    try_process_wayland ${1}
+    try_process_x11 ${1}
+    try_process_pulseaudio ${1}
+    try_process_podman ${1}
+    set +o nounset
+
+    arguments+=("${container_image_name}" "/wkdev-sdk/scripts/container-only/wkdev-init" "${container_shell}" "${container_user_name}" "${container_group_name}")
+}
+
+build_podman_arguments() {
+
+    local -n generic_arguments=${1}
+
+    # Podman debug logging
+    if [ ${debug} -eq 1 ]; then
+        generic_arguments+=("--log-level debug")
+    fi
+
+    generic_arguments+=("--cgroup-manager" "systemd")
+    generic_arguments+=("--hooks-dir" "/etc/containers/oci/hooks.d")
+}
+
+# Pretty printing tables
+print_table_header_border() {
+    printf "+%$(expr ${settings_table_first_column_size} + 2)s+%$(expr ${settings_table_second_column_size} + 2)s+" | tr " " "-"
+}
+
+print_table_header() {
+    local column_title_1=${1}
+    local column_title_2=${2}
+    printf "| %-${settings_table_first_column_size}s | %-${settings_table_second_column_size}s |\n" "${column_title_1}" "${column_title_2}"
+}
+
+print_table_row() {
+    local key=${1}
+    local value=${2}
+    printf "| %-${settings_table_first_column_size}s | %-${settings_table_second_column_size}s |\n" "${key}" "${value}"
+}
+
+print_host_settings() {
+    printf "\n     Host settings:\n\n"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_header "Key" "Value")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "Hostname" "${host_hostname}")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "User name" "$(printf "%s %s" "${host_user_name}" "(UID ${host_user_id})")")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "Group name" "$(printf "%s %s" "${host_group_name}" "(GID ${host_group_id})")")"
+
+    set +o nounset
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${XDG_RUNTIME_DIR}" "${XDG_RUNTIME_DIR}")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${XDG_SESSION_TYPE}" "${XDG_SESSION_TYPE}")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${WAYLAND_DISPLAY}" "${WAYLAND_DISPLAY}")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${DISPLAY}" "${DISPLAY}")"
+    set -o nounset
+
+    # Do not attempt to validate the /etc/sub?id files for printing purposes, assume no duplicates are present and
+    # an entry is present for the current UID or the current user name, but not both.
+    subuid_settings="MISSING!"
+    subuid_name_entries=$(cat /etc/subuid | grep "${host_user_name}")
+    if [ ! -z "${subuid_name_entries}" ]; then
+        subuid_settings=$(echo "${subuid_name_entries}" | awk -F':' '{ print $3 " UIDs available, first: " $2 }')
+    else
+        subuid_id_entries=$(cat /etc/subuid | grep "${host_user_id}")
+        subuid_settings=$(echo "${subuid_id_entries}" | awk -F':' '{ print $3 " UIDs available, first: " $2 }')
+    fi
+
+    subgid_settings="MISSING!"
+    subgid_name_entries=$(cat /etc/subgid | grep "${host_group_name}")
+    if [ ! -z "${subgid_name_entries}" ]; then
+        subgid_settings=$(echo "${subgid_name_entries}" | awk -F':' '{ print $3 " GIDs available, first: " $2 }')
+    else
+        subgid_id_entries=$(cat /etc/subgid | grep "${host_group_id}")
+        subgid_settings=$(echo "${subgid_id_entries}" | awk -F':' '{ print $3 " GIDs available, first: " $2 }')
+    fi
+
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "/etc/subuid" "${subuid_settings}")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "/etc/subgid" "${subgid_settings}")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
+}
+
+print_container_settings() {
+    printf "\n     Container settings:\n\n"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_header "Key" "Value")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "Hostname" "${container_hostname}")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "User name" "$(printf "%s %s" "${container_user_name}" "(UID ${container_user_id})")")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_row "Group name" "$(printf "%s %s" "${container_group_name}" "(UID ${container_group_id})")")"
+    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
+}
+
+print_user_namespace_settings() {
+    unshare_uid_result="$(podman unshare cat /proc/self/uid_map)"
+    unshare_gid_result="$(podman unshare cat /proc/self/gid_map)"
+    printf "\n     Host -> Container UID/GID mapping configuration for rootless mode:\n\n"
+    printf "         $ podman unshare cat /proc/self/uid_map:\n"
+    printf "%s\n\n" "${unshare_uid_result}"
+    printf "         $ podman unshare cat /proc/self/gid_map:\n"
+    printf "%s\n\n" "${unshare_gid_result}"
+    printf "         The '/proc/self/{uid|gid}_map' contains N rows with triplets, that describe a mapping of UIDs/GIDs\n"
+    printf "         \"<host-id> <container-id> <count>\" ---> [<container-id>, ..., <container-id> + <count>].\n"
+}
+
+print_settings() {
+    print_host_settings
+    print_container_settings
+    print_user_namespace_settings
+}
+
+try_enable_lingering_on_host() {
+    local linger_status=$(loginctl show-user "${host_user_name}" | grep Linger | sed -e s/Linger=//)
+    if [ "${linger_status}" == "no" ]; then
+        printf "\n-> Enable lingering for user '${host_user_name}' on host system...\n"
+        loginctl enable-linger ${host_user_name}
+    else
+        printf "\n-> Lingering for user '${host_user_name}' is already activated.\n"
+    fi
+}
+
+try_enable_user_podman_socket_service_on_host() {
+    local service="podman.socket"
+    local socket_status=$(systemctl --user is-enabled ${service})
+    if [ "${socket_status}" == "disabled" ]; then
+        printf "\n-> Enable '${service}' systemd user service for user '${host_user_name}' on host system...\n"
+        systemctl --user enable ${service}
+        systemctl --user start ${service}
+    else
+        printf "\n-> The systemd user service '${service}' is already enabled.\n"
+    fi
+
+    if [ ${verbose} -ne 0 ]; then
+        printf "\nsystemctl --user status ${service}:\n"
+        systemctl --user status ${service}
+    fi
+}
+
+# Main functionality
+run() {
+    parse_command_line_arguments $@
+    handle_command_line_arguments
+
+    printf "\n-> Preparing creation of rootless podman container...\n"
+    print_settings
+
+    try_enable_lingering_on_host
+    try_enable_user_podman_socket_service_on_host
+
+    printf "\n-> Host integration features:\n\n"
+    local podman_create_arguments=()
+    build_podman_create_arguments podman_create_arguments
+
+    local podman_arguments=()
+    build_podman_arguments podman_arguments
+
+    printf "\n-> Creating container \"${container_name}\"...\n"
+    if [ ${verbose} -eq 1 ]; then
+        echo ""
+        echo "     $ podman ${podman_arguments[@]} create ${podman_create_arguments[@]}"
+    fi
+
+    container_id=$(podman ${podman_arguments[@]} create ${podman_create_arguments[@]})
+    if [ -z "${container_id}" ]; then
+        printf "\n-> Container creation failed - please check the logs and report any issue.\n"
+        exit 1
+    fi
+
+    printf "\n-> Starting container \"${container_name}\"...\n"
+    echo "   NOTE: Use \`podman logs -f ${container_name}\` to follow the initialization."
+
+    podman start "${container_id}" &>/dev/null
+
+    printf "\n-> Finished creation of container \"${container_name}\"\n"
+    echo "   NOTE: Use \`wkdev-enter ${container_name}\` to launch an interactive shell."
+}
+
+run ${@}

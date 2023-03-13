@@ -1,24 +1,34 @@
 #!/usr/bin/bash
-
-trap '[ "$?" -ne 0 ] && echo "[ERROR] A fatal error occurred. Aborting!"' EXIT
+test_container_name="wkdev-bootstrap"
+test_home_directory="/tmp/${test_container_name}-home"
 
 # Bash scripting recommendations
 set -o errexit # Exit upon command failure
 set -o nounset # Warn about unset variables
 
-# 1) Build image using podman
-printf "\n-> Building image...\n"
-host_scripts/wkdev-sdk-build
+# 1) Build SDK
+printf "\n-> Building SDK ...\n"
+scripts/host-only/wkdev-sdk-build --verbose
 
-# 2) Test creation of full-fledged distrobox containers
-printf "\n-> Creating 'wkdev-bootstrap' container...\n"
-host_scripts/wkdev-create --create-home --home /tmp/wkdev-bootstrap-home wkdev-bootstrap
+# 2) Test creation of container
+printf "\n-> Creating '${test_container_name}' container with fresh home directory in '${test_home_directory}'...\n"
+if [ -d "${test_home_directory}" ]; then
+    podman unshare rm -rf "${test_home_directory}" &>/dev/null
+fi
 
-# 3) Cleanup
-printf "\n-> Stopping & deleting container...\n"
-podman stop wkdev-bootstrap &>/dev/null
-podman rm wkdev-bootstrap &>/dev/null
-rm -Rf /tmp/wkdev-bootstap-home &> /dev/null
+scripts/host-only/wkdev-create --verbose --create-home --home "${test_home_directory}" "${test_container_name}"
 
-# 4) Show instructions how to deploy new SDK image to docker.io
-printf "\n\nReady. If everything went well, use \"host_scripts/wkdev-sdk-deploy\" to push the new SDK image to the registry, once tested!\n"
+# 3) Test entering container
+printf "\n-> Entering '${test_container_name}' container...\n"
+scripts/host-only/wkdev-enter --verbose --execute "${test_container_name}" uptime --pretty
+
+# 4) Cleanup
+printf "\n-> Stopping '${test_container_name}' container...\n"
+podman stop "${test_container_name}" &>/dev/null
+
+printf "\n-> Deleting '${test_container_name}' container & home directory...\n"
+podman rm "${test_container_name}" &>/dev/null
+podman unshare rm -rf "${test_home_directory}" &>/dev/null
+
+# 5) Show instructions how to deploy new SDK image to docker.io
+printf "\n\nReady. If everything went well, use \"scripts/host-only/wkdev-sdk-deploy\" to push the new SDK image to the registry, once tested!\n"

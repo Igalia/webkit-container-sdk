@@ -1,0 +1,231 @@
+#!/usr/bin/bash
+application_path=${0}
+application_name=$(basename ${application_path})
+application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
+printf "${application_name}: Launch a command or spawn an interactive shell in a container previously created by 'wkdev-create'.\n"
+
+# No trap here on purpose (interfers with systemd-run + podman -it)
+
+# Prevent to run this script from the container
+if [ -f /run/.containerenv ]; then
+    printf "\nThe script '${application_name}' is not intended to run from within the container.\n"
+    exit 1
+fi
+
+# Verify pre-requisite: podman needs to be installed.
+if ! command -v podman >/dev/null; then
+    printf "\nCannot find podman executable.\n"
+    exit 1
+fi
+
+# Command line argument handling - defaults.
+debug=0
+trace=0
+verbose=0
+execute_commands_mode=0
+execute_commands=()
+login_as_root=0
+container_name=""
+
+max_retries=10
+retry_wait_duration_in_seconds=5
+
+# Command line argument handling - help message.
+show_help_message() {
+    cat << EOF
+<< Usage >>
+
+    $ ${application_name} (options)? <container-name>
+
+    See below for a list of possible options.
+    Requires a single positional argument: the name of the container to enter.
+
+    Example:
+
+    $ ${application_name} <container-name>
+    $ ${application_name} --root <container-name>
+    $ ${application_name} --execute <container-name> <commands-to-execute>
+    ...
+
+<< Options >>
+
+    -h / --help:      show this help message
+    -d / --debug:     set podman log level to debug
+    -t / --trace:     enable tracing for bash script
+    -v / --verbose:   increase verbosity for ${application_name}
+
+    -r / --root:      enter as root into container
+    -e / --execute:   interpret the remaining arguments after the <container-name> as command to invoke in the container
+EOF
+}
+
+parse_command_line_arguments() {
+    while :; do
+        case ${1} in
+            -h | --help)
+                show_help_message
+                exit 0
+                ;;
+            -d | --debug)
+                debug=1
+                shift
+                ;;
+            -t | --trace)
+                trace=1
+                shift
+                ;;
+            -v | --verbose)
+                verbose=1
+                shift
+                ;;
+            -r | --root)
+                login_as_root=1
+                shift
+                ;;
+            -e | --execute)
+                execute_commands_mode=1
+                shift
+               ;;
+            -*)
+                printf "\nInvalid option '${1}'. Displaying --help instead:\n\n"
+                show_help_message
+                exit 1
+                ;;
+            *)
+                break ;;
+        esac
+    done
+
+    # Handle required positional argument
+    container_name="${1}"
+    shift
+
+    if [ -z "${container_name}" ]; then
+        echo "-> You have to pass a container name as first positional argument, after possible options."
+        exit 1
+    fi
+
+    if [ ${execute_commands_mode} -eq 1 ]; then
+        if [ ${#} -gt 0 ]; then
+            execute_commands=${@}
+            shift ${#}
+        fi
+    fi
+}
+
+handle_command_line_arguments() {
+    # Bash scripting recommendations
+    set -o errexit # Exit upon command failure
+    set -o nounset # Warn about unset variables
+
+    # Enable debug tracing, if desired.
+    if [ ${trace} -eq 1 ]; then
+        set -o xtrace
+    fi
+}
+
+build_podman_arguments() {
+    local -n intermediate_arguments=${1}
+ 
+    # Podman API socket support if available.
+    if [ -S "/run/user/$(id --user --real)/podman/podman.sock" ] && systemctl status --user podman.socket >/dev/null; then
+        intermediate_arguments+=("--remote")
+    fi
+
+    # Podman debug logging
+    if [ ${debug} -eq 1 ]; then
+        intermediate_arguments+=("--log-level debug")
+    fi
+}
+
+# Main functionality
+run() {
+    # Obtain and verify host user name / uid.
+    local host_user_id="$(id --user --real)"
+    local host_group_id="$(id --group --real)"
+    local host_user_name="$(id --user --name)"
+    if [ -z "${host_user_name}" ]; then
+        echo "-> 'id --user --name' returned an empty user name for the current user - that should not happen."
+        exit 1
+    fi
+
+    local host_group_id="$(id --group --real)"
+    local host_group_name="$(id --group --name)"
+    if [ -z "${host_group_name}" ]; then
+        echo "-> 'id --group --name' returned an empty group name for the curent user - that should not happen."
+        exit 1
+    fi
+
+    parse_command_line_arguments ${@}
+    handle_command_line_arguments
+
+    container_status="unknown"
+    eval "$(podman inspect --type container "${container_name}" --format 'container_status={{.State.Status}};')"
+    if [ "${container_status}" == "unknown" ]; then
+        printf "\n-> Cannot find container '${container_name}'. Did you forget to create it with 'wkdev-create' before?\n"
+        exit 1
+    elif [ "${container_status}" != "running" ]; then
+        printf "\n-> Container '${container_name}' is not yet running. Starting it before attempting to enter...\n"
+        podman start ${container_name} &>/dev/null
+    fi
+
+    local podman_arguments=()
+    build_podman_arguments podman_arguments
+
+    # Temporarilty disable: Exit upon command failure
+    set +o errexit
+    podman ${podman_arguments[@]} exec ${container_name} test -f /run/.wkdev-init-done
+    local status=${?}
+
+    if [ ${status} -ne 0 ]; then
+        printf "\n-> Wait for '${container_name}' to finish initialization...\n"
+
+        local retries=0
+        while : ; do
+            podman ${podman_arguments[@]} exec ${container_name} test -f /run/.wkdev-init-done
+            status=${?}
+            if [ ${status} -eq 0 ]; then
+                break
+            fi
+
+            retries=$((retries+1))
+            if [ ${retries} -eq 10 ]; then
+               printf "Container does not start, please investigate.\n"
+               exit 1
+            fi
+
+            printf "   Retry ${retries}/${max_retries} in ${retry_wait_duration_in_seconds} seconds...\n"
+            sleep ${retry_wait_duration_in_seconds}
+        done
+    fi
+
+    set -o errexit
+
+    if [ ${verbose} -eq 1 ]; then
+        if [ ${execute_commands_mode} -eq 1 ]; then
+            printf "\n-> Spawn non-interactive shell session in '${container_name}' container ('--execute' mode enabled)...\n"
+        else
+            printf "\n-> Spawn interactive shell session in '${container_name}' container...\n"
+        fi
+    fi
+
+    # Request interactive session with pseudo-tty allocation.
+    local podman_exec_arguments=("--interactive" "--tty")
+
+    # Choose root or regular user.
+    if [ ${login_as_root} -eq 0 ]; then
+        podman_exec_arguments+=("--user" "${host_user_id}:${host_group_id}")
+    else
+        podman_exec_arguments+=("--user" "0:0")
+    fi
+
+    if [ ${execute_commands_mode} -eq 1 ]; then
+        podman_exec_arguments+=("${container_name}" "${execute_commands[@]}")
+    else
+        podman_exec_arguments+=("${container_name}" "${SHELL}" "--login")
+    fi
+
+    podman ${podman_arguments[@]} exec ${podman_exec_arguments[@]}
+}
+
+run ${@}

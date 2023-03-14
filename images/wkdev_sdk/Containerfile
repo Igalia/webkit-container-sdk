@@ -40,6 +40,7 @@ RUN yes | /usr/local/sbin/unminimize
 RUN locale-gen ${CONTAINER_LOCALE}
 ENV LC_ALL ${CONTAINER_LOCALE}
 ENV LANG ${CONTAINER_LOCALE}
+RUN dpkg-reconfigure locales
 
 # Bootstrapping is done, switch to working directory /tmp to continue setup.
 WORKDIR /tmp

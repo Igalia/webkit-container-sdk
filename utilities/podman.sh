@@ -1,9 +1,10 @@
 #!/usr/bin/bash
 
-source "${sdk_directory}/utilities/prerequisites.sh"
+[ -z "${application_ready}" ] && { echo "[FATAL] You need to source utilities/application.sh before sourcing this script." && return 1; }
+source "${WKDEV_SDK}/utilities/prerequisites.sh"
 
 podman_executable="/usr/bin/podman"
-if [ -f /run/.containerenv ]; then
+if [ -f "$(container_detection_file)" ]; then
     # Requires the presence of /usr/bin/podman-host in the container image.
     # It acts as portal to access the host podman instance.
     podman_executable="/usr/bin/podman-host"

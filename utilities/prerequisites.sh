@@ -1,10 +1,11 @@
 #!/usr/bin/bash
 
+[ -z "${application_ready}" ] && { echo "[FATAL] You need to source utilities/application.sh before sourcing this script." && return 1; }
+
 verify_executable_exists() {
     local executable="${1}"
     if ! command -v "${executable}" >/dev/null; then
-        printf "\nCannot find required '${executable}' executable.\n"
-        exit 1
+        _abort_ "Cannot find required '${executable}' executable"
     fi
 }
 

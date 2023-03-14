@@ -1,50 +1,23 @@
 #!/usr/bin/bash
 
-application_path=${0}
-application_name=$(basename ${application_path})
-application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
-sdk_directory=$(readlink -f "${application_directory}/../../")
-printf "${application_name}: Create a new podman container ready to use for WebKit GTK/WPE development.\n"
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout." && exit 1; }
+init_application "${0}" "Create a new container ready to use for WebKit GTK/WPE development." host-only
 
-# Prevent to run this script from the container
-if [ -f /run/.containerenv ]; then
-    printf "\nThe script '${application_name}' is not intended to run from within the container.\n"
-    exit 1
-fi
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/podman.sh"
 
-# Verify pre-requisite: podman needs to be installed.
-if ! command -v podman > /dev/null; then
-    printf "\nCannot find podman executable.\n"
-    exit 1
-fi
+argsparse_use_option debug        "Enable debug logging for podman (useful to debug container issues)"
+argsparse_use_option trace        "Enable 'xtrace' mode for this script"
+argsparse_use_option =verbose     "Increase verbosity of this script"
 
-# Command line argument handling - defaults.
-debug=0
-trace=0
-verbose=0
-create_home_directory=0
-container_name=""
-container_shell=""
-container_user_home=""
-container_hostname=""
-container_user_name=""
-container_user_id=0
-container_group_name=""
-container_group_id=0
-settings_table_first_column_size=40
-settings_table_second_column_size=40
-print_prefix='         '
+argsparse_use_option =user:       "Container account user name" type:username default:$(id --user --name)
+argsparse_use_option =group:      "Container account group name" type:group default:$(id --group --name)
+argsparse_use_option =shell:      "Specific shell to use for interactive container usage" type:file default:${SHELL}
+argsparse_use_option =create-home "Create home directory and add necessary configuration files (shell settings, etc.)"
+argsparse_use_option h=ome:       "Path to existing or to-be-created container home directory" type:directory default:${HOME}/wkdev-home
+argsparse_use_option =name:       "Name of container" default:wkdev mandatory
 
-container_image_name="docker.io/nikolaszimmermann/wkdev-sdk"
-host_hostname="$(hostname --short)"
-host_user_id=""
-host_user_name=""
-group_user_id=""
-group_user_name=""
-
-# Command line argument handling - help message.
-show_help_message() {
-    cat << EOF
+argsparse_usage_description="$(cat <<EOF
 << Purpose >>
 
     It was build to launch the 'wkdev-sdk' container with approriate settings, offering tight
@@ -55,179 +28,49 @@ show_help_message() {
     The user shell for interaction is started as current user on the host, mapped into the container.
     Becoming root in the user namespace is possible using 'sudo' or by directly logging in as root user.
 
-<< Usage >>
+<< Examples >>
 
-    $ ${application_name} (options)? <container-name>
-
-    See below for a list of possible options.
-    Requires a single positional argument: the name of the container to create.
-
-    Example:
-
-<< Usage >>
-
-    $ ${application_name} --home \${HOME}/wkdev-home wkdev
-    $ ${application_name} --home \${HOME}/wkdev-home --trace wkdev
-    $ ${application_name} --home \${HOME}/wkdev-home --debug --shell /usr/bin/bash wkdev2
-    ...
-
-<< Options >>
-
-    -h / --help:        show this help message
-    -d / --debug:       set podman log level to debug
-    -t / --trace:       enable tracing for bash script
-    -v / --verbose:     increase verbosity for ${application_name}
-
-    -s / --shell:       shell to use for container (default: same as host \$SHELL=${SHELL})
-    -u / --user:        container account user name (default: $(id --user --name))
-    -g / --group:       container account group name (default: $(id --group --name))
-    -o / --home:        path to container home directory for new podman container (default: ~/<container-name>-home -- within user \$HOME)
-    -c / --create-home: path to container home directory for new podman container (default: ~/<container-name>-home -- within user \$HOME)
-    -m / --hostname:    hostname for container (default: <container-name>.$(hostname --short))
+    $ ${application_name} --create-home --home \${HOME}/wkdev-home --name wkdev
+    $ ${application_name} --home \${HOME}/wkdev-home --trace --name wkdev2
+    $ ${application_name} --home \${HOME}/wkdev-home --debug --shell /usr/bin/bash --name wkdev3
 EOF
-}
+)"
 
-parse_command_line_arguments() {
-    while :; do
-        case ${1} in
-            -h | --help)
-                show_help_message
-                exit 0
-                ;;
-            -d | --debug)
-                debug=1
-                shift
-                ;;
-            -d | --trace)
-                trace=1
-                shift
-                ;;
-            -v | --verbose)
-                verbose=1
-                shift
-                ;;
-            -s | --shell)
-                if [ -n "${2}" ]; then
-                    container_shell="${2}"
-                    shift 2
-                else
-                    shift
-                fi
-                ;;
-            -u | --user)
-                if [ -n "${2}" ]; then
-                    container_user_name="${2}"
-                    shift 2
-                else
-                    shift
-                fi
-                ;;
-            -g | --group)
-                if [ -n "${2}" ]; then
-                    container_group_name="${2}"
-                    shift 2
-                else
-                    shift
-                fi
-                ;;
-            -o | --home)
-                if [ -n "${2}" ]; then
-                    container_user_home="${2}"
-                    shift 2
-                else
-                    shift
-                fi
-                ;;
-            -c | --create-home)
-                create_home_directory=1
-                shift
-                ;;
-            -m | --hostname)
-                if [ -n "${2}" ]; then
-                    container_hostname="${2}"
-                    shift 2
-                else
-                    shift
-                fi
-                ;;
-            -*)
-                printf "Invalid option '${1}'.\n"
-                show_help_message
-                exit 1
-                ;;
-            *)
-                break ;;
-        esac
-    done
+# Command line argument handling - defaults.
 
-    if [ -n "${1}" ]; then
-        container_name="${1}"
-        shift
-    fi
-
-    trap '[ "$?" -ne 0 ] && printf "[ERROR] A fatal error occurred. Aborting!\n"' EXIT
-}
+# FIXME: MOVE
+settings_table_first_column_size=40
+settings_table_second_column_size=40
+settings_table_print_prefix='         '
+wkdev_sdk_image_name="docker.io/nikolaszimmermann/wkdev-sdk"
 
 handle_command_line_arguments() {
-    # Bash scripting recommendations
-    set -o errexit # Exit upon command failure
-    set -o nounset # Warn about unset variables
 
-    # Enable debug tracing, if desired.
-    if [ ${trace} -eq 1 ]; then
-        set -o xtrace
-    fi
+    argsparse_is_option_set "trace" && set -o xtrace
 
-    # Use host user shell for container, if not explicitely overriden.
-    if [ -z "${container_shell}" ]; then
-        container_shell=${SHELL}
-    fi
+    container_shell="${program_options["shell"]}"
+    container_name="${program_options["name"]}"
+    container_user_home="${program_options["home"]}"
 
-    # Choose default container name, if unset.
-    if [ -z "${container_name}" ]; then
-        container_name=wkdev
-    fi
+    container_user_name="${program_options["user"]}"
+    container_user_id=$(id --user --real "${container_user_name}")
 
-    # Obtain and verify host user name / uid.
-    host_user_id="$(id --user --real)"
-    host_user_name="$(id --user --name)"
-    if [ -z "${host_user_name}" ]; then
-        printf "'id --user --name' returned an empty user name for the current user - that should not happen.\n"
-        exit 1
-    fi
+    host_user_name=$(id --user --name)
+    host_user_id=$(id --user --real)
 
-    host_group_id="$(id --group --real)"
-    host_group_name="$(id --group --name)"
-    if [ -z "${host_group_name}" ]; then
-        printf "'id --group --name' returned an empty group name for the curent user - that should not happen.\n"
-        exit 1
-    fi
+    host_group_name=$(id --group --name)
+    host_group_id=$(id --group --real)
 
-    # Use host user for container, if not explicitely overriden.
-    if [[ -z "${container_user_name}" || -z "${container_user_id}" ]]; then
-        container_user_name="${host_user_name}"
-        container_user_id=${host_user_id}
-    fi
+    container_group_name="${program_options["group"]}"
+    container_group_id=$(id --group --real "${container_group_name}")
 
-    # Use host group for container, if not explicitely overriden.
-    if [[ -z "${container_group_name}" || -z "${container_group_id}" ]]; then
-        container_group_name="${host_group_name}"
-        container_group_id=${host_group_id}
-    fi
-
-    # Use host user for container, if not explicitely overriden.
+    host_hostname="$(hostname --short)"
     container_hostname="$(basename "${container_name}").${host_hostname}"
-
-    # Choose default container home directory, if unset.
-    if [ -z "${container_user_home}" ]; then
-        container_user_home=${HOME}/${container_name}-home
-    fi
 
     # Verify the container home directory is accessible.
     if [ ! -d "${container_user_home}" ]; then
-        if [ ${create_home_directory} -eq 0 ]; then
-            printf "\n-> The passed home directory '${container_user_home}' does not exist (pass --create-home, if you want to automatically create them).\n"
-            exit 1
+        if ! argsparse_is_option_set "create-home"; then
+            _abort_ "The passed home directory '${container_user_home}' does not exist (pass --create-home, if you want to automatically create them)"
         else
             printf "\n-> The passed home directory '${container_user_home}' does not exist, creating...\n\n"
 
@@ -236,10 +79,10 @@ handle_command_line_arguments() {
 
             # Set ownership / permissions
             chown ${container_user_id}:${container_group_id} "${container_user_home}"
-            chmod 750 ${container_user_home}
+            chmod 750 "${container_user_home}"
 
-            default_config_directory=$(readlink -f "${sdk_directory}/images/wkdev_sdk/user_home_directory_defaults/")
-            shell_type=$(basename ${SHELL})
+            default_config_directory=$(readlink --canonicalize "${WKDEV_SDK}/images/wkdev_sdk/user_home_directory_defaults/")
+            shell_type=$(basename "${SHELL}")
             if [ "${shell_type}" == "bash" ]; then
                 cp --verbose "${default_config_directory}"/dot-bash_profile "${container_user_home}"/.bash_profile
             elif [ "${shell_type}" == "zsh" ]; then
@@ -416,7 +259,7 @@ build_podman_create_arguments() {
     # arguments+=("--cap-add=CHOWN,DAC_OVERRIDE,FOWNER,FSETID,KILL,SETFCAP,SETGID,SETPCAP,SETUID") / arguments+=("--privileged")
 
     # Map our SDK git repository into the container.
-    arguments+=("--mount" "type=bind,source=${sdk_directory},destination=/wkdev-sdk,rslave")
+    arguments+=("--mount" "type=bind,source=${WKDEV_SDK},destination=/wkdev-sdk,rslave")
 
     # Add 'SYS_PTRACE' support, to be able to use strace / gdb / ...
     arguments+=("--cap-add=SYS_PTRACE")
@@ -474,20 +317,15 @@ build_podman_create_arguments() {
     try_process_podman ${1}
     set +o nounset
 
-    arguments+=("${container_image_name}" "/wkdev-sdk/scripts/container-only/wkdev-init" "${container_shell}" "${container_user_name}" "${container_group_name}")
+    arguments+=("${wkdev_sdk_image_name}" "/wkdev-sdk/scripts/container-only/wkdev-init" "${container_shell}" "${container_user_name}" "${container_group_name}")
 }
 
 build_podman_arguments() {
 
     local -n generic_arguments=${1}
-
-    # Podman debug logging
-    if [ ${debug} -eq 1 ]; then
-        generic_arguments+=("--log-level debug")
-    fi
-
     generic_arguments+=("--cgroup-manager" "systemd")
     generic_arguments+=("--hooks-dir" "/etc/containers/oci/hooks.d")
+    argsparse_is_option_set "debug" && generic_arguments+=("--log-level debug")
 }
 
 # Pretty printing tables
@@ -509,18 +347,18 @@ print_table_row() {
 
 print_host_settings() {
     printf "\n     Host settings:\n\n"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_header "Key" "Value")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "Hostname" "${host_hostname}")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "User name" "$(printf "%s %s" "${host_user_name}" "(UID ${host_user_id})")")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "Group name" "$(printf "%s %s" "${host_group_name}" "(GID ${host_group_id})")")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_header_border)"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_header "Key" "Value")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_header_border)"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "Hostname" "${host_hostname}")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "User name" "$(printf "%s %s" "${host_user_name}" "(UID ${host_user_id})")")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "Group name" "$(printf "%s %s" "${host_group_name}" "(GID ${host_group_id})")")"
 
     set +o nounset
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${XDG_RUNTIME_DIR}" "${XDG_RUNTIME_DIR}")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${XDG_SESSION_TYPE}" "${XDG_SESSION_TYPE}")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${WAYLAND_DISPLAY}" "${WAYLAND_DISPLAY}")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "\${DISPLAY}" "${DISPLAY}")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "\${XDG_RUNTIME_DIR}" "${XDG_RUNTIME_DIR}")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "\${XDG_SESSION_TYPE}" "${XDG_SESSION_TYPE}")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "\${WAYLAND_DISPLAY}" "${WAYLAND_DISPLAY}")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "\${DISPLAY}" "${DISPLAY}")"
     set -o nounset
 
     # Do not attempt to validate the /etc/sub?id files for printing purposes, assume no duplicates are present and
@@ -543,20 +381,20 @@ print_host_settings() {
         subgid_settings=$(echo "${subgid_id_entries}" | awk -F':' '{ print $3 " GIDs available, first: " $2 }')
     fi
 
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "/etc/subuid" "${subuid_settings}")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "/etc/subgid" "${subgid_settings}")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "/etc/subuid" "${subuid_settings}")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "/etc/subgid" "${subgid_settings}")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_header_border)"
 }
 
 print_container_settings() {
     printf "\n     Container settings:\n\n"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_header "Key" "Value")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "Hostname" "${container_hostname}")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "User name" "$(printf "%s %s" "${container_user_name}" "(UID ${container_user_id})")")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_row "Group name" "$(printf "%s %s" "${container_group_name}" "(UID ${container_group_id})")")"
-    printf "%s%s\n" "${print_prefix}" "$(print_table_header_border)"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_header_border)"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_header "Key" "Value")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_header_border)"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "Hostname" "${container_hostname}")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "User name" "$(printf "%s %s" "${container_user_name}" "(UID ${container_user_id})")")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_row "Group name" "$(printf "%s %s" "${container_group_name}" "(UID ${container_group_id})")")"
+    printf "%s%s\n" "${settings_table_print_prefix}" "$(print_table_header_border)"
 }
 
 print_user_namespace_settings() {
@@ -598,7 +436,7 @@ try_enable_user_podman_socket_service_on_host() {
         printf "\n-> The systemd user service '${service}' is already enabled.\n"
     fi
 
-    if [ ${verbose} -ne 0 ]; then
+    if argsparse_is_option_set "verbose"; then
         printf "\nsystemctl --user status ${service}:\n"
         systemctl --user status ${service}
     fi
@@ -606,7 +444,7 @@ try_enable_user_podman_socket_service_on_host() {
 
 # Main functionality
 run() {
-    parse_command_line_arguments $@
+    argsparse_parse_options "${@}"
     handle_command_line_arguments
 
     printf "\n-> Preparing creation of rootless podman container...\n"
@@ -623,10 +461,7 @@ run() {
     build_podman_arguments podman_arguments
 
     printf "\n-> Creating container \"${container_name}\"...\n"
-    if [ ${verbose} -eq 1 ]; then
-        echo ""
-        echo "     $ podman ${podman_arguments[@]} create ${podman_create_arguments[@]}"
-    fi
+    argsparse_is_option_set "verbose" && printf "\n     $ podman %s create %s\n" "${podman_arguments[@]}" "${podman_create_arguments[@]}"
 
     container_id=$(podman ${podman_arguments[@]} create ${podman_create_arguments[@]})
     if [ -z "${container_id}" ]; then
@@ -643,4 +478,4 @@ run() {
     echo "   NOTE: Use \`wkdev-enter ${container_name}\` to launch an interactive shell."
 }
 
-run ${@}
+run "${@}"

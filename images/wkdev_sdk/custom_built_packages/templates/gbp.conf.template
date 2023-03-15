@@ -18,8 +18,3 @@ filter-pristine-tar = True
 
 [import-dsc]
 filter = [ '.gitignore' ]
-
-[dch]
-snapshot-number = 'snapshot + ${package_version_increment}'
-dch-opt = ['--local ${package_version_suffix}', '--distribution ${package_distribution}']
-commit = True

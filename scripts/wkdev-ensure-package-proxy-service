@@ -1,128 +1,67 @@
 #!/usr/bin/bash
-application_path=${0}
-application_name=$(basename ${application_path})
-application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
-sdk_directory=$(readlink -f "${application_directory}/../")
-printf "${application_name}: Ensures that the 'wkdev-package-proxy' container is running.\n"
 
-source "${sdk_directory}/utilities/podman.sh"
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Ensures that the '$(get_package_proxy_image_name)' container is running." host-and-container
 
-# Command line argument handling - defaults.
-debug=0
-trace=0
-verbose=0
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/podman.sh"
 
-proxy_container_name="wkdev-package-proxy"
+argsparse_use_option debug        "Enable debug mode for this script"
+argsparse_use_option trace        "Enable 'xtrace' mode for this script"
+argsparse_use_option =verbose     "Increase verbosity of this script"
 
-# Command line argument handling - help message.
-show_help_message() {
-    cat << EOF
-<< Usage >>
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
 
-    $ ${application_name} (options)?
-
-    See below for a list of possible options.
-
-    Example:
-
-    $ ${application_name}
-    ...
-
-<< Options >>
-
-    -h / --help:      show this help message
-    -d / --debug:     set podman log level to debug
-    -t / --trace:     enable tracing for bash script
-    -v / --verbose:   increase verbosity for ${application_name}
+    This helper utility ensures that a '"$(get_package_proxy_image_name)"' container is running, serving as
+    local proxy server for APT repositories, auto-caching .deb packages to avoid downloading
+    the same package twice.
 EOF
-}
+)"
 
-parse_command_line_arguments() {
-    while :; do
-        case ${1} in
-            -h | --help)
-                show_help_message
-                exit 0
-                ;;
-            -d | --debug)
-                debug=1
-                shift
-                ;;
-            -t | --trace)
-                trace=1
-                shift
-                ;;
-            -v | --verbose)
-                verbose=1
-                shift
-                ;;
-            -*)
-                printf "\nInvalid option '${1}'. Displaying --help instead:\n\n"
-                show_help_message
-                exit 1
-                ;;
-            *)
-                break ;;
-        esac
-    done
-}
+process_command_line_arguments() {
 
-handle_command_line_arguments() {
-    # Bash scripting recommendations
-    set -o errexit # Exit upon command failure
-    set -o nounset # Warn about unset variables
+    # Allow empty command line
+    argsparse_allow_no_argument yes
 
-    # Enable bash script tracing, if desired.
-    if [ ${trace} -eq 1 ]; then
-        set -o xtrace
-    fi
-}
-
-build_podman_arguments() {
-    local -n intermediate_arguments=${1}
-
-    # Podman debug logging
-    if [ ${debug} -eq 1 ]; then
-        intermediate_arguments+=("--log-level debug")
-    fi
+    argsparse_parse_options "${@}"
+    argsparse_is_option_set "trace" && set -o xtrace
 }
 
 # Main functionality
 run() {
-    parse_command_line_arguments ${@}
-    handle_command_line_arguments
 
+    process_command_line_arguments "${@}"
+
+    local proxy_container_name="$(get_package_proxy_image_name)"
     # Check if proxy server container is running, if not - start or create it.
     last_container_status="unknown"
     check_podman_container_status "${proxy_container_name}"
+    argsparse_is_option_set "debug" && echo "## Status for '${proxy_container_name}' container: '${last_container_status}'"
 
     if [ "${last_container_status}" == "unknown" ]; then
         # If the container isn't known, create it and run it - in one shot.
-        printf "\n-> Creating & starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container...\n"
-        call_podman run --rm --pull newer --detach --tty --publish 127.0.0.1:8765:8765 --volume wkdev-package-proxy-data:/data \
-                        --name "${proxy_container_name}" docker.io/nikolaszimmermann/wkdev-package-proxy:22.10
+        argsparse_is_option_set "verbose" && echo "-> Creating & starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container..."
+        run_podman_silent run --pull newer --detach --tty --publish 127.0.0.1:8765:8765 --volume "${proxy_container_name}-data":/data \
+                              --name "${proxy_container_name}" "$(get_package_proxy_qualified_name_and_tag)"
     elif [ "${last_container_status}" != "running" ]; then
         # If the container exists and isn't running, start it.
-        printf "\n-> Starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container...\n"
-        call_podman start "${proxy_container_name}"
+        argsparse_is_option_set "verbose" && echo "-> Starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container..."
+        run_podman_silent start "${proxy_container_name}"
     else
-        if [ ${verbose} -ne 0 ]; then
-            printf "\n-> Local proxy server '${proxy_container_name}' already running, no need to spawn a new instance.\n"
-        fi
-
+        argsparse_is_option_set "verbose" && echo "-> Local proxy server '${proxy_container_name}' already running, no need to spawn a new instance."
         exit 0
     fi
 
     # Check if startup was successful.
     last_container_status="unknown"
     check_podman_container_status "${proxy_container_name}"
-
     if [ "${last_container_status}" == "running" ]; then
+        argsparse_is_option_set "verbose" && { echo ""; echo "-> Local proxy server '${proxy_container_name}' started successfully."; }
         exit 0
     fi
 
-    printf "\n-> Proxy container status: '${last_container_status}'. Cannot start '${proxy_container_name}' container - please check logs using 'podman logs ${proxy_container_name}'.\n"
-    exit 1
+    _abort_ "Proxy container status: '${last_container_status}'. Cannot start '${proxy_container_name}' container - please check logs using 'podman logs ${proxy_container_name}'."
 }
 
-run ${@}
+run "${@}"

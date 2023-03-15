@@ -1,5 +1,8 @@
 #!/usr/bin/bash
 
+# FIXME: This is a legacy helper script, not integrated within the standard "init_application" logic.
+# Fix that, for consistency reasons.
+
 application_path=${0}
 application_name=$(basename ${application_path})
 application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)

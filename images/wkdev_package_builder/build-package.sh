@@ -1,8 +1,13 @@
 #!/usr/bin/bash
 
-build_profile=${1}
-package_full_name=${2}
-deb_build_options=${3}
+# NOTE: This runs in a container where the wkdev-sdk is not available, therefore
+# we're not making use of the standard "init_application" logic.
+#
+# In contrary to all other scripts this one also uses "set -o errexit" by default.
+
+build_profile="${1}"
+package_full_name="${2}"
+deb_build_options="${3}"
 
 package_name=$(basename "${package_full_name}")
 work_directory="/builder/work"
@@ -18,9 +23,11 @@ source /builder/setup-container.sh
 
 APT="eatmydata apt --assume-yes"
 APT_GET="eatmydata apt-get --assume-yes"
+export DEBIAN_FRONTEND=noninteractive
 
 # Update apt repositories
-printf "\n-> Updating APT repositories (for dependency resolving)...\n"
+echo ""
+echo "-> Updating APT repositories (for dependency resolving)..."
 ${APT_GET} update
 
 if [ -f "${dependencies_file}" ]; then
@@ -37,8 +44,9 @@ if [ -f "${dependencies_file}" ]; then
 
     # Install additional dependencies
     if [ ! -z "${install_string}" ]; then
-        printf "\n-> Installing packages specified in '${dependencies_file}'...\n"
-        printf "  All additional packages to install: '${install_string}'\n"
+        echo ""
+        echo "-> Installing packages specified in '${dependencies_file}'..."
+        echo "  All additional packages to install: '${install_string}'"
         pushd "${packages_directory}" &>/dev/null
         sudo ${APT} install ${install_string}
         popd &>/dev/null
@@ -46,19 +54,22 @@ if [ -f "${dependencies_file}" ]; then
 fi
 
 # Print statistics
-printf "\n-> ccache build cache statistics:\n"
+echo ""
+echo "-> ccache build cache statistics:"
 ccache --show-stats --verbose | sed -e "s/^/    /"
 
-printf "\n-> Switch into source directory '${source_directory}', preparing to build '${package_name}'...\n"
+echo ""
+echo "-> Switch into source directory '${source_directory}', preparing to build '${package_name}'..."
 pushd "${source_directory}" &>/dev/null
 
 # Install build dependencies, as specified in dsc file.
-printf "\n-> Installing build dependencies using 'mk-build-deps'...\n"
+echo ""
+echo "-> Installing build dependencies using 'mk-build-deps'..."
 mk-build-deps --install --remove --tool "${APT_GET} -o Debug::pkgProblemResolver=yes"
 
 # Build package
-printf "\n-> Building package using 'gbp buildpackage'...\n"
-printf "   Build log location: ${build_directory}/build.log\n"
+echo ""
+echo "-> Building package using 'gbp buildpackage'..."
 
 # Choose 'DEB_BUILD_OPTIONS' and 'DEBUILD_LINTIAN' environment variable values according to build profile.
 # Build profile: fast -> do not generate documentation, do not run tests after build, do not run lintian -- used for _development_ (all packages built _in_ the container are built in 'fast' mode)
@@ -76,12 +87,14 @@ DEBUILD_LINTIAN_full="yes"
 DEBUILD_LINTIAN_selected=DEBUILD_LINTIAN_${build_profile}
 
 if [ "${build_profile}" == "fast" ] || [ "${build_profile}" == "full" ]; then
-    printf "\n-> Selected build profile '${build_profile}':\n"
-    printf "   deb_build_options=\"${deb_build_options}\" -- if set, overrides DEB_BUILD_OPTIONS.\"\n"
-    printf "   DEB_BUILD_OPTIONS=\"${!DEB_BUILD_OPTIONS_selected}\" -- passed as environment variable to 'gbp buildpackage'\"\n"
-    printf "   DEBUILD_LINTIAN=\"${!DEBUILD_LINTIAN_selected}\" -- passed as environment variable to 'gbp buildpackage'\"\n"
+    echo ""
+    echo "-> Selected build profile '${build_profile}':"
+    echo "   deb_build_options=\"${deb_build_options}\" -- if set, overrides DEB_BUILD_OPTIONS.\""
+    echo "   DEB_BUILD_OPTIONS=\"${!DEB_BUILD_OPTIONS_selected}\" -- passed as environment variable to 'gbp buildpackage'\""
+    echo "   DEBUILD_LINTIAN=\"${!DEBUILD_LINTIAN_selected}\" -- passed as environment variable to 'gbp buildpackage'\""
 else
-    printf "\n-> Unknown build profile '${build_profile}'. Please either pass 'fast' or 'full'.\n"
+    echo ""
+    echo "-> Unknown build profile '${build_profile}'. Please either pass 'fast' or 'full'."
     exit 1
 fi
 
@@ -94,8 +107,10 @@ popd &>/dev/null
 
 file_extensions=(ddeb deb)
 for file_extension in "${file_extensions[@]}"; do
-    printf "\n-> Copy *.${file_extension} files from build directory '${build_directory}' to packages directory '${packages_directory}'...\n"
+    echo ""
+    echo "-> Copy *.${file_extension} files from build directory '${build_directory}' to packages directory '${packages_directory}'..."
     find "${build_directory}"/  -type f -name "*.${file_extension}" -exec cp --archive --verbose {} "${packages_directory}"/ \;
 done
 
-printf "\n-> Finished!\n"
+echo ""
+echo "-> Finished!"

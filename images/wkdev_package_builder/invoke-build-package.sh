@@ -1,14 +1,21 @@
 #!/usr/bin/bash
-sdk_directory=${1}
-work_directory=${2}
-packages_directory=${3}
-package_full_name=${4}
-deb_build_options=${5}
+
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "The variable \${WKDEV_SDK} needs to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Launch a container that runs the 'build-package.sh' script" host-and-container
+
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/podman.sh"
+
+work_directory="${1}"
+packages_directory="${2}"
+package_full_name="${3}"
+deb_build_options="${4}"
 
 build_directory="${work_directory}/builds/${package_full_name}"
+log_file="${build_directory}/build.log"
 
 build_profile="full"
-if [ -f /run/.containerenv ]; then
+if is_running_in_container; then
     build_profile="fast"
 
     # Translate from container home relative path to host path.
@@ -16,28 +23,23 @@ if [ -f /run/.containerenv ]; then
     packages_directory="${packages_directory/${HOME}/${HOST_CONTAINER_HOME_PATH}}"
 fi
 
-source "${sdk_directory}/utilities/podman.sh"
-
 # Ensure the package proxy service is running...
-${sdk_directory}/scripts/wkdev-ensure-package-proxy-service --verbose
+${WKDEV_SDK}/scripts/wkdev-ensure-package-proxy-service
 
 # ... before invoking package builds.
-call_podman run --network host --rm \
-       --mount type=bind,source=${work_directory},destination=/builder/work,rslave \
-       --mount type=bind,source=${packages_directory},destination=/builder/packages,rslave \
-       --mount type=volume,source=wkdev-package-builder-cache,destination=/builder/cache \
-       docker.io/nikolaszimmermann/wkdev-package-builder:22.10 /builder/build-package.sh \
-       "${build_profile}" "${package_full_name}" "${deb_build_options}" &> "${build_directory}/build.log" &
+run_podman_in_background_and_log_to_file "${log_file}" run --network host --rm \
+    --mount type=bind,source=${work_directory},destination=/builder/work,rslave \
+    --mount type=bind,source=${packages_directory},destination=/builder/packages,rslave \
+    --mount type=volume,source="$(get_package_builder_image_name)-cache",destination=/builder/cache \
+    "$(get_package_builder_qualified_name_and_tag)" /builder/build-package.sh \
+    "${build_profile}" "${package_full_name}" "${deb_build_options}"
 
-build_pid=${!}
-tail --follow --pid=${build_pid} "${build_directory}/build.log" &
+# Grace period before attempting to tail the log.
+sleep 2
 
-wait ${build_pid}
-build_status=${?}
+background_pid=${!}
+tail --lines=10000 --follow --pid=${background_pid} "${log_file}" &
+wait ${background_pid} || _abort_ "Build failed"
 
-if [ ${build_status} -ne 0 ]; then
-    printf "\n-> Build failed. Aborting with exit code ${build_status}.\n"
-    exit ${build_status}
-fi
-
-printf "\n-> Build finished successfully.\n"
+echo ""
+echo "-> Build finished successfully."

@@ -5,4 +5,4 @@ debuginfod
 iptables libcap2-bin libyajl2 uidmap
 
 # General utilities
-apt-file aptly atop emacs git htop iotop iputils-ping less locate man-db nano openssh-client strace sudo unzip vim wget
+apt-file aptly atop emacs git htop iotop iputils-ping kmod less locate man-db nano openssh-client strace sudo unzip vim wget

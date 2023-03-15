@@ -1,0 +1,89 @@
+#!/usr/bin/bash
+
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Install NVIDIA GPU Container Toolkit on host system" host-only
+
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/nvidia-gpu.sh"
+source "${WKDEV_SDK}/utilities/prerequisites.sh"
+
+argsparse_use_option trace        "Enable 'xtrace' mode for this script"
+
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
+
+    Installs the NVIDIA Container Toolkit on the host machine and sets up
+    /etc/cdi/nvidia.yaml to expose NVIDIA GPUs to podman.
+
+<< Examples >>
+
+    $ ${application_name}
+EOF
+)"
+
+process_command_line_arguments() {
+
+    # Allow empty command line
+    argsparse_allow_no_argument yes
+
+    argsparse_parse_options "${@}"
+    argsparse_is_option_set "trace" && set -o xtrace
+}
+
+# Main functionality
+run() {
+
+    process_command_line_arguments "${@}"
+
+    if [ -f "$(get_nvidia_cdi_config_file)" ]; then
+        echo ""
+        echo "-> Configuration file '$(get_nvidia_cdi_config_file)' already exists, skipping creation."
+        echo "   NOTE: If your system GPU configuration changed, remove the file and re-run '${application_name}'."
+        exit 0
+    fi
+
+    if [ ! -f "$(get_nvidia_gpg_key_file)" ]; then
+        echo "-> Download & deploy NVIDIA GPG key to '$(get_nvidia_gpg_key_file)'..."
+
+        set -o pipefail
+        curl --silent --location "$(get_nvidia_repository_url)/gpgkey" | gpg --dearmor | sudo tee "$(get_nvidia_gpg_key_file)" &>/dev/null
+        [ ${?} -eq 0 ] || _abort_ "Adding new GPG key failed"
+        set +o pipefail
+    else
+        echo "-> No need to download & deploy NVIDIA GPG key, already present in '$(get_nvidia_gpg_key_file)'."
+    fi
+
+    if [ ! -f "$(get_nvidia_apt_source_file)" ]; then
+        echo ""
+        echo "-> Add '$(get_nvidia_repository_url)' to APT source file '$(get_nvidia_apt_source_file)'..."
+
+        set -o pipefail
+        curl --silent --location "$(get_nvidia_repository_url)/$(get_nvidia_ubuntu_distribution)/$(get_nvidia_repository_name).list" | sudo tee "$(get_nvidia_apt_source_file)" &>/dev/null
+        [ ${?} -eq 0 ] || _abort_ "Adding new repository failed"
+        set +o pipefail
+    else
+        echo "-> No need to create new APT source file, already present in '$(get_nvidia_apt_source_file)'."
+    fi
+
+    if [ $(dpkg-query --show --showformat='${Status}' "$(get_nvidia_host_package)" 2>/dev/null | grep --count "ok installed") -eq 0 ]; then
+        echo ""
+        echo "-> Updating APT repositories..."
+        sudo apt-get update || _abort_ "'apt-get update' failed"
+
+        echo ""
+        echo "-> Installing '$(get_nvidia_host_package)'..."
+        sudo apt-get install --assume-yes "$(get_nvidia_host_package)" || _abort_ "'apt-get install' failed"
+    fi
+
+    if [ ! -f "$(get_nvidia_cdi_config_file)" ]; then
+        echo ""
+        echo "-> Generating CDI specification '$(get_nvidia_cdi_config_file)'..."
+        verify_executable_exists nvidia-ctk
+        sudo nvidia-ctk cdi generate --output "$(get_nvidia_cdi_config_file)" || _abort_ "CDI generation failed"
+    fi
+
+    echo ""
+    echo "-> Finished!"
+}
+
+run "${@}"

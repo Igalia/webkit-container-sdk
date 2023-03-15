@@ -1,0 +1,108 @@
+#!/usr/bin/bash
+
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Build the WebKit software development kit (SDK)." host-only
+
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/podman.sh"
+
+argsparse_use_option debug        "Enable debug mode for this script"
+argsparse_use_option trace        "Enable 'xtrace' mode for this script"
+argsparse_use_option =verbose     "Increase verbosity of this script"
+
+argsparse_use_option =mode:       "Operation mode: 'build' or 'deploy'" mandatory
+
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
+
+    Builds all necessary container images & software packages forming the 'wkdev-sdk' SDK.
+
+<< Examples >>
+
+    $ ${application_name} --mode build
+    $ ${application_name} --mode deploy
+EOF
+)"
+
+process_command_line_arguments() {
+
+    argsparse_parse_options "${@}"
+    argsparse_is_option_set "trace" && set -o xtrace
+
+    operation_mode="${program_options["mode"]}"
+    [ "${operation_mode}" != 'build' ] && [ "${operation_mode}" != 'deploy' ] && _abort_ "Unknown operation mode: '${operation_mode}' (valid choices are 'build' or 'deploy')"
+}
+
+process_container_image() {
+
+    echo ""
+
+    local container_image_name="${1}"
+    echo "-> Building '${container_image_name}' container image..."
+
+    local extra_options=()
+    argsparse_is_option_set "debug" && extra_options+=("--debug")
+    argsparse_is_option_set "verbose" && extra_options+=("--verbose")
+    argsparse_is_option_set "trace" && extra_options+=("--trace")
+
+    "${WKDEV_SDK}/scripts/host-only/wkdev-sdk-container-bakery" --mode "${operation_mode}" --name "${container_image_name}" ${extra_options[@]} || _abort_ "Image build failed"
+}
+
+build_packages_defined_in_build_definitions_yaml() {
+
+    echo ""
+
+    local packages_build_definitions="${1}"
+    local build_done_file="${WKDEV_SDK}/.build-done_${packages_build_definitions}"
+    if [ ! -f "${build_done_file}" ]; then
+        echo "-> Building packages denoted in '${packages_build_definitions}.yaml' configuration for inclusion in 'wkdev-sdk' image..."
+
+        temporary_directory=$(mktemp --tmpdir --directory wkdevsdk.XXXXXXXXXX)
+        pushd "${temporary_directory}" &>/dev/null
+
+        local extra_options=()
+        argsparse_is_option_set "debug" && extra_options+=("--debug")
+        argsparse_is_option_set "trace" && extra_options+=("--trace")
+        argsparse_is_option_set "verbose" && extra_options+=("--verbose")
+
+        "${WKDEV_SDK}/scripts/wkdev-setup-dependency-work-tree" \
+            --settings "${WKDEV_SDK}/images/wkdev_sdk/custom_built_packages/${packages_build_definitions}.yaml" \
+            --work-directory "${PWD}" \
+            --packages-directory "${WKDEV_SDK}/images/wkdev_sdk/custom_built_packages/${packages_build_definitions}" ${extra_options[@]} || _abort_ "Work tree setup failed"
+
+        cd builds || _abort_ "Changing directory to '${PWD}/builds' failed"
+        make || _abort_ "Build failed, inspect the build work directory '${temporary_directory}' to check why and remove it manually afterward"
+
+        touch "${build_done_file}"
+        popd &>/dev/null
+        rm -rf "${temporary_directory}" &>/dev/null
+    else
+        echo "-> Skipping building packages denoted in '${packages_build_definitions}.yaml' configuration."
+        echo "   NOTE: To force rebuilding, remove '${build_done_file}' and restart '${application_name}'."
+    fi
+}
+
+# Main functionality
+run() {
+
+    process_command_line_arguments "${@}"
+
+    # Build or deploy auxiliary container images that belong to the SDK
+    process_container_image "$(get_package_proxy_image_name)"
+    process_container_image "$(get_package_builder_image_name)"
+
+    # Build required packages before building the wkdev-sdk image, which depends on them.
+    if [ "${operation_mode}" = "build" ]; then
+        for build_definition in $(get_custom_package_build_definitions); do
+            build_packages_defined_in_build_definitions_yaml "${build_definition}"
+        done
+    fi
+
+    # Build or deploy main SDK container image.
+    process_container_image "$(get_sdk_image_name)"
+
+    echo ""
+    echo "-> Finished!"
+}
+
+run "${@}"

@@ -4,24 +4,24 @@ packages=${packages}
 
 build:
 	@for package in $(packages); do \
-		cd "$${package}" || exit 1 ;\
-		make build || exit 1 ;\
-		cd .. || exit 1 ;\
+		cd "$${package}" || exit 1; \
+		make build || exit 1; \
+		cd ..; \
 	done
 
 clean:
 	@for package in $(packages); do \
-		cd "$${package}" || exit 1 ;\
-		make clean || exit 1 ;\
-		cd .. || exit 1 ;\
+		cd "$${package}" || exit 1; \
+		make clean || exit 1; \
+		cd ..; \
 	done
 
 install: build
 	@echo "NOTE: Remember to 'make repo-publish' once before installing one or multiple packages using 'make install'."
 	@for package in $(packages); do \
-		cd "$${package}" || exit 1 ;\
-		make install || exit 1 ;\
-		cd .. || exit 1 ;\
+		cd "$${package}" || exit 1; \
+		make install || exit 1; \
+		cd ..; \
 	done
 
 repo-info:

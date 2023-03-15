@@ -1,80 +1,112 @@
 #!/usr/bin/bash
 
-application_path=${0}
-application_name=$(basename ${application_path})
-printf "${application_name}: Test host system integration.\n"
-printf "Timestamp: $(date)\n"
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Test host system integration" container-only
 
-# Prevent to run this script from the host
-if [ ! -f /run/.containerenv ]; then
-    printf "\nThe script '${application_name}' is intended to run from within the container only.\n"
-    exit 1
-fi
+argsparse_use_option trace "Enable 'xtrace' mode for this script"
 
-printf "\n-> Install required packages:\n"
-sudo apt-get install --assume-yes epiphany-browser gedit glmark2 glmark2-drm glmark2-wayland iputils-ping libnotify-bin mesa-utils x11-apps
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
 
-printf "\n-> Dump of all environment variables:\n"
-env
+    Verifies that the container <-> host system integration behaves as expected.
 
-printf "\n-> Ping wpewebkit.org: (should work in rootless container)\n"
-ping -c 4 wpewebkit.org
+    This script exercises systemd / dbus intgration, X11/Wayland integration, desktop notifications,
+    PulseAudio, dconf (via gedit) and runs glxgears, the glmark2 benchmark, and Epiphany. Each test
+    denotes an expectation, whether the tested feature is supposed to work in the container or if
+    access is forbidden.
 
-read -p "Press any key to start tests...."
-printf "\n-> Access to system dbus: (should be forbidden!)\n"
-busctl --no-pager list
+<< Examples >>
 
-read -p "Press any key to continue.."
-printf "\n-> Access to systemd session: (should be forbidden!)\n"
-systemctl --no-pager status
+    $ ${application_name} --trace
+EOF
+)"
 
-read -p "Press any key to continue.."
-printf "\n-> Access to user dbus: (should be allowed!)\n"
-busctl --no-pager --user list
+process_command_line_arguments() {
 
-read -p "Press any key to continue.."
-printf "\n-> Accesus to systemd user session: (should be allowed!)\n"
-systemctl --no-pager --user status
+    # Allow empty command line
+    argsparse_allow_no_argument yes
 
-read -p "Press any key to continue.."
-printf "\n-> Access to system journal: (should be allowed!)\n"
-journalctl --no-pager --boot=0 --lines=10
+    argsparse_parse_options "${@}"
+    argsparse_is_option_set "trace" && set -o xtrace
+}
 
-read -p "Press any key to continue.."
-printf "\n-> Access to user journal: (should be allowed!)\n"
-journalctl --no-pager --user --boot=0 --lines=10
+# Runs a single test.
+run_test() {
+    local description="${1}"
+    local command="${2}"
+    shift 2
 
-read -p "Press any key to continue.."
-printf "\n-> Launching podman in podman container: (only works in priviliged session for now!)\n"
-podman info
+    read -p "Press any key to continue.."
 
-printf "\n-> Launching podman from host in podman container: (only works in priviliged session for now!)\n"
-podman-host info
+    echo ""
+    echo "-> ${description}:"
+    "${command}" ${@}
+}
 
-read -p "Press any key to continue.."
-printf "\n-> Desktop notifications should appear:\n"
-notify-send "Hello from wkdev-sdk!"
+# Main functionality
+run() {
 
-read -p "Press any key to continue.."
-printf "\n-> Run X11 application, xeyes: (should work if X11/Xwayland is activate on host)\n"
-xeyes
+    process_command_line_arguments "${@}"
 
-read -p "Press any key to continue.."
-printf "\n-> Run Gtk/Wayland application, gedit: (should work if Wayland is activate on host)\n"
-gedit
+    echo "-> Install required packages:"
+    sudo apt-get install --assume-yes epiphany-browser gedit glmark2 glmark2-drm glmark2-wayland iputils-ping libnotify-bin mesa-utils x11-apps
 
-read -p "Press any key to continue.."
-printf "\n-> Run glxgears OpenGL application: (should work if it works on the host)\n"
-glxgears -info
+    run_test "Ping allowed in rootless container: (expected to work)" \
+        ping -c 4 wpewebkit.org
 
-read -p "Press any key to continue.."
-printf "\n-> Run glmark2 benchmark: (should work if it works on the host)\n"
-glmark2
+    run_test "Access to system dbus: (expected to fail)" \
+        busctl --no-pager list
 
-read -p "Press any key to continue.."
-printf "\n-> Test PulseAudio: (should work if it works on the host)\n"
-pactl info
+    run_test "Access to systemd session: (expected to fail)" \
+        systemctl --no-pager status
 
-read -p "Press any key to continue.."
-printf "\n-> Test Epiphany browser: (try youtube.com, CSS 3D demos, WebGL, etc.)\n"
-epiphany
+    run_test "Access to user dbus: (expected to work)" \
+        busctl --no-pager --user list
+
+    run_test "Accesus to systemd user session: (expected to work)" \
+        systemctl --no-pager --user status
+
+    run_test "Access to system journal: (expected to work)" \
+        journalctl --no-pager --boot=0 --lines=10
+
+    run_test "Access to user journal: (expected to work)" \
+        journalctl --no-pager --user --boot=0 --lines=10
+
+    # TODO: We would need to setup a subordinate GID/UID mapping that is well embedded
+    # in the constraints given bythe host subordinate GID/UID mapping. If we ever want
+    # that, investigate. The current approach of steering the host podman from within
+    # the container is reliable, and avoids the problem alltogether, at the expense
+    # of opening another portal to the host system which exposes many host system
+    # details that one usually wants to hide from a potentially malicious container.
+    # In our case that for sure does not apply -- it is a developer SDK.
+    run_test "Launching podman in podman container: (not expected to work on every host yet)" \
+        podman info
+
+    run_test "Launching podman-host in podman container: (expected to work)" \
+        podman-host info
+
+    run_test "Desktop notifications should appear: (expected to work)" \
+        notify-send "Hello from wkdev-sdk!"
+
+    run_test "Run X11 application, xeyes: (should work if X11/Xwayland is activate on host)" \
+        xeyes
+
+    run_test "Run Gtk/Wayland application, gedit: (should work if Wayland is activate on host)" \
+        gedit
+
+    run_test "Run glxgears OpenGL application: (should work if it works on the host)" \
+        glxgears -info
+
+    run_test "Run glmark2 benchmark: (should work if it works on the host)" \
+        glmark2
+
+    run_test "Test PulseAudio: (should work if it works on the host)" \
+        pactl info
+
+    run_test "Test Epiphany browser: (try youtube.com, CSS 3D demos, WebGL, etc.)" \
+        epiphany
+
+    exit 0
+}
+
+run "${@}"

@@ -1,22 +1,38 @@
 #!/usr/bin/bash
-application_path=${0}
-application_name=$(basename ${application_path})
-application_directory=$(cd "$(dirname "${application_path:-$PWD}")" 2>/dev/null 1>&2 && pwd)
-sdk_directory=$(readlink -f "${application_directory}/..")
-printf "${application_name}: Setup SDK dependencies build environment.\n"
 
-# Verify pre-requisite: shyaml needs to be installed.
-export PATH="$(python3 -m site --user-base)/bin:${PATH}"
-if ! command -v shyaml > /dev/null; then
-    printf "Cannot find 'shyaml' executable.\n"
-    exit 1
-fi
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Setup SDK dependencies build environment." host-and-container
 
-# Verify pre-requisite: git-buildpackage needs to be installed.
-if ! command -v gbp > /dev/null; then
-    printf "Cannot find 'gbp' executable.\n"
-    exit 1
-fi
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/prerequisites.sh"
+source "${WKDEV_SDK}/utilities/resources.sh"
+
+# nproc is used to determine the number of CPU cores
+verify_executables_exist nproc
+
+# Needed for --settings default below
+get_default_dependency_settings() { echo "${WKDEV_SDK}/images/wkdev_sdk/custom_built_packages/wkdev-webkit-dependencies.yaml"; }
+
+argsparse_use_option debug        "Enable debug mode for this script"
+argsparse_use_option trace        "Enable 'xtrace' mode for this script"
+argsparse_use_option =verbose     "Increase verbosity of this script"
+
+argsparse_use_option =work-directory:     "Path to working directory, where a new work tree will be setup" mandatory
+argsparse_use_option =packages-directory: "Path to packages directory, where resulting *.deb/*.ddeb packages will be placed"
+argsparse_use_option =settings:           "Path to build definitions .yaml settings file" default:$(get_default_dependency_settings) mandatory
+
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
+
+    Creates a work tree containing all WebKit dependencies, ready to hack.
+
+<< Examples >>
+
+    $ ${application_name} --work-directory \${HOME}/wkdev-local-sdk
+EOF
+)"
+
+verify_executables_exist gbp shyaml
 
 # Package naming convention.
 # Debian package number version format: [epoch:]upstream-version[-debian-revision]
@@ -33,232 +49,154 @@ fi
 # | wkdevlocalsdk   | Self-compiled package, during SDK image _usage_ (in container!)    |
 # +-----------------+--------------------------------------------------------------------+
 #
-# '${package_version_increment}' states how often debian-revision is incremented with respect
-# to the original upstream package .dsc file: once for pre-shipped SDK packages, twice for
-# local builds.
-package_version_increment=1
+# '${package_snapshot_number}' is used when creating a snapshot build of the package, as
+# fixed snapshot number: 111 for SDK-included packages, and 222 for local package builds.
+package_snapshot_number=111
 package_version_suffix="wkdevsdk"
-if [ -f "/run/.containerenv" ]; then
-    package_version_increment=2
+if is_running_in_container; then
+    package_snapshot_number=222
     package_version_suffix="wkdevlocalsdk"
 
-    # Verify pre-requisite: aptly needs to be installed.
-    if ! command -v aptly > /dev/null; then
-        printf "Cannot find 'aptly' executable.\n"
-        exit 1
-    fi
+    verify_executable_exists aptly
 fi
 
-# Command line argument handling - defaults.
-trace=0
-verbose=0
-work_directory=""
-packages_directory=""
-settings=""
+process_command_line_arguments() {
 
-apt_repository_name="wkdev-sdk-packages"
-apt_repository_source_list="/etc/apt/sources.list.d/${apt_repository_name}.list"
-container_image_name="docker.io/nikolaszimmermann/wkdevsdk"
-dependency_settings="${sdk_directory}/images/wkdev_sdk/custom_built_packages/wkdev-webkit-dependencies.yaml"
-package_makefile_template="${sdk_directory}/images/wkdev_sdk/custom_built_packages/templates/Makefile.package.template"
-group_makefile_template="${sdk_directory}/images/wkdev_sdk/custom_built_packages/templates/Makefile.group.template"
-gbp_conf_template="${sdk_directory}/images/wkdev_sdk/custom_built_packages/templates/gbp.conf.template"
-package_distribution="kinetic"
-package_debian_branch="ubuntu/${package_distribution}"
-package_component="main"
-package_maintainer_name="Igalia"
-package_maintainer_email="webkit-gtk@lists.webkit.org"
+    argsparse_parse_options "${@}"
+    argsparse_is_option_set "trace" && set -o xtrace
 
-# Command line argument handling - help message.
-show_help_message() {
-    cat << EOF
-<< Purpose >>
+    work_directory="${program_options["work-directory"]}"
+    packages_directory="${program_options["packages-directory"]-}"
+    settings="${program_options["settings"]}"
 
-    Creates a work tree containing all WebKit dependencies, ready to hack.
+    [ -z "${work_directory}" ] && _abort_ "You have to pass a work directory using the --work-directory option."
+    [ ! -d "${work_directory}" ] && _abort_ "You have to pass a valid directory to the --work-directory option"
 
-<< Usage >>
+    [ -z "${packages_directory}" ] && packages_directory="${work_directory}/packages"
+    [ ! -d "${packages_directory}" ] && mkdir --parents "${packages_directory}" &>/dev/null
 
-    $ ${application_name} (options)?
-
-    See below for a list of possible options.
-
-    Example:
-
-    $ ${application_name} --work-directory \${HOME}/wkdeps
-    ...
-
-<< Options >>
-
-    -h / --help:        show this help message
-    -t / --trace:       enable tracing for bash script
-    -v / --verbose:     increase verbosity for ${application_name}
-
-    -w / --work-directory:     path to work directory in which the new work tree will be setup
-    -p / --packages-directory: path to packages directory in which resulting .(d)deb packages will be stored / queried for dependency resolving (default: <work-directory>/packages)
-    -s / --settings:           path to settings file in YAML format (default: ${dependency_settings})
-EOF
+    [ -z "${settings}" ] && settings="${dependency_settings}"
+    [ ! -f "${settings}" ] && _abort_ "Cannot parse settings file '${settings}', make sure it exists and is accesible."
 }
 
-parse_command_line_arguments() {
-    while :; do
-        case ${1} in
-            -h | --help)
-                show_help_message
-                exit 0
-                ;;
-            -t | --trace)
-                trace=1
-                shift
-                ;;
-            -v | --verbose)
-                verbose=1
-                shift
-                ;;
-            -w | --work-directory)
-                if [ -n "${2}" ]; then
-                    work_directory="${2}"
-                    shift 2
-                else
-                    shift
-                fi
-                ;;
-            -p | --packages-directory)
-                if [ -n "${2}" ]; then
-                    packages_directory="${2}"
-                    shift 2
-                else
-                    shift
-                fi
-                ;;
-            -s | --settings)
-                if [ -n "${2}" ]; then
-                    settings="${2}"
-                    shift 2
-                else
-                    shift
-                fi
-                ;;
-            -*)
-                printf "Invalid option '${1}'.\n"
-                show_help_message
-                exit 1
-                ;;
-            *)
-                break ;;
-        esac
+# Replaces ${variable_references} in a template text file by the content, if defined, and writes the result into a new file.
+render_template() {
+
+    local template_file_name="${1}"
+    local result_file_name="${2}"
+    shift 2
+
+    local variable_names=${@}
+
+    local commands=()
+    local allowed_variables=""
+    for variable_name in ${variable_names}; do
+        local key="${variable_name}"
+        [[ "${key}" =~ "[@]" ]] && key="${variable_name/\[@\]/}"
+
+        if [ -z "${allowed_variables}" ]; then
+            allowed_variables="\${${key}}"
+        else
+            allowed_variables="${allowed_variables},\${${key}}"
+        fi
+
+        local value="${!variable_name}"
+        commands+=("export ${key}=\"${value}\"")
     done
-}
 
-handle_command_line_arguments() {
-    # Bash scripting recommendations
-    set -o errexit # Exit upon command failure
-    set -o nounset # Warn about unset variables
+    commands+=("$(printf "envsubst '%s'< \"${template_file_name}\" > \"${result_file_name}\"" "${allowed_variables}")")
+    printf -v command_string "%s\n" "${commands[@]}"
 
-    # Enable tracing, if desired.
-    if [ ${trace} -eq 1 ]; then
-        set -o xtrace
+    if argsparse_is_option_set "debug"; then
+        echo ""
+        echo "Rendering template '${template_file_name}' to result file '${result_file_name}' applying substitutions:"
+        echo "${command_string}"
     fi
 
-    if [ -z "${work_directory}" ]; then
-        printf "You have to pass a work directory using the --work-directory option.\n"
-        exit 1
+    bash -c "${command_string}"
+    render_status=${?}
+
+    if argsparse_is_option_set "debug"; then
+        echo "Result file:"
+        cat "${result_file_name}"
     fi
 
-    if [ ! -d "${work_directory}" ]; then
-        printf "You have to pass a valid directory to the --work-directory option.\n"
-        exit 1
-    fi
-
-    if [ -z "${packages_directory}" ]; then
-        packages_directory="${work_directory}/packages"
-    fi
-
-    if [ ! -d "${packages_directory}" ]; then
-        mkdir --parents "${packages_directory}" &>/dev/null
-    fi
-
-    if [ -z "${settings}" ]; then
-        settings="${dependency_settings}"
-    fi
-
-    if [ ! -f "${settings}" ]; then
-        printf "Cannot parse settings file '${settings}', make sure it exists and is accesible.\n"
-        exit 1
-    fi
+    return ${render_status}
 }
 
 # Main functionality
 run() {
-    parse_command_line_arguments $@
-    handle_command_line_arguments
 
-    printf "\n-> Create work tree in '${work_directory}' directory...\n"
-    mkdir -p "${work_directory}/sources" &>/dev/null
-    mkdir -p "${work_directory}/builds" &>/dev/null
+    process_command_line_arguments "${@}"
 
-    if [ -f "/run/.containerenv" ]; then
-        set +o errexit
+    echo ""
+    echo "-> Create work tree in '${work_directory}' directory..."
+    mkdir --parents "${work_directory}/sources" &>/dev/null
+    mkdir --parents "${work_directory}/builds" &>/dev/null
 
-        show_output=$(aptly repo show "${apt_repository_name}")
-        if [ ${?} -ne 0 ]; then
-            printf "\n-> Create local APT repository '${apt_repository_name}'...\n"
-            aptly repo create -distribution="${package_distribution}" -component="${package_component}" "${apt_repository_name}"
+    local apt_repository_name="$(get_custom_package_local_apt_repository_name)"
+    if is_running_in_container; then
+        show_output=$(aptly repo show "${apt_repository_name}" 2>/dev/null)
+        aptly_status=${?}
+        echo ""
+        if [ ${aptly_status} -ne 0 ]; then
+            echo "-> Create local APT repository '${apt_repository_name}'..."
+            aptly repo create -distribution="$(get_custom_package_distribution)" -component="$(get_custom_package_component)" "${apt_repository_name}"
         else
-            printf "\n-> Reusing existing local APT repository '${apt_repository_name}'. Statistics:\n${show_output}\n"
+            echo "-> Re-using existing local APT repository '${apt_repository_name}'. Statistics:"
+            echo "${show_output}"
         fi
 
-        if [ ! -f "${apt_repository_source_list}" ]; then
-            echo "deb [trusted=yes] file:///${apt_repository_name}/public/ ${package_distribution} ${package_component}" | sudo tee "${apt_repository_source_list}" >/dev/null
+        if [ ! -f "$(get_custom_package_local_apt_repository_source_list)" ]; then
+            echo "deb [trusted=yes] file:///${apt_repository_name}/public/ $(get_custom_package_distribution) $(get_custom_package_component)" | sudo tee "$(get_custom_package_local_apt_repository_source_list)" >/dev/null
         fi
-
-        set -o errexit
     else
-        printf "\n-> Local APT repository creation disabled -- we are running on the host, not in the container where this is useful.\n"
+        echo ""
+        echo "-> Local APT repository creation disabled -- we are running on the host, not in the container where this is useful."
     fi
 
     local package_groups=()
-    local package_groups_count=$(cat ${settings} | shyaml --quiet get-length package_groups)
+    local package_groups_count=$(cat "${settings}" | shyaml --quiet get-length package_groups)
     for (( package_group_index=0; package_group_index<${package_groups_count}; package_group_index++ )); do
-        local package_group_name=$(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.name)
-        local package_group_entities_count=$(cat ${settings} | shyaml --quiet get-length package_groups.${package_group_index}.entities)
+        local package_group_name=$(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.name)
+        local package_group_entities_count=$(cat "${settings}" | shyaml --quiet get-length package_groups.${package_group_index}.entities)
         package_groups+=("${package_group_name}")
-        printf "\n-> Processing package group '${package_group_name}' containing ${package_group_entities_count} packages:\n"
+
+        echo ""
+        echo "-> Processing package group '${package_group_name}' containing ${package_group_entities_count} packages:"
 
         # Create package group directories
-        mkdir -p "${work_directory}/sources/${package_group_name}" &>/dev/null
-        mkdir -p "${work_directory}/builds/${package_group_name}" &>/dev/null
+        mkdir --parents "${work_directory}/sources/${package_group_name}" &>/dev/null
+        mkdir --parents "${work_directory}/builds/${package_group_name}" &>/dev/null
 
         local packages_in_group=()
         for (( package_group_entity_index=0; package_group_entity_index<${package_group_entities_count}; package_group_entity_index++ )); do
-            local package_name=$(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.name)
+            local package_name=$(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.name)
             packages_in_group+=("${package_name}")
 
-            local package_url=$(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.url)
-            local gbp_import_dsc_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.gbp_import_dsc))
-            local deb_build_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.deb_build))
-            local debuild_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.debuild))
-            local dpkg_buildpackage_options=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.dpkg_buildpackage))
+            local package_url=$(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.url)
+            local gbp_import_dsc_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.gbp_import_dsc))
+            local deb_build_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.deb_build))
+            local debuild_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.debuild))
+            local dpkg_buildpackage_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.dpkg_buildpackage))
 
-            local dependencies_count=$(cat ${settings} | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on)
-            if [ -z "${dependencies_count}" ]; then
-                dependencies_count=0
-            fi
+            local dependencies_count=$(cat "${settings}" | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on)
+            [ -z "${dependencies_count}" ] && dependencies_count=0
 
-            local system_dependencies_count=$(cat ${settings} | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.required_system_packages)
-            if [ -z "${system_dependencies_count}" ]; then
-                system_dependencies_count=0
-            fi
+            local system_dependencies_count=$(cat "${settings}" | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.required_system_packages)
+            [ -z "${system_dependencies_count}" ] && system_dependencies_count=0
 
-            printf "\n  -> Processing package '${package_name}' with URL '${package_url}':\n"
-            printf "     Options:\n"
-            printf "     - gbp_import_dsc_options=\"${gbp_import_dsc_options[@]}\"\n"
-            printf "     - deb_build_options=\"${deb_build_options[@]}\"\n"
-            printf "     - debuild_options=\"${debuild_options[@]}\"\n"
-            printf "     - dpkg_buildpackage_options=\"${dpkg_buildpackage_options[@]}\"\n"
+            echo ""
+            echo "  -> Processing package '${package_name}' with URL '${package_url}':"
+            echo "     Options:"
+            echo "     - gbp_import_dsc_options=\"${gbp_import_dsc_options[@]}\""
+            echo "     - deb_build_options=\"${deb_build_options[@]}\""
+            echo "     - debuild_options=\"${debuild_options[@]}\""
+            echo "     - dpkg_buildpackage_options=\"${dpkg_buildpackage_options[@]}\""
 
             # Create directories for result files and dependency packages
             local build_directory="${work_directory}/builds/${package_group_name}/${package_name}"
-            mkdir -p "${build_directory}"
+            mkdir --parents "${build_directory}"
 
             # Prepare gbp.conf configuration file
             # NOTE: Remember that paths are resolved within the 'wkdev_package_builder' container rootfs.
@@ -266,35 +204,34 @@ run() {
             # within the 'wkdev_package_builder' container (see images/wkdev_package_builder/invoke-build-package.sh).
             # Therefore export_directory needs to start with '/builder/work' and follow the same directory naming scheme.
             local export_directory="/builder/work/builds/${package_group_name}/${package_name}"
-            cat "${gbp_conf_template}" | package_version_increment=${package_version_increment} package_version_suffix="${package_version_suffix}" package_distribution="${package_distribution}" export_directory="${export_directory}" debuild_options="${debuild_options[@]}" dpkg_buildpackage_options="${dpkg_buildpackage_options[@]}" envsubst '${package_version_increment},${package_version_suffix},${package_distribution},${export_directory},${debuild_options},${dpkg_buildpackage_options}'> "${build_directory}/gbp.conf"
+            local package_distribution="$(get_custom_package_distribution)"
+
+            echo ""
+            local gbp_conf_parameters=(package_distribution export_directory debuild_options[@] dpkg_buildpackage_options[@])
+            render_template "$(get_template_file_by_name "gbp.conf")" "${build_directory}/gbp.conf" ${gbp_conf_parameters[@]} || _abort_ "Template creation failed"
 
             export GBP_CONF_FILES="${build_directory}/gbp.conf"
-            export DEBFULLNAME="${package_maintainer_name}"
-            export DEBEMAIL="${package_maintainer_email}"
+            export DEBFULLNAME="$(get_sdk_maintainer_name)"
+            export DEBEMAIL="$(get_sdk_maintainer_email)"
+
+            local gbp_verbose_flag=""
+            argsparse_is_option_set "debug" && gbp_verbose_flag="--verbose" # Not a typo: --debug should enable --verbose for gbp, which shows all Git commands it executes...
 
             # Create package source directory
-            mkdir -p "${work_directory}/sources/${package_group_name}/${package_name}" &>/dev/null
+            mkdir --parents "${work_directory}/sources/${package_group_name}/${package_name}" &>/dev/null
             pushd "${work_directory}/sources/${package_group_name}/${package_name}" &>/dev/null
 
             # Create a local git repository to manage the package + patches on top
-            printf "\n    -> Creating local Git repository based on DSC file '${package_url}'...\n"
-            if [ ${verbose} -eq 0 ]; then
-                gbp import-dsc ${gbp_import_dsc_options[@]} "${package_url}" &>/dev/null
-            else
-                gbp import-dsc ${gbp_import_dsc_options[@]} "${package_url}"
-            fi
+            echo "    -> Creating local Git repository based on DSC file '${package_url}'..."
+            run_command_silent_unless_verbose gbp import-dsc ${gbp_verbose_flag} ${gbp_import_dsc_options[@]} "${package_url}" || _abort_ "Git repository creation failed"
 
             package_git_directory=$(find . -type d -name "*${package_name}*" | head --lines 1)
-            pushd "${package_git_directory}" &>/dev/null
+            pushd "${package_git_directory}" &>/dev/null || _abort_ "Switching to '${package_git_directory}' failed"
 
             # Override debian revision in package version string
-            printf "\n    -> Incrementing local package version and appending '${package_version_suffix}' suffix to package name...\n"
-            if [ ${verbose} -eq 0 ]; then
-                gbp dch &>/dev/null
-            else
-                gbp dch
-            fi
-
+            # NOTE: Neither '--local <x>' nor '--distribution <y>' can be set via gbp.conf -- only a command line parameter to gbp dch.
+            echo "    -> Creating snapshot of package using a fixed snapshot number '${package_snapshot_number}' and an additional package name suffix '${package_version_suffix}'..."
+            run_command_silent_unless_verbose gbp dch ${gbp_verbose_flag} --local "${package_version_suffix}" --distribution "${package_distribution}" --commit --snapshot --snapshot-number "${package_snapshot_number}" --debian-branch "ubuntu/${package_distribution}" || _abort_ "Incrementing local package version failed"
             popd &>/dev/null
 
             local dependencies_file="${build_directory}/.dependencies"
@@ -303,8 +240,8 @@ run() {
             # Handle 'depends_on' field to depend on all build artifacts (.deb/.ddeb) files of a previously built package.
             if [ ${dependencies_count} -gt 0 ]; then
                 for (( dependency_index=0; dependency_index<${dependencies_count}; dependency_index++ )); do
-                    local dependency_package_name=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on.${dependency_index}))
-                    printf "    -> Mark this package depending on the expression '${dependency_package_name}' provided by earlier builds.\n"
+                    local dependency_package_name=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on.${dependency_index}))
+                    echo "    -> Mark this package depending on the expression '${dependency_package_name}' provided by earlier builds."
 
                     echo "${dependency_package_name}" >> "${dependencies_file}"
                 done
@@ -313,30 +250,39 @@ run() {
             # Handle 'required_system_packages' field to depend on system packages.
             if [ ${system_dependencies_count} -gt 0 ]; then
                 for (( system_dependency_index=0; system_dependency_index<${system_dependencies_count}; system_dependency_index++ )); do
-                    local system_dependency_package_name=($(cat ${settings} | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.required_system_packages.${system_dependency_index}))
+                    local system_dependency_package_name=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.required_system_packages.${system_dependency_index}))
                     echo "    -> Mark this package depending on the system package '${system_dependency_package_name}' provided in the distribution repositories."
 
                     echo "${system_dependency_package_name}" >> "${dependencies_file}"
                 done
             fi
 
-            printf "    -> Generating Makefile for package '${package_name}' in '${build_directory}/Makefile'...\n"
-            cat "${package_makefile_template}" | apt_repository_name="${apt_repository_name}" deb_build_options="${deb_build_options[@]}" sdk_directory="${sdk_directory}" work_directory="${work_directory}" package_full_name="${package_group_name}/${package_name}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${deb_build_options},${sdk_directory},${work_directory},${package_full_name},${packages_directory}'> "${build_directory}"/Makefile
+            echo "    -> Generating Makefile for package '${package_name}' in '${build_directory}/Makefile'..."
+            local makefile_parameters=(apt_repository_name deb_build_options[@] work_directory package_group_name package_name packages_directory)
+            render_template "$(get_template_file_by_name "Makefile.package")" "${build_directory}/Makefile" ${makefile_parameters[@]} || _abort_ "Template creation failed"
             popd &>/dev/null
         done
 
         local build_directory="${work_directory}/builds/${package_group_name}"
-        printf "\n-> Generating Makefile for package group '${package_group_name}' in '${build_directory}/Makefile'...\n"
-        cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages="${packages_in_group[@]}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${packages},${packages_directory}'> "${build_directory}"/Makefile
+        echo ""
+        echo "-> Generating Makefile for package group '${package_group_name}' in '${build_directory}/Makefile'..."
+        local packages="${packages_in_group[@]}"
+        local makefile_parameters=(apt_repository_name packages packages_directory)
+        render_template "$(get_template_file_by_name "Makefile.group")" "${build_directory}/Makefile" ${makefile_parameters[@]} || _abort_ "Template creation failed"
     done
 
     local build_directory="${work_directory}/builds"
-    printf "\n-> Generating Makefile for all package groups in '${build_directory}/Makefile'...\n"
-    printf "   NOTE: Use 'make' / 'make install' in '${build_directory}' to compile/install all packages in all package groups or descend into a specific package group or single package to build exactly what's needed for the current task.\n"
-    cat "${group_makefile_template}" | apt_repository_name="${apt_repository_name}" packages="${package_groups[@]}" packages_directory="${packages_directory}" envsubst '${apt_repository_name},${packages},${packages_directory}' > "${build_directory}"/Makefile
+    echo ""
+    echo "-> Generating Makefile for all package groups in '${build_directory}/Makefile'..."
+    echo "   NOTE: Use 'make' / 'make install' in '${build_directory}' to build all packages in all package groups or descend into a specific package group or single package to build exactly what's needed for the current task."
 
-    printf "\n-> Finished.\n"
-    printf "NOTE: Remember to 'make repo-publish' once before installing one or multiple packages using 'make install'.\n"
+    local packages="${package_groups[@]}"
+    local makefile_parameters=(apt_repository_name packages packages_directory)
+    render_template "$(get_template_file_by_name "Makefile.group")" "${build_directory}/Makefile" ${makefile_parameters[@]} || _abort_ "Template creation failed"
+
+    echo ""
+    echo "-> Finished."
+    echo "NOTE: Remember to 'make repo-publish' once before installing one or multiple packages using 'make install'."
 }
 
-run ${@}
+run "${@}"

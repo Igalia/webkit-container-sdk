@@ -1,0 +1,87 @@
+#!/usr/bin/bash
+
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Build one of the container images that form the SDK" host-only
+
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/podman.sh"
+source "${WKDEV_SDK}/utilities/resources.sh"
+
+# nproc is used to determine the number of CPU cores
+verify_executables_exist nproc
+
+argsparse_use_option debug        "Enable debug logging for podman (useful to debug container issues)"
+argsparse_use_option trace        "Enable 'xtrace' mode for this script"
+argsparse_use_option =verbose     "Increase verbosity of this script"
+
+argsparse_use_option =name:       "Name of container image" mandatory
+argsparse_use_option =mode:       "Operation mode: 'build' or 'deploy'" mandatory
+argsparse_use_option =tag:        "Tag to use for new container image" default:$(get_default_container_tag) mandatory
+argsparse_use_option idle-cores:  "Number of CPU cores to leave idle, when building the image" type:uint default:2
+
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
+
+    Builds one of the container images that form the SDK.
+
+<< Examples >>
+
+    $ ${application_name} --name wkdev-sdk --mode build
+    $ ${application_name} --name wkdev-sdk --mode deploy
+EOF
+)"
+
+get_tag_for_build() { get_qualified_name_and_tag "${container_image_name}" "${container_tag}";}
+get_number_of_cores_for_build() { nproc --ignore=${idle_cores}; }
+
+process_command_line_arguments() {
+
+    argsparse_parse_options "${@}"
+    argsparse_is_option_set "trace" && set -o xtrace
+
+    container_image_name="${program_options["name"]}"
+    container_tag="${program_options["tag"]}"
+    idle_cores=${program_options["idle-cores"]}
+
+    operation_mode="${program_options["mode"]}"
+    [ "${operation_mode}" != 'build' ] && [ "${operation_mode}" != 'deploy' ] && _abort_ "Unknown operation mode: '${operation_mode}' (valid choices are 'build' or 'deploy')"
+}
+
+build_image() {
+
+    echo ""
+    echo "-> Building container image '${container_image_name}'..."
+    echo ""
+
+    pushd "$(get_image_directory_by_name "${container_image_name}")" &>/dev/null
+    run_podman_silent_unless_verbose build --jobs $(get_number_of_cores_for_build) --tag "$(get_tag_for_build)" . || _abort_ "Container image build failed"
+    popd &>/dev/null
+}
+
+deploy_image() {
+
+    echo ""
+    echo "-> Deploying container image '${container_image_name}' to registry '$(get_default_container_registry)'..."
+    echo ""
+
+    run_podman login --username "$(get_default_container_registry_user_name)" "$(get_default_container_registry)" || _abort_ "Login to registry failed"
+
+    local image_directory="$(get_image_directory_by_name "${container_image_name}")"
+    pushd "${image_directory}" &>/dev/null || _abort_ "Switching to directory '${image_directory}' failed"
+    run_podman_silent_unless_verbose push "$(get_tag_for_build)" || _abort_ "Pushing to registry failed"
+    popd &>/dev/null
+}
+
+# Main functionality
+run() {
+
+    process_command_line_arguments "${@}"
+
+    [ "${operation_mode}" = "build" ] && build_image
+    [ "${operation_mode}" = "deploy" ] && deploy_image
+
+    echo ""
+    echo "-> Finished!"
+}
+
+run "${@}"

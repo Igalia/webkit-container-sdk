@@ -1,61 +1,84 @@
-#!/bin/sh
+#!/usr/bin/bash
 
-application_path=${0}
-application_name=$(basename ${application_path})
-printf "${application_name}: Initialize wkdev-sdk container...\n"
-printf "Timestamp: $(date)\n"
+[ -z "${WKDEV_SDK}" ] && export WKDEV_SDK=/wkdev-sdk
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Performs post-container-startup initialization tasks." container-only
 
-container_shell=${1}
-container_user_name=${2}
-container_user_group=${3}
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/podman.sh"
 
-# Prevent to run this script from the host
-if [ ! -f /run/.containerenv ]; then
-    printf "\nThe script '${application_name}' is intended to run from within the container only.\n"
-    exit 1
-fi
+argsparse_use_option trace        "Enable 'xtrace' mode for this script"
+
+argsparse_use_option =shell:      "Specific shell to use for interactive container usage" mandatory
+argsparse_use_option =user:       "Container account user name" type:username mandatory
+argsparse_use_option =group:      "Container account group name" type:group mandatory
+
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
+
+    ${application_name} is the entry point for the wkdev-sdk container.
+
+    It performs various initialization tasks, such as installing the user shell package in the container,
+    updating the APT cache, setting up sudo support, etc.
+
+    NOTE: You do NOT need to call this script manually, it is only used during container startup.
+EOF
+)"
+
+process_command_line_arguments() {
+
+    argsparse_parse_options "${@}"
+    argsparse_is_option_set "trace" && set -o xtrace
+
+    container_shell="${program_options["shell"]}"
+    container_user_name="${program_options["user"]}"
+    container_group_name="${program_options["group"]}"
+}
 
 try_update_apt_cache() {
-    printf "\n[1/7] Updating APT repositories...\n"
-    apt-get update
+
+    echo ""
+
+    echo "[1/7] Updating APT repositories..."
+    apt-get update || _abort_ "Cannot update APT repositories"
     # Allow this to fail (e.g. no internet connectivity on host system)
 }
 
 try_install_shell_package() {
+
+    echo ""
+
     container_shell_package=$(basename "${container_shell}")
-    if [ $(dpkg-query --show --showformat='${Status}' "${container_shell_package}" 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-        printf "\n[2/7] Installing user shell package '${container_shell_package}'...\n"
-        apt-get --assume-yes install "${container_shell_package}"
-
-        if [ ${?} -ne 0 ]; then
-            printf "Cannot install package: executing 'apt-get' failed.\n"
-            exit 1
-        fi
-
-        apt-get --assume-yes autoremove && apt-get --assume-yes clean
+    if [ $(dpkg-query --show --showformat='${Status}' "${container_shell_package}" 2>/dev/null | grep --count "ok installed") -eq 0 ]; then
+        echo "[2/7] Installing user shell package '${container_shell_package}'..."
+        apt-get --assume-yes install "${container_shell_package}" || _abort_ "Cannot install package: executing 'apt-get install' failed"
+        apt-get --assume-yes autoremove || _abort_ "Cannot install package: executing 'apt-get autoremove' failed"
+        apt-get --assume-yes clean || _abort_ "Cannot install package: executing 'apt-get clean' failed"
     else
-        printf "\n[2/7] No need to install user shell package '${container_shell_package}' - it's already present.\n"
+        echo "[2/7] No need to install user shell package '${container_shell_package}' - it's already present."
     fi
 }
 
 try_switch_shell_for_user() {
-    container_shell=$(which ${container_shell_package})
-    if ! grep "${container_user_name}" /etc/passwd | grep --quiet "${container_shell}"; then
-        printf "\n[3/7] Switch shell to '${container_shell}' for container user '${container_user_name}'...\n"
-        usermod --shell "${container_shell}" "${container_user_name}"
 
-        if [ ${?} -ne 0 ]; then
-            printf "Cannot switch shell: executing 'usermod' failed.\n"
-            exit 1
-        fi
+    echo ""
+
+    container_shell="$(which ${container_shell_package})"
+    if ! grep "${container_user_name}" /etc/passwd | grep --quiet "${container_shell}"; then
+        echo "[3/7] Switch shell to '${container_shell}' for container user '${container_user_name}'..."
+        usermod --shell "${container_shell}" "${container_user_name}" || _abort_ "Cannot switch shell: executing 'usermod' failed"
     else
-        printf "\n[3/7] No need to switch shell to '${container_shell}' - it's already the default for user '${container_user_name}'.\n"
+        echo "[3/7] No need to switch shell to '${container_shell}' - it's already the default for user '${container_user_name}'."
     fi
 }
 
 try_setup_setgid_subuid_files() {
+
+    echo ""
+
     if ! grep --quiet "${container_user_name}" /etc/subuid; then
-        printf "\n[4/7] Setup /etc/sub{gid|uid} files for user '${container_user_name}'...\n\n"
+        echo "[4/7] Setup /etc/sub{gid|uid} files for user '${container_user_name}'..."
+        echo ""
 
         # FIXME: This assumes the host UID/GID subordinate range is 100000-200000. We should rather
         # find a free subordinate-range in the given host outer container mapping, to assign it
@@ -64,86 +87,86 @@ try_setup_setgid_subuid_files() {
         # Eventually the new 'auto' user-ns mode can be handy for this kind of situation to avoid
         # having to define a mapping at all in the outer container -- in theory podman should
         # be able to figure out exactly this 'free' subordinate-range. Needs some testing.
-        usermod --add-subuids 50000-99999 --add-subgids 50000-99999 "${container_user_name}"
-
-        if [ ${?} -ne 0 ]; then
-            printf "Cannot add user '${container_user_name}' to /etc/subgid or /etc/subuid file: executing usermod failed.\n"
-            exit 1
-        fi
+        usermod --add-subuids 50000-99999 --add-subgids 50000-99999 "${container_user_name}" || _abort_ "Cannot add user '${container_user_name}' to /etc/subgid or /etc/subuid file: executing usermod failed"
     else
-        printf "\n[4/7] No need to setup /etc/sub{gid|uid} -- UID/GID mapping for container user '${container_user_name}' already present.\n"
+        echo "[4/7] No need to setup /etc/sub{gid|uid} -- UID/GID mapping for container user '${container_user_name}' already present."
     fi
 
-    printf "      -> /etc/subgid contents: $(cat /etc/subgid)\n"
-    printf "      -> /etc/subuid contents: $(cat /etc/subuid)\n"
+    echo "      -> /etc/subgid contents: $(cat /etc/subgid)"
+    echo "      -> /etc/subuid contents: $(cat /etc/subuid)"
 }
 
 try_setup_sudoers_file() {
+
+    echo ""
+
     local sudoers_directory="/etc/sudoers.d"
     local sudoers_file="${sudoers_directory}/sudoers"
-    printf "\n[5/7] Setup sudoers file '${sudoers_file}' for user '${container_user_name}', if necessary...\n"
+    echo "[5/7] Setup sudoers file '${sudoers_file}' for user '${container_user_name}', if necessary..."
 
     mkdir --parents "${sudoers_directory}" &>/dev/null
     chmod 750 "${sudoers_directory}"
 
-    if [ ! -f "${sudoers_file}" ]; then
-        touch "${sudoers_file}"
-    fi
+    [ ! -f "${sudoers_file}" ] && touch "${sudoers_file}"
 
     # Suppress FQDN checks upon sudo invocation
     if ! grep --quiet "Defaults !fqdn" "${sudoers_file}"; then
-        printf "Defaults !fqdn\n" >> "${sudoers_file}"
+        echo "Defaults !fqdn" >> "${sudoers_file}"
     fi
 
     # Ensure passwordless sudo is set up for user
     if ! grep --quiet "${container_user_name} ALL = (root) NOPASSWD:ALL" "${sudoers_file}"; then
-        printf "%s ALL = (root) NOPASSWD:ALL\n" "${container_user_name}" >> "${sudoers_file}"
+        echo "${container_user_name} ALL = (root) NOPASSWD:ALL" >> "${sudoers_file}"
     fi
 }
 
 try_setup_run_user_directory() {
+
+    echo ""
+
     local container_user_id=$(id --user --real "${container_user_name}")
     local current_run_user_directory="/run/user/${container_user_id}"
-    printf "\n[6/7] Initialize systemd-style /run/user/ user session directory '${current_run_user_directory}', if necessary...\n"
+    echo "[6/7] Initialize systemd-style /run/user/ user session directory '${current_run_user_directory}', if necessary..."
 
     mkdir --parents "${current_run_user_directory}" &>/dev/null
     chmod 700 "${current_run_user_directory}"
-    chown "${container_user_name}:${container_user_group}" "${current_run_user_directory}" &>/dev/null
+    chown "${container_user_name}:${container_group_name}" "${current_run_user_directory}" &>/dev/null
 }
 
 try_setup_local_sdk_repository() {
+
+    echo ""
+
     local packages_directory="/wkdev-sdk-packages"
-    printf "\n[7/7] Initialize local '${packages_directory}' APT repository, if necessary...\n"
+    echo "[7/7] Initialize local '${packages_directory}' APT repository, if necessary..."
 
     mkdir --parents "${packages_directory}" &>/dev/null
     chmod 750 "${packages_directory}"
-    chown "${container_user_name}:${container_user_group}" "${packages_directory}" &>/dev/null
+    chown "${container_user_name}:${container_group_name}" "${packages_directory}" &>/dev/null
 }
 
-# 1) Update APT package cache.
-try_update_apt_cache
+# Main functionality
+run() {
 
-# 2) Install shell associated with host user account.
-try_install_shell_package
+    process_command_line_arguments "${@}"
 
-# 3) Switch shell for container user, if needed.
-try_switch_shell_for_user
+    # Set for the whole wkdev-init session.
+    export DEBIAN_FRONTEND=noninteractive
 
-# 4) Setup /etc/subgid and /etc/subuid to allow spawning rootless containers from within the container.
-try_setup_setgid_subuid_files
+    echo "-> Performing post-startup initialization tasks in container..."
+    try_update_apt_cache
+    try_install_shell_package
+    try_switch_shell_for_user
+    try_setup_setgid_subuid_files
+    try_setup_sudoers_file
+    try_setup_run_user_directory
+    try_setup_local_sdk_repository
 
-# 5) Setup sudo support (useful enough for sudo apt-get install).
-try_setup_sudoers_file
+    echo ""
+    echo "Finished initialization - sleeping forever..."
 
-# 6) Hand-create /run/user/<uid> with correct permissions, since we are not using systemd.
-try_setup_run_user_directory
+    touch /run/.wkdev-init-done
+    exec tail -f /dev/null
+}
 
-# 7) Create place for SDK internal APT repository.
-try_setup_local_sdk_repository
-
-# 8) Rest forever
-printf "\nFinished initialization - sleeping forever...\n"
-printf "Timestamp: $(date)\n"
-
-touch /run/.wkdev-init-done
-exec tail -f /dev/null
+run "${@}"

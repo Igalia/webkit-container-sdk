@@ -1,2 +1,5 @@
 export DEBUGINFOD_URLS="https://debuginfod.ubuntu.com"
-export PATH="$(python3 -m site --user-base)/bin:${PATH}"
+
+# wkdev-sdk integration
+export WKDEV_SDK=/wkdev-sdk
+export PATH="${WKDEV_SDK}/scripts:${WKDEV_SDK}/scripts/container-only:$(python3 -m site --user-base)/bin:${PATH}"

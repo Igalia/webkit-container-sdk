@@ -16,7 +16,7 @@ package_groups:
         url: 'http://archive.ubuntu.com/ubuntu/pool/universe/libj/libjxl-testdata/libjxl-testdata_0.0~git20230110.d6168ff-1.dsc'
 
       - name: jpeg-xl # JPEG XL Image Coding System
-        url: 'http://archive.ubuntu.com/ubuntu/pool/universe/j/jpeg-xl/jpeg-xl_0.7.0-10ubuntu1.dsc'
+        url: 'http://archive.ubuntu.com/ubuntu/pool/universe/j/jpeg-xl/jpeg-xl_0.7.0-10ubuntu2.dsc'
         depends_on: ['./libhwy*.deb', './libjxl-testdata*.deb']
 
   - package_group:

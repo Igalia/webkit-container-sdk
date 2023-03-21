@@ -15,17 +15,14 @@ is_nvidia_kernel_module_loaded() {
 
 is_nvidia_gpu_installed() {
 
-echo "#### 1"
     is_nvidia_kernel_module_loaded || return 1
-echo "#### 2"
 
     # Check NVIDIA tools are available.
     does_executable_exist nvidia-smi || return 1
-echo "#### 3"
 
     # Check nvidia-smi returns an zero exit code.
     run_command_silent nvidia-smi || return 1
-echo "#### 4"
+
     return 0
 }
 
@@ -39,3 +36,4 @@ get_nvidia_repository_url() { echo "https://nvidia.github.io/$(get_nvidia_reposi
 get_nvidia_apt_source_file() { echo "/etc/apt/sources.list.d/$(get_nvidia_repository_name).list"; }
 get_nvidia_gpg_key_file() { echo "/etc/apt/trusted.gpg.d/$(get_nvidia_repository_name).gpg"; }
 get_nvidia_cdi_config_file() { echo "/etc/cdi/nvidia.yaml"; }
+get_nvidia_gpu_profiling_conf_file() { echo "/etc/modprobe.d/nvidia-gpu-profiling.conf"; }

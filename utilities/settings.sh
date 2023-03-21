@@ -9,6 +9,8 @@ get_sdk_maintainer_email() { echo "webkit-gtk@lists.webkit.org"; }
 #####
 ##### Host/container environment detection
 #####
+get_init_done_file() { echo "/run/.wkdev-init-done"; }
+is_first_time_run() { [ ! -f "$(get_init_done_file)" ]; }
 is_running_in_container() { [ -f "/run/.containerenv" ]; }
 
 #####

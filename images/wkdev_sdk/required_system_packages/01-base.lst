@@ -4,5 +4,8 @@ debuginfod
 # Container/capabilities support tools
 iptables libcap2-bin libyajl2 uidmap
 
+# NVIDIA/EGL/Wayland integration
+libnvidia-egl-wayland1
+
 # General utilities
 apt-file aptly atop emacs git htop iotop iputils-ping kmod less locate man-db nano openssh-client strace sudo unzip vim wget

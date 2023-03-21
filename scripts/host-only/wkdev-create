@@ -41,6 +41,7 @@ EOF
 get_settings_table_first_column_size() { echo 40; }
 get_settings_table_second_column_size() { echo 40; }
 get_settings_table_print_prefix() { echo "         "; }
+get_procfs_perf_event_setting() { echo "/proc/sys/kernel/perf_event_paranoid"; }
 
 process_command_line_arguments() {
 
@@ -245,7 +246,7 @@ try_process_dri() {
 
 try_process_nvidia_gpu() {
 
-    local is_nvidia_gpu_available=$([ is_nvidia_gpu_installed ] && echo 1 || echo 0)
+    local is_nvidia_gpu_available=$([ is_nvidia_gpu_installed ] && [ -f "$(get_nvidia_cdi_config_file)" ] && echo 1 || echo 0)
     local podman_argument=("--device" "nvidia.com/gpu=all")
     try_process ${1} "Access to NVIDIA GPU on host" ${is_nvidia_gpu_available} ${podman_argument[@]}
 }
@@ -300,6 +301,8 @@ build_podman_create_arguments() {
 
     # Add 'SYS_PTRACE' support, to be able to use strace / gdb / ...
     arguments+=("--cap-add=SYS_PTRACE")
+    arguments+=("--cap-add=SYS_ADMIN")
+    arguments+=("--privileged")
 
     # Set container name & hostname & workdir.
     arguments+=("--name" "${container_name}")
@@ -418,6 +421,7 @@ print_host_settings() {
     print_table "$(print_table_row "\${XDG_SESSION_TYPE}" "${XDG_SESSION_TYPE-}")"
     print_table "$(print_table_row "\${WAYLAND_DISPLAY}" "${WAYLAND_DISPLAY-}")"
     print_table "$(print_table_row "\${DISPLAY}" "${DISPLAY-}")"
+    print_table "$(print_table_row "$(get_procfs_perf_event_setting)" $(cat "$(get_procfs_perf_event_setting)"))"
 
     # Do not attempt to validate the /etc/sub?id files for printing purposes, assume no duplicates are present and
     # an entry is present for the current UID or the current user name, but not both.
@@ -518,6 +522,55 @@ try_enable_user_podman_socket_service_on_host() {
     fi
 }
 
+try_enable_nvidia_container_integration_on_host() {
+
+    echo ""
+    if [ ! -f "$(get_nvidia_cdi_config_file)" ]; then
+        echo "-> Enable NVIDIA GPU container integration on host system, running 'wkdev-setup-nvidia-gpu-for-container'..."
+        # Continue gracefully, as long as the setup script is not widely tested.
+        "${WKDEV_SDK}/scripts/host-only/wkdev-setup-nvidia-gpu-for-container" || _log_ "Script failed, please investigate."
+    else
+        echo "-> The NVIDIA GPU container integration is already enabled on host system."
+    fi
+}
+
+try_enable_cpu_profiling_settings_on_host() {
+
+    echo ""
+
+    local perf_event_setting="$(get_procfs_perf_event_setting)"
+    if [ $(cat "${perf_event_setting}") -ne 0 ]; then
+        echo "-> The procfs '${perf_event_setting}' settings needs to be modified to enable CPU profiling (current value: '$(cat "${perf_event_setting}")'), switching to '0'..."
+        echo 0 | sudo tee "${perf_event_setting}" &>/dev/null
+    else
+        echo "-> The procfs '${perf_event_setting}' settings is correctly set to '0' - no need to modify."
+    fi
+}
+
+try_enable_nvidia_gpu_profiling_settings_on_host() {
+
+    echo ""
+
+    if [ -f "$(get_nvidia_gpu_profiling_conf_file)" ]; then
+        echo "-> The NVIDIA kernel module settings were already deployed to $(get_nvidia_gpu_profiling_conf_file) - no need to modify."
+    else
+        echo "-> Deploying NVIDIA kernel module settings to $(get_nvidia_gpu_profiling_conf_file)..."
+        echo 'options nvidia "NVreg_RestrictProfilingToAdminUsers=0"' | sudo tee "$(get_nvidia_gpu_profiling_conf_file)" &>/dev/null
+
+        echo "-> Updating /boot/initrd.img files..."
+        if does_executable_exist dracut; then
+            sudo dracut --regenerate-all --force
+        elif does_executable_exist update-initramfs; then
+            update-initramfs -u -k all
+        else
+            _abort_ "Cannot update initram - which method to use?"
+        fi
+
+        echo ""
+        echo "NOTE: YOU NEED TO REBOOT THE HOST SYSTEM ONCE!"
+    fi
+}
+
 # Main functionality
 run() {
 
@@ -528,6 +581,9 @@ run() {
 
     try_enable_lingering_on_host
     try_enable_user_podman_socket_service_on_host
+    try_enable_nvidia_container_integration_on_host
+    try_enable_cpu_profiling_settings_on_host
+    try_enable_nvidia_gpu_profiling_settings_on_host
 
     echo ""
     echo "-> Host integration features:"

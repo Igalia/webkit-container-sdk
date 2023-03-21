@@ -4,6 +4,7 @@
 init_application "${0}" "Launch a command or spawn an interactive shell in a container built by 'wkdev-create'" host-only
 
 # Source utility script fragments
+source "${WKDEV_SDK}/utilities/packages.sh"
 source "${WKDEV_SDK}/utilities/podman.sh"
 
 argsparse_use_option debug           "Enable debug logging for podman (useful to debug container issues)"
@@ -88,13 +89,13 @@ run() {
     local podman_arguments=()
     build_podman_arguments podman_arguments
 
-    run_podman_silent ${podman_arguments[@]} exec ${container_name} test -f /run/.wkdev-init-done || {
+    run_podman_silent ${podman_arguments[@]} exec "${container_name}" test -f "$(get_init_done_file)" || {
         echo ""
         echo "-> Wait for '${container_name}' to finish initialization..."
 
         local retries=0
         while : ; do
-            run_podman_silent ${podman_arguments[@]} exec ${container_name} test -f /run/.wkdev-init-done && break
+            run_podman_silent ${podman_arguments[@]} exec "${container_name}" test -f "$(get_init_done_file)" && break
 
             retries=$((retries+1))
             [ ${retries} -eq 10 ] && _abort_ "Container does not start, please investigate"
@@ -128,7 +129,7 @@ run() {
     if argsparse_is_option_set "exec"; then
         podman_exec_arguments+=("${container_name}" "${program_params[@]}")
     else
-        podman_exec_arguments+=("${container_name}" "${SHELL}" "--login")
+        podman_exec_arguments+=("${container_name}" "/usr/bin/env" "-i TERM=${TERM} USER=$(id --user --name)" "${SHELL}" "--login")
     fi
 
     run_podman ${podman_arguments[@]} exec ${podman_exec_arguments[@]}

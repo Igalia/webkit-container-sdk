@@ -1,12 +1,5 @@
 General features:
-- --silent mode
-- measure timing
-- greeting message with instructions
-- add build-wpe-release shortcuts with WEBKIT_HOME
-
-GPU:
-- nvidia nsight
+- greeting message with instructions where to find HOST, etc.
 
 IDE:
 - try vscode in container
-- try vscode from host

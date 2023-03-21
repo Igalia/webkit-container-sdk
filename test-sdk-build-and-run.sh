@@ -47,4 +47,4 @@ podman unshare rm -rf "${test_home_directory}" &>/dev/null
 
 # 7) Show instructions how to deploy the new SDK image
 echo ""
-echo "Ready. If everything went well, use 'scripts/host-only/wkdev-sdk-deploy' to push the new SDK image to the registry, once tested!"
+echo "Ready. If everything went well, use 'scripts/host-only/wkdev-sdk-bakery --mode deploy' to push the new SDK image to the registry, once tested!"

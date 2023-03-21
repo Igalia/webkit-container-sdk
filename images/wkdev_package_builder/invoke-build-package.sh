@@ -5,6 +5,7 @@ init_application "${0}" "Launch a container that runs the 'build-package.sh' scr
 
 # Source utility script fragments
 source "${WKDEV_SDK}/utilities/podman.sh"
+source "${WKDEV_SDK}/utilities/timer.sh"
 
 work_directory="${1}"
 packages_directory="${2}"
@@ -27,6 +28,7 @@ fi
 ${WKDEV_SDK}/scripts/wkdev-ensure-package-proxy-service
 
 # ... before invoking package builds.
+timer_start
 run_podman_in_background_and_log_to_file "${log_file}" run --network host --rm \
     --mount type=bind,source=${work_directory},destination=/builder/work,rslave \
     --mount type=bind,source=${packages_directory},destination=/builder/packages,rslave \
@@ -42,4 +44,4 @@ tail --lines=10000 --follow --pid=${background_pid} "${log_file}" &
 wait ${background_pid} || _abort_ "Build failed"
 
 echo ""
-echo "-> Build finished successfully."
+echo "-> Build finished successfully. $(timer_stop)"

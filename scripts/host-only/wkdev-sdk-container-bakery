@@ -6,6 +6,7 @@ init_application "${0}" "Build one of the container images that form the SDK" ho
 # Source utility script fragments
 source "${WKDEV_SDK}/utilities/podman.sh"
 source "${WKDEV_SDK}/utilities/resources.sh"
+source "${WKDEV_SDK}/utilities/timer.sh"
 
 # nproc is used to determine the number of CPU cores
 verify_executables_exist nproc
@@ -54,7 +55,9 @@ build_image() {
     echo ""
 
     pushd "$(get_image_directory_by_name "${container_image_name}")" &>/dev/null
+    timer_start
     run_podman_silent_unless_verbose build --jobs $(get_number_of_cores_for_build) --tag "$(get_tag_for_build)" . || _abort_ "Container image build failed"
+    timer_stop
     popd &>/dev/null
 }
 

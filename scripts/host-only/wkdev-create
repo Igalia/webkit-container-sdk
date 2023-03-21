@@ -294,15 +294,15 @@ build_podman_create_arguments() {
 
     # NOTE: Extra capabilities are needed to run podman in podman. We don't need it,
     # since we command the host podman to run extra containers for us, when needed.
-    # arguments+=("--cap-add=CHOWN,DAC_OVERRIDE,FOWNER,FSETID,KILL,SETFCAP,SETGID,SETPCAP,SETUID") / arguments+=("--privileged")
 
     # Map our SDK git repository into the container.
     arguments+=("--mount" "type=bind,source=${WKDEV_SDK},destination=/wkdev-sdk,rslave")
 
-    # Add 'SYS_PTRACE' support, to be able to use strace / gdb / ...
+    # Add 'SYS_PTRACE' support, to be able to use gdb.
     arguments+=("--cap-add=SYS_PTRACE")
+
+    # Add 'SYS_ADMIN' support, to be able to use CPU profiiling.
     arguments+=("--cap-add=SYS_ADMIN")
-    arguments+=("--privileged")
 
     # Set container name & hostname & workdir.
     arguments+=("--name" "${container_name}")

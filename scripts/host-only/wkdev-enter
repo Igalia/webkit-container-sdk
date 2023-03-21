@@ -128,7 +128,7 @@ run() {
     if argsparse_is_option_set "exec"; then
         podman_exec_arguments+=("${container_name}" "${program_params[@]}")
     else
-        podman_exec_arguments+=("${container_name}" "/usr/bin/env" "-i TERM=${TERM} USER=$(id --user --name)" "${SHELL}" "--login")
+        podman_exec_arguments+=("${container_name}" "/usr/bin/env" "USER=$(id --user --name)" "${SHELL}" "--login")
     fi
 
     run_podman ${podman_arguments[@]} exec ${podman_exec_arguments[@]}

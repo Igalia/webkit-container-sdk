@@ -49,7 +49,7 @@ run() {
     process_command_line_arguments "${@}"
 
     echo "-> Install required packages:"
-    sudo apt-get install --assume-yes epiphany-browser gedit glmark2 glmark2-drm glmark2-wayland iputils-ping libnotify-bin mesa-utils x11-apps
+    sudo apt-get install --assume-yes epiphany-browser gedit glmark2 glmark2-drm glmark2-wayland libnotify-bin mesa-utils x11-apps
 
     run_test "Ping allowed in rootless container: (expected to work)" \
         ping -c 4 wpewebkit.org
@@ -86,7 +86,7 @@ run() {
         podman-host info
 
     run_test "Desktop notifications should appear: (expected to work)" \
-        notify-send "Hello from wkdev-sdk!"
+        notify-send 'Hello from wkdev-sdk'
 
     run_test "Run X11 application, xeyes: (should work if X11/Xwayland is activate on host)" \
         xeyes

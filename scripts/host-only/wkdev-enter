@@ -4,7 +4,6 @@
 init_application "${0}" "Launch a command or spawn an interactive shell in a container built by 'wkdev-create'" host-only
 
 # Source utility script fragments
-source "${WKDEV_SDK}/utilities/packages.sh"
 source "${WKDEV_SDK}/utilities/podman.sh"
 
 argsparse_use_option debug           "Enable debug logging for podman (useful to debug container issues)"

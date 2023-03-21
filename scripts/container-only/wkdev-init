@@ -5,7 +5,7 @@
 init_application "${0}" "Performs post-container-startup initialization tasks." container-only
 
 # Source utility script fragments
-source "${WKDEV_SDK}/utilities/packages.sh"
+source "${WKDEV_SDK}/utilities/debian-packages.sh"
 source "${WKDEV_SDK}/utilities/podman.sh"
 
 argsparse_use_option trace        "Enable 'xtrace' mode for this script"

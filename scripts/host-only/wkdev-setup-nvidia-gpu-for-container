@@ -75,7 +75,8 @@ run() {
         echo "-> Installing '$(get_nvidia_host_package)'..."
         sudo apt-get install --assume-yes "$(get_nvidia_host_package)" || _abort_ "'apt-get install' failed"
     elif [ "${distribution}" = "fedora" ]; then
-        local nvidia_distribution="$(. /etc/os-release; echo $ID$VERSION_ID;)"
+        # local nvidia_distribution="$(. /etc/os-release; echo $ID$VERSION_ID;)"
+        local nvidia_distribution="centos8" # e.g. fedora7 symlinks no longer work
         local yum_repo_file="/etc/yum.repos.d/$(get_nvidia_repository_name).repo"
 
         if [ ! -f "${yum_repo_file}" ]; then

@@ -5,7 +5,7 @@ build-essential cmake ninja-build meson
 icecc ccache
 
 # Debugging / profiling / tracing
-valgrind rr perf-tools-unstable
+valgrind rr perf-tools-unstable systemd-coredump
 
 # Documentation
 asciidoc doxygen doxygen-latex doxygen-doxyparse graphviz python3-sphinx

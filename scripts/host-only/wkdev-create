@@ -383,10 +383,6 @@ build_podman_arguments() {
     # cgroups are managed via systemd, not cgroupfs.
     generic_arguments+=("--cgroup-manager" "systemd")
 
-    # The OCI hooks.d directory contains e.g. nvidia-container-runtime
-    # hooks to support NVIDIA GPUs in the container.
-    generic_arguments+=("--hooks-dir" "/etc/containers/oci/hooks.d")
-
     argsparse_is_option_set "debug" && generic_arguments+=("--log-level debug")
 }
 

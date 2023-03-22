@@ -5,14 +5,15 @@ source "${WKDEV_SDK}/utilities/prerequisites.sh"
 
 verify_executable_exists lsmod
 
+# Checks if kernel modules named 'nvidia....' are loaded.
 is_nvidia_kernel_module_loaded() {
 
     # Check kernel modules named 'nvidia...' are loaded.
     local nvidia_modules=$(lsmod | grep --count "^nvidia")
     [ ${nvidia_modules} -gt 0 ] || return 1
-    return 0
 }
 
+# Checks if an NVIDIA GPU is available for use (on the host!)
 is_nvidia_gpu_installed() {
 
     is_nvidia_kernel_module_loaded || return 1
@@ -22,8 +23,6 @@ is_nvidia_gpu_installed() {
 
     # Check nvidia-smi returns an zero exit code.
     run_command_silent nvidia-smi || return 1
-
-    return 0
 }
 
 # This distribution also works for 22.10 -- has no official support though.

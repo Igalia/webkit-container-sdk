@@ -165,8 +165,8 @@ try_process_home_directory() {
 try_process_coredump_directory() {
 
     # coredumpctl needs to share the directory when the systemd service stores the coredumps
-    local podman_argument=("--mount" "type=bind,source=${coredump_directory},destination=${coredump_directory},rslave")
     local coredump_directory="/var/lib/systemd/coredump"
+    local podman_argument=("--mount" "type=bind,source=${coredump_directory},destination=${coredump_directory},rslave")
     local coredump_directory_exists=$([ -d "${coredump_directory}" ] && echo 1 || echo 0)
     try_process ${1} "Expose systemd-coredump directory in case it is present" ${coredump_directory_exists} ${podman_argument[@]}
 }

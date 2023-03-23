@@ -624,7 +624,7 @@ run() {
 
     echo ""
     echo "-> Finished creation of container '${container_name}'!"
-    echo "   NOTE: Use \`wkdev-enter ${container_name}\` to launch an interactive shell."
+    echo "   NOTE: Use \`wkdev-enter --name ${container_name}\` to launch an interactive shell."
 }
 
 run "${@}"

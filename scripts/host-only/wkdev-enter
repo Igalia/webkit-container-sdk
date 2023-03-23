@@ -64,12 +64,11 @@ build_podman_arguments() {
 ensure_container_is_running() {
 
     # Check if container is running, if not - start or create it.
-    last_container_status="unknown"
-    check_podman_container_status "${container_name}"
-    argsparse_is_option_set "debug" && echo "## Status for '${container_name}' container: '${last_container_status}'"
+    container_status="$(get_podman_container_status "${container_name}")"
+    argsparse_is_option_set "debug" && echo "## Status for '${container_name}' container: '${container_status}'"
 
-    [ "${last_container_status}" == "unknown" ] && _abort_ "Cannot find container '${container_name}'"
-    [ "${last_container_status}" == "running" ] || {
+    [ "${container_status}" == "unknown" ] && _abort_ "Cannot find container '${container_name}'"
+    [ "${container_status}" == "running" ] || {
         echo "";
         echo "-> Container '${container_name}' is not yet running. Starting it before attempting to enter...";
         run_podman_silent start "${container_name}"

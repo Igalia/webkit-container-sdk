@@ -33,18 +33,17 @@ run() {
 
     process_command_line_arguments "${@}"
 
-    local proxy_container_name="$(get_package_proxy_image_name)"
     # Check if proxy server container is running, if not - start or create it.
-    last_container_status="unknown"
-    check_podman_container_status "${proxy_container_name}"
-    argsparse_is_option_set "debug" && echo "## Status for '${proxy_container_name}' container: '${last_container_status}'"
+    local proxy_container_name="$(get_package_proxy_image_name)"
+    proxy_container_status="$(get_podman_container_status "${proxy_container_name}" || echo "unknown")"
+    argsparse_is_option_set "debug" && echo "## Status for '${proxy_container_name}' container: '${proxy_container_status}'"
 
-    if [ "${last_container_status}" == "unknown" ]; then
+    if [ "${proxy_container_status}" == "unknown" ]; then
         # If the container isn't known, create it and run it - in one shot.
         argsparse_is_option_set "verbose" && echo "-> Creating & starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container..."
         run_podman_silent run --pull newer --detach --tty --publish 127.0.0.1:8765:8765 --volume "${proxy_container_name}-data":/data \
                               --name "${proxy_container_name}" "$(get_package_proxy_qualified_name_and_tag)"
-    elif [ "${last_container_status}" != "running" ]; then
+    elif [ "${proxy_container_status}" != "running" ]; then
         # If the container exists and isn't running, start it.
         argsparse_is_option_set "verbose" && echo "-> Starting local proxy server to cache .deb packages as separated '${proxy_container_name}' container..."
         run_podman_silent start "${proxy_container_name}"
@@ -54,14 +53,13 @@ run() {
     fi
 
     # Check if startup was successful.
-    last_container_status="unknown"
-    check_podman_container_status "${proxy_container_name}"
-    if [ "${last_container_status}" == "running" ]; then
+    proxy_container_status="$(get_podman_container_status "${proxy_container_name}")"
+    if [ "${proxy_container_status}" == "running" ]; then
         argsparse_is_option_set "verbose" && { echo ""; echo "-> Local proxy server '${proxy_container_name}' started successfully."; }
         exit 0
     fi
 
-    _abort_ "Proxy container status: '${last_container_status}'. Cannot start '${proxy_container_name}' container - please check logs using 'podman logs ${proxy_container_name}'."
+    _abort_ "Proxy container status: '${proxy_container_status}'. Cannot start '${proxy_container_name}' container - please check logs using 'podman logs ${proxy_container_name}'."
 }
 
 run "${@}"

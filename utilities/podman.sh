@@ -29,14 +29,6 @@ run_podman_in_background_and_log_to_file() {
 }
 
 # Queries the container status - stores result in global 'last_container_status' variable.
-check_podman_container_status() {
-
-    # FIXME: Stop using eval here.
-    local container_name="${1}"
-    eval "$(${podman_executable} inspect --type container "${container_name}" --format 'last_container_status={{.State.Status}};' 2>/dev/null)"
-}
-
-# Queries the container status - stores result in global 'last_container_status' variable.
 get_podman_container_status() {
 
     local container_name="${1}"

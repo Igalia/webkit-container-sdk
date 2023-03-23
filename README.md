@@ -1,12 +1,17 @@
 ## wkdev-sdk
 
-Welcome to wkdev-sdk, the all-in SDK for WebKit GTK/WPE port development.
+Welcome to wkdev-sdk, the all-in-one SDK for WebKit GTK/WPE port development.
 
-It provides a fully-equipped container image ready for development, and
-we recommend to use Podman to execute the OCI compatible container image.
+It provides a fully-equipped container image ready for WebKit development.
+We recommend to use **podman** to execute the OCI-compatible container image.
 
 Once you entered the container, you can navigate to a WebKit checkout
 and compile using Tools/Scripts/build-webkit --gtk / --wpe, as usual.
+
+Please refer to the documentation in the **docs** subdirectory for further
+information on what the SDK provides and how it greatly simplifies WebKit
+development and removes a lot of friction, by providing a reproducible,
+consistent development/testing environment for all our users/developers.
 
 ### Quickstart guide
 

@@ -1,0 +1,78 @@
+#!/usr/bin/bash
+
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "" container-only
+
+argsparse_use_option trace "Enable 'xtrace' mode for this script"
+
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/ansi-code-generator/ansi.sh"
+
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
+
+    Shows the welcome message upon container login.
+
+<< Examples >>
+
+    $ ${application_name}
+EOF
+)"
+
+process_command_line_arguments() {
+
+    # Allow empty command line
+    argsparse_allow_no_argument yes
+
+    argsparse_parse_options "${@}"
+    argsparse_is_option_set "trace" && set -o xtrace
+}
+
+# Runs a single test.
+run_test() {
+
+    local description="${1}"
+    local command="${2}"
+    shift 2
+
+
+    echo ""
+    echo "-> ${description}:"
+    "${command}" "${@}"
+}
+
+# Main functionality
+run() {
+
+    process_command_line_arguments "${@}"
+
+    pushd "${WKDEV_SDK}" &>/dev/null
+
+    echo ""
+    echo '          _        ______   _______                  _______  ______   _       '
+    echo '|\     /|| \    /\(  __  \ (  ____ \|\     /|       (  ____ \(  __  \ | \    /\'
+    echo '| )   ( ||  \  / /| (  \  )| (    \/| )   ( |       | (    \/| (  \  )|  \  / /'
+    echo '| | _ | ||  (_/ / | |   ) || (__    | |   | | _____ | (_____ | |   ) ||  (_/ / '
+    echo '| |( )| ||   _ (  | |   | ||  __)   ( (   ) )(_____)(_____  )| |   | ||   _ (  '
+    echo '| || || ||  ( \ \ | |   ) || (       \ \_/ /              ) || |   ) ||  ( \ \ '
+    echo '| () () ||  /  \ \| (__/  )| (____/\  \   /         /\____) || (__/  )|  /  \ \'
+    echo '(_______)|_/    \/(______/ (_______/   \_/          \_______)(______/ |_/    \/'
+    echo ""
+    echo ""
+    echo "Git repository 'wkdev-sdk' ($(ansi::bold) $(git branch --show-current) @ $(git rev-parse HEAD) $(ansi::normal))"
+    echo " 🠲  Last commit: $(ansi::bold)$(git log -1 --format=%cd)$(ansi::normal)"
+    echo ""
+    echo "NOTE:"
+    echo " - Be sure to try $(ansi::bold)\`wkdev-test-host-integration\`$(ansi::normal) to verify your container setup behaves as expected."
+    echo ""
+    echo " - The home directory $(ansi::bold)\${HOME}$(ansi::normal)=${HOME} within the container is $(ansi::underline)$(ansi::bold)not the same$(ansi::normal)$(ansi::noUnderline) as your host home directory."
+    echo "   You can find your regular host home directory in the container under $(ansi::bold)\${HOST_HOME}$(ansi::normal)=${HOST_HOME}."
+    echo ""
+    echo " - Instructions on how to build / debug / profile WebKit can be found in the SDK documentation, either"
+    echo "   locally in $(ansi::underline)\${WKDEV_SDK}/docs$(ansi::noUnderline) or online $(ansi::underline)https://gitlab.igalia.com/teams/webkit/wkdev-sdk/-/tree/main/docs$(ansi::noUnderline)".
+
+    popd &>/dev/null
+}
+
+run "${@}"
+

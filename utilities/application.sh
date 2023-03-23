@@ -102,7 +102,7 @@ init_application() {
        _abort_ "Unknown constraints '${application_constraints}' passed as third parameter to 'init_application'"
     fi
 
-    _log_ "${application_name}: ${application_description}"
+    [ -z "${application_description}" ] || _log_ "${application_name}: ${application_description}"
 }
 
 # Remember that we've processed and loaded this script fragment - it's safe now to include others.

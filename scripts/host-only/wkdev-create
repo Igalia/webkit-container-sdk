@@ -86,8 +86,10 @@ process_command_line_arguments() {
             default_config_directory="$(get_container_home_defaults_directory_name)"
             shell_type=$(basename "${SHELL}")
             if [ "${shell_type}" = "bash" ]; then
+                cp --verbose "${default_config_directory}"/dot-bash_login "${container_user_home}"/.bash_login
                 cp --verbose "${default_config_directory}"/dot-bash_profile "${container_user_home}"/.bash_profile
             elif [ "${shell_type}" = "zsh" ]; then
+                cp --verbose "${default_config_directory}"/dot-zlogin "${container_user_home}"/.zlogin
                 cp --verbose "${default_config_directory}"/dot-zprofile "${container_user_home}"/.zprofile
                 cp --verbose "${default_config_directory}"/dot-zshrc "${container_user_home}"/.zshrc
             else

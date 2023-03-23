@@ -32,6 +32,7 @@ process_command_line_arguments() {
 
 # Runs a single test.
 run_test() {
+
     local description="${1}"
     local command="${2}"
     shift 2
@@ -40,7 +41,7 @@ run_test() {
 
     echo ""
     echo "-> ${description}:"
-    "${command}" ${@}
+    "${command}" "${@}"
 }
 
 # Main functionality
@@ -85,8 +86,9 @@ run() {
     run_test "Launching podman-host in podman container: (expected to work)" \
         podman-host info
 
+    message="Hello from wkdev-sdk!"
     run_test "Desktop notifications should appear: (expected to work)" \
-        notify-send 'Hello from wkdev-sdk'
+        notify-send "${message}"
 
     run_test "Run X11 application, xeyes: (should work if X11/Xwayland is activate on host)" \
         xeyes
@@ -105,8 +107,6 @@ run() {
 
     run_test "Test Epiphany browser: (try youtube.com, CSS 3D demos, WebGL, etc.)" \
         epiphany
-
-    exit 0
 }
 
 run "${@}"

@@ -1,0 +1,172 @@
+#!/usr/bin/bash
+
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Updates the wkdev-sdk Git repository and containers." host-only
+
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/ansi-code-generator/ansi.sh"
+source "${WKDEV_SDK}/utilities/podman.sh"
+
+argsparse_use_option debug        "Enable debug logging for podman (useful to debug container issues)"
+argsparse_use_option trace        "Enable 'xtrace' mode for this script"
+argsparse_use_option =verbose     "Increase verbosity of this script"
+
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
+
+    Updates the Git repository that holds the 'wkdev-sdk' and assists in re-creating containers, if the base image changes.
+EOF
+)"
+
+process_command_line_arguments() {
+
+    # Allow empty command line
+    argsparse_allow_no_argument yes
+
+    argsparse_parse_options "${@}"
+    argsparse_is_option_set "trace" && set -o xtrace
+}
+
+try_update_sdk_repository() {
+
+    echo ""
+
+    if [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] && [ -z "$(git status --untracked-files=no --porcelain)" ]; then
+        echo "-> Updating Git repository 'wkdev-sdk' located in \${WKDEV_SDK}..."
+        run_command_silent_unless_verbose git pull --rebase || _abort_ "Cannot update wkdev-sdk repository"
+    else
+        echo "-> Not updating Git repository 'wkdev-sdk' located in \${WKDEV_SDK} - there are local modifications!"
+    fi
+}
+
+ask_for_confirmation() {
+
+    local prompt="${1}"
+
+    while true; do
+        local answer=""
+        read -p "${prompt}" answer
+
+        case "${answer}" in
+            [Yy]* ) return 0;;
+            [Nn]* ) return 1;;
+                * ) echo "Please answer 'y'es or 'n'o.";;
+        esac
+    done
+}
+
+update_containers_using_image() {
+
+    echo ""
+    local image_name="${1}"
+
+    local latest_image_id="$(get_image_id_by_image_name "${image_name}")"
+    if [ -z "${latest_image_id}" ]; then
+        echo "-> Skipping update of image "${image_name}" - no containers use this image."
+        return
+    fi
+
+    local max_container_name_length=0
+    local found_containers_using_image=0
+    for container_name in $(get_list_of_containers); do
+        local container_image_name_with_tag="$(get_image_name_by_container_name "${container_name}")"
+        [ "${container_image_name_with_tag//:*/}" = "${image_name}" ] || continue
+        found_containers_using_image=$((found_containers_using_image+1))
+        [ ${#container_name} -gt ${max_container_name_length} ] && max_container_name_length=${#container_name}
+    done
+
+    if [ ${found_containers_using_image} -eq 0 ]; then
+        echo "-> No containers use this image, no need to recreate any of them."
+        return
+    fi
+
+    echo "-> Found ${found_containers_using_image} container(s) using the image '${image_name}', checking status:"
+
+    local -A outdated_container_data=()
+    for container_name in $(get_list_of_containers); do
+        local container_image_name_with_tag="$(get_image_name_by_container_name "${container_name}")"
+        [ "${container_image_name_with_tag//:*/}" = "${image_name}" ] || continue
+
+        local existing_image_id="$(get_image_id_by_container_name "${container_name}")"
+        [ -z "${existing_image_id}" ] && _abort_ "Cannot retrieve image id for container name '${container_name}'"
+
+        local status="OK"
+        local status_color="green"
+        if [ "${existing_image_id}" != "${latest_image_id}" ]; then
+            status="OUTDATED"
+            status_color="red"
+
+            local recreate_arguments=()
+            recreate_arguments+=("--home" "$(get_podman_container_home_directory_on_host "${container_name}")")
+            recreate_arguments+=($(get_podman_container_init_arguments "${container_name}"))
+            outdated_container_data["${container_name}"]=${recreate_arguments[@]}
+        fi
+
+        printf "   Container: %-${max_container_name_length}s ⇾ " "${container_name}"
+        printf "$(ansi::bold)$(ansi::${status_color})%-8s $(ansi::resetForeground)$(ansi::normal) (image id ${existing_image_id})\n" "${status}"
+    done
+
+    local outdated_container_names="${!outdated_container_data[@]}"
+    if [ -z "${outdated_container_names}" ]; then
+        echo ""
+        echo "-> No containers need to be re-created, all use the latest image version."
+        return
+    fi
+
+    echo ""
+    echo "-> Trying to re-create containers, if desired..."
+    echo "   NOTE: Remember that all changes made to your local image are $(ansi::bold)gone$(ansi::normal) if you re-create the container."
+    echo ""
+
+    # Loop over outdated containers and re-create them, if desired.
+    for key in ${outdated_container_names}; do
+        local container_name="${key}"
+        local recreate_arguments="${outdated_container_data["${key}"]}"
+        ask_for_confirmation "   -> Do you want to re-create the $(ansi::bold)'${container_name}'$(ansi::normal) container? [y/n] " || continue
+
+        # TODO: Handle re-creation of home directories, if the default shell configuration files, change?
+        # At least we have to warn if there is e.g. a new '.bashrc' file...
+        echo ""
+        echo "       -> Stopping container..."
+        run_podman_silent stop "${container_name}"
+
+        echo "       -> Deleting container..."
+        run_podman_silent rm "${container_name}"
+
+        echo "       -> Re-creating container..."
+        "${WKDEV_SDK}/scripts/host-only/wkdev-create" --verbose --name "${container_name}" ${recreate_arguments[@]}
+    done
+}
+
+
+update_image() {
+
+    echo ""
+    local image_name="${1}"
+
+    echo "-> Updating image '${image_name}'..."
+    run_podman_silent_unless_verbose pull "${image_name}" || _abort_ "Cannot update image '${image_name}'"
+}
+
+# Main functionality
+run() {
+
+    process_command_line_arguments "${@}"
+
+    pushd "${WKDEV_SDK}" &>/dev/null
+    try_update_sdk_repository
+    popd &>/dev/null
+
+    update_image "$(get_package_builder_qualified_name)"
+    update_image "$(get_package_proxy_qualified_name)"
+    update_image "$(get_sdk_qualified_name)"
+
+    update_containers_using_image "$(get_package_builder_qualified_name)"
+    update_containers_using_image "$(get_package_proxy_qualified_name)"
+    update_containers_using_image "$(get_sdk_qualified_name)"
+
+    echo ""
+    echo "-> Finished."
+}
+
+run "${@}"

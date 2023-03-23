@@ -43,7 +43,7 @@ run_command() {
     local command="${1}"
     shift
 
-    ${command} ${@}
+    "${command}" "${@}"
 }
 
 # Runs a command suppressing both stdout and stderr output.
@@ -52,7 +52,7 @@ run_command_silent() {
     local command="${1}"
     shift
 
-    ${command} ${@} &>/dev/null
+    "${command}" "${@}" &>/dev/null
 }
 
 # Runs a command suppressing both stdout and stderr output,
@@ -63,9 +63,9 @@ run_command_silent_unless_verbose() {
     shift
 
     if argsparse_is_option_set "verbose"; then
-        ${command} ${@}
+        "${command}" "${@}"
     else
-        ${command} ${@} &>/dev/null
+        "${command}" "${@}" &>/dev/null
     fi
 }
 

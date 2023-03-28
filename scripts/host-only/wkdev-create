@@ -257,7 +257,7 @@ try_process_dri() {
 
 try_process_nvidia_gpu() {
 
-    local is_nvidia_gpu_available=$([ is_nvidia_gpu_installed ] && [ -f "$(get_nvidia_cdi_config_file)" ] && echo 1 || echo 0)
+    local is_nvidia_gpu_available=$(is_nvidia_gpu_installed && [ -f "$(get_nvidia_cdi_config_file)" ] && echo 1 || echo 0)
     local podman_argument=("--device" "nvidia.com/gpu=all")
     try_process ${1} "Access to NVIDIA GPU on host" ${is_nvidia_gpu_available} ${podman_argument[@]}
 }
@@ -592,7 +592,7 @@ run() {
     try_enable_user_podman_socket_service_on_host
     try_enable_cpu_profiling_settings_on_host
 
-    if [ is_nvidia_gpu_installed ]; then
+    if is_nvidia_gpu_installed; then
         try_enable_nvidia_container_integration_on_host
         try_enable_nvidia_gpu_profiling_settings_on_host
     fi

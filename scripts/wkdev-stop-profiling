@@ -1,0 +1,39 @@
+#!/usr/bin/bash
+
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Modify 'perf' related host kernel parameters to disable CPU profiling for unprivileged users." host-and-container
+
+# Source utility script fragments
+source "${WKDEV_SDK}/utilities/cpu-profiling.sh"
+
+argsparse_use_option trace "Enable 'xtrace' mode for this script"
+
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
+
+$(get_perf_settings_help_message)
+
+    \`${application_name}\` restores the original 'kernel.$(get_perf_event_kernel_setting)' setting to the value before
+    \`wkdev-start-profiling\` switched the value to '$(get_desired_perf_event_kernel_setting_value_for_profiling)'.
+
+    NOTE: It is not recommended to leave the 'kernel.perf*' parameters at '$(get_desired_perf_event_kernel_setting_value_for_profiling)' all the time, due to security concerns!
+EOF
+)"
+
+process_command_line_arguments() {
+
+    # Allow empty command line
+    argsparse_allow_no_argument yes
+
+    argsparse_parse_options "${@}"
+    argsparse_is_option_set "trace" && set -o xtrace
+}
+
+# Main functionality
+run() {
+
+    process_command_line_arguments "${@}"
+    disable_perf_settings_for_cpu_profiling
+}
+
+run "${@}"

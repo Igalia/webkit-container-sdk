@@ -4,7 +4,8 @@ package_groups:
     name: applications
     entities:
       - name: valgrind # instrumentation framework for building dynamic analysis tools
-        url: 'http://archive.ubuntu.com/ubuntu/pool/main/v/valgrind/valgrind_3.19.0-1ubuntu1.dsc'
+        url: 'http://archive.ubuntu.com/ubuntu/pool/main/v/valgrind/valgrind_3.19.0-1ubuntu2.dsc'
+        options: {gbp_import_dsc: '--allow-unauthenticated'}
 
   - package_group:
     name: jpeg_xl

@@ -6,7 +6,6 @@ source "${WKDEV_SDK}/utilities/kernel-parameters.sh"
 get_perf_event_kernel_setting() { echo "perf_event_paranoid"; }
 get_perf_event_procfs_path() { echo "/proc/sys/kernel/$(get_perf_event_kernel_setting)"; }
 get_preserved_perf_event_kernel_setting_file() { echo "${WKDEV_SDK}/.sysctl_setting_$(get_perf_event_kernel_setting)"; }
-get_preserved_perf_event_kernel_setting_file
 get_desired_perf_event_kernel_setting_value_for_profiling() { echo "-1"; }
 
 # Helper function to explain the purpose of this setting

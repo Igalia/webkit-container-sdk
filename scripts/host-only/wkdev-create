@@ -325,6 +325,9 @@ build_podman_create_arguments() {
     # Add 'SYS_PTRACE' support, to be able to use gdb.
     arguments+=("--cap-add=SYS_PTRACE")
 
+    # Add 'NET_RAW' support, to be able to use ping
+    arguments+=("--cap-add=NET_RAW")
+
     # Add 'SYS_ADMIN' support, to be able to use CPU profiiling.
     arguments+=("--cap-add=SYS_ADMIN")
 

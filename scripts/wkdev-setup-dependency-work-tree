@@ -176,9 +176,13 @@ run() {
 
             local package_url=$(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.url)
             local gbp_import_dsc_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.gbp_import_dsc))
+            [ -z ${gbp_import_dsc_options+x} ] && gbp_import_dsc_options=""
             local deb_build_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.deb_build))
+            [ -z ${deb_build_options+x} ] && deb_build_options=""
             local debuild_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.debuild))
+            [ -z ${debuild_options+x} ] && debuild_options=""
             local dpkg_buildpackage_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.dpkg_buildpackage))
+            [ -z ${dpkg_buildpackage_options+x} ] && dpkg_buildpackage_options=""
 
             local dependencies_count=$(cat "${settings}" | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on)
             [ -z "${dependencies_count}" ] && dependencies_count=0

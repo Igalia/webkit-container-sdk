@@ -103,6 +103,7 @@ run() {
         echo "-> Generating CDI specification '$(get_nvidia_cdi_config_file)'..."
         verify_executable_exists nvidia-ctk
         sudo nvidia-ctk cdi generate --output "$(get_nvidia_cdi_config_file)" || _abort_ "CDI generation failed"
+        sudo chmod 644 "$(get_nvidia_cdi_config_file)"
     fi
 
     echo ""

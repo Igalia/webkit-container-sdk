@@ -3,3 +3,11 @@ export DEBUGINFOD_URLS="https://debuginfod.ubuntu.com"
 # wkdev-sdk integration
 export WKDEV_SDK=/wkdev-sdk
 export PATH="${WKDEV_SDK}/scripts:${WKDEV_SDK}/scripts/container-only:$(python3 -m site --user-base)/bin:${PATH}"
+
+# if running bash
+if [ -n "$BASH_VERSION" ]; then
+    # include .bashrc if it exists
+    if [ -f "$HOME/.profile" ]; then
+	. "$HOME/.profile"
+    fi
+fi

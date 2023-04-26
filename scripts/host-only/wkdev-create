@@ -161,8 +161,8 @@ try_process_home_directory() {
     podman_argument+=("--mount" "type=bind,source=${container_user_home},destination=/home/${container_user_name},rslave")
     podman_argument+=("--mount" "type=bind,source=${HOME},destination=/host/home/${container_user_name},rslave")
 
-    # systemctl --user is-enabled <some-service> relies on the accessibility of ~/.config/systemd/user, map it into the container.
-    podman_argument+=("--mount" "type=bind,source=${HOME}/.config/systemd/user,destination=/home/${container_user_name}/.config/systemd/user,rslave")
+    # systemctl --user is-enabled <some-service> relies on the accessibility of ~/.config/systemd/user, map it into the container if available.
+    [ -d "${HOME}/.config/systemd/user" ] && podman_argument+=("--mount" "type=bind,source=${HOME}/.config/systemd/user,destination=/home/${container_user_name}/.config/systemd/user,rslave")
 
     try_process ${1} "Expose both host & container home directory" 1 ${podman_argument[@]}
 }

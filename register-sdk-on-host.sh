@@ -1,7 +1,9 @@
 #!/usr/bin/bash
 
 # To be sourced from your e.g. ~/.bashrc / ~.zprofile / ... to integrate wkdev-sdk with your host OS.
-wkdev_sdk_directory=$(cd "$(dirname "${0:-${PWD}}")" &>/dev/null && pwd)
+my_relpath="${BASH_SOURCE[0]}"
+test -z "${my_relpath}" && my_relpath="${0}"
+wkdev_sdk_directory="$(readlink -f $(dirname ${my_relpath}))"
 
 export WKDEV_SDK="${wkdev_sdk_directory}"
 export PATH="${WKDEV_SDK}/scripts:${WKDEV_SDK}/scripts/host-only:$(python3 -m site --user-base)/bin:${PATH}"

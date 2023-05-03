@@ -4,7 +4,7 @@ package_groups:
     name: podman
     entities:
       - name: golang-1.20 # Go programming language
-        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/golang-1.20_1.20.3-1.dsc'
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/golang-1.20_1.20.4-1.dsc'
         options:
           gbp_import_dsc: '--allow-unauthenticated'
           dpkg_buildpackage: '--build=binary'
@@ -16,14 +16,14 @@ package_groups:
           dpkg_buildpackage: '--build=binary'
 
       - name: containers-common # Configuration files common to github.com/containers
-        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/containers-common_0.52.0-1.dsc'
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/containers-common_0.53.0-1.dsc'
         options:
           gbp_import_dsc: '--allow-unauthenticated'
           dpkg_buildpackage: '--build=binary'
         depends_on: ['./golang-1.20*.deb', './crun*.deb']
 
       - name: containers-storage # Configuration files storage to github.com/containers
-        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/containers-storage_1.46.0-1.dsc'
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/containers-storage_1.46.1-1.dsc'
         options:
           gbp_import_dsc: '--allow-unauthenticated'
           dpkg_buildpackage: '--build=binary'

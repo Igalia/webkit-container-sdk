@@ -46,7 +46,7 @@ convenience it's still exposed in the container, as ${HOST_HOME}.
 
 NOTE: wkdev-create will auto-detect the whole environment: X11, Wayland, PulseAudio, etc.
 and eventually needs 'root' permissions on the 'host' system to perform first-time-run-only
-initializations (such as allowing GPU profiiling, by modifying root-owned config files, etc.)
+initializations (such as allowing GPU profiling, by modifying root-owned config files, etc.)
 
 3. Enter the new 'wkdev' container
 

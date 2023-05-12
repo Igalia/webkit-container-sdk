@@ -43,7 +43,7 @@ try_update_apt_cache() {
 
     echo ""
 
-    echo "[1/8] Updating APT repositories..."
+    echo "[1/9] Updating APT repositories..."
     if is_first_time_run; then
         update_packages || _abort_ "Cannot update APT repositories"
     else
@@ -58,9 +58,9 @@ try_install_shell_package() {
 
     container_shell_package=$(basename "${container_shell}")
     if is_package_installed "${container_shell_package}"; then
-        echo "[2/8] No need to install user shell package '${container_shell_package}' - it's already present."
+        echo "[2/9] No need to install user shell package '${container_shell_package}' - it's already present."
     else
-        echo "[2/8] Installing user shell package '${container_shell_package}'..."
+        echo "[2/9] Installing user shell package '${container_shell_package}'..."
         ensure_package_installed "${container_shell_package}"
     fi
 }
@@ -69,11 +69,11 @@ try_install_additional_packages() {
 
     echo ""
     if [ -z "${additional_packages}" ]; then
-        echo "[3/8] No need to install additional packages - none necessary."
+        echo "[3/9] No need to install additional packages - none necessary."
         return 0
     fi
 
-    echo "[3/8] Installing additional packages '${additional_packages}', if necessary..."
+    echo "[3/9] Installing additional packages '${additional_packages}', if necessary..."
     for package in ${additional_packages}; do
         if is_package_installed "${package}"; then
             echo "      Skipping '${package}' - it's already present."
@@ -89,10 +89,10 @@ try_switch_shell_for_user() {
     echo ""
 
     if ! grep "${container_user_name}" /etc/passwd | grep --quiet "${container_shell}"; then
-        echo "[4/8] Switch shell to '${container_shell}' for container user '${container_user_name}'..."
+        echo "[4/9] Switch shell to '${container_shell}' for container user '${container_user_name}'..."
         usermod --shell "${container_shell}" "${container_user_name}" || _abort_ "Cannot switch shell: executing 'usermod' failed"
     else
-        echo "[4/8] No need to switch shell to '${container_shell}' - it's already the default for user '${container_user_name}'."
+        echo "[4/9] No need to switch shell to '${container_shell}' - it's already the default for user '${container_user_name}'."
     fi
 }
 
@@ -101,7 +101,7 @@ try_setup_setgid_subuid_files() {
     echo ""
 
     if ! grep --quiet "${container_user_name}" /etc/subuid; then
-        echo "[5/8] Setup /etc/sub{gid|uid} files for user '${container_user_name}'..."
+        echo "[5/9] Setup /etc/sub{gid|uid} files for user '${container_user_name}'..."
         echo ""
 
         # FIXME: This assumes the host UID/GID subordinate range is 100000-200000. We should rather
@@ -113,7 +113,7 @@ try_setup_setgid_subuid_files() {
         # be able to figure out exactly this 'free' subordinate-range. Needs some testing.
         usermod --add-subuids 50000-99999 --add-subgids 50000-99999 "${container_user_name}" || _abort_ "Cannot add user '${container_user_name}' to /etc/subgid or /etc/subuid file: executing usermod failed"
     else
-        echo "[5/8] No need to setup /etc/sub{gid|uid} -- UID/GID mapping for container user '${container_user_name}' already present."
+        echo "[5/9] No need to setup /etc/sub{gid|uid} -- UID/GID mapping for container user '${container_user_name}' already present."
     fi
 
     echo "      -> /etc/subgid contents: $(cat /etc/subgid)"
@@ -126,7 +126,7 @@ try_setup_sudoers_file() {
 
     local sudoers_directory="/etc/sudoers.d"
     local sudoers_file="${sudoers_directory}/sudoers"
-    echo "[6/8] Setup sudoers file '${sudoers_file}' for user '${container_user_name}', if necessary..."
+    echo "[6/9] Setup sudoers file '${sudoers_file}' for user '${container_user_name}', if necessary..."
 
     mkdir --parents "${sudoers_directory}" &>/dev/null
     chmod 750 "${sudoers_directory}"
@@ -150,11 +150,19 @@ try_setup_run_user_directory() {
 
     local container_user_id=$(id --user --real "${container_user_name}")
     local current_run_user_directory="/run/user/${container_user_id}"
-    echo "[7/8] Initialize systemd-style /run/user/ user session directory '${current_run_user_directory}', if necessary..."
+    echo "[7/9] Initialize systemd-style /run/user/ user session directory '${current_run_user_directory}', if necessary..."
 
     mkdir --parents "${current_run_user_directory}" &>/dev/null
     chmod 700 "${current_run_user_directory}"
     chown "${container_user_name}:${container_group_name}" "${current_run_user_directory}" &>/dev/null
+}
+
+try_setup_dockerenv_file() {
+
+    echo ""
+
+    echo "[8/9] Create /.dockerenv file to make 'bwrap' detection work in legacy Epiphany/cog versions..."
+    sudo touch /.dockerenv
 }
 
 try_setup_local_sdk_repository() {
@@ -162,7 +170,7 @@ try_setup_local_sdk_repository() {
     echo ""
 
     local packages_directory="/wkdev-sdk-packages"
-    echo "[8/8] Initialize local '${packages_directory}' APT repository, if necessary..."
+    echo "[9/9] Initialize local '${packages_directory}' APT repository, if necessary..."
 
     mkdir --parents "${packages_directory}" &>/dev/null
     chmod 750 "${packages_directory}"
@@ -185,6 +193,7 @@ run() {
     try_setup_setgid_subuid_files
     try_setup_sudoers_file
     try_setup_run_user_directory
+    try_setup_dockerenv_file
     try_setup_local_sdk_repository
 
     # Reset DEBIAN_FRONTEND again.

@@ -284,6 +284,16 @@ try_process_x11() {
     try_process ${1} "Access to X11 on host" ${is_x11_display_set} ${podman_argument[@]}
 }
 
+try_process_xauthority() {
+
+    local xauthority_file="${XAUTHORITY}"
+    local is_xauthority_set=$([ -z "${XAUTHORITY}" ] && echo 0 || echo 1)
+    local xauthority_dir=$(dirname $xauthority_file)
+    local podman_argument=("--mount" "type=bind,source=${xauthority_dir},destination=${xauthority_dir},rslave")
+    podman_argument+=("--env" "XAUTHORITY=${XAUTHORITY}")
+    try_process ${1} "Authorization of X resources on host" ${is_xauthority_set} ${podman_argument[@]}
+}
+
 try_process_pulseaudio() {
 
     local pulseaudio_directory="${XDG_RUNTIME_DIR}/pulse"
@@ -368,6 +378,7 @@ build_podman_create_arguments() {
     try_process_nvidia_gpu ${1}
     try_process_wayland ${1}
     try_process_x11 ${1}
+    try_process_xauthority ${1}
     try_process_pulseaudio ${1}
     try_process_podman ${1}
     set -o nounset
@@ -533,6 +544,20 @@ try_enable_user_podman_socket_service_on_host() {
     fi
 }
 
+try_enable_localuser_authorization_for_x11() {
+
+    echo ""
+
+    if type xhost >/dev/null 2>&1; then
+        if xhost | grep --quiet "localuser:${host_user_name}"; then
+            echo "-> The X11 localuser authorization for user '${host_user_name}' on host system is already enabled."
+        else
+            echo "-> Enable X11 localuser authorization for user '${host_user_name}' on host system..."
+            xhost +"si:localuser:${host_user_name}"
+        fi
+    fi
+}
+
 try_enable_nvidia_container_integration_on_host() {
 
     echo ""
@@ -580,6 +605,7 @@ run() {
 
     try_enable_lingering_on_host
     try_enable_user_podman_socket_service_on_host
+    try_enable_localuser_authorization_for_x11
 
     if is_nvidia_gpu_installed; then
         try_enable_nvidia_container_integration_on_host

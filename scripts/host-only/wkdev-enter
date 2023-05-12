@@ -15,7 +15,7 @@ argsparse_use_option =exec           "Treat all remaining non-option arguments (
 argsparse_use_option =name:          "Name of container" default:wkdev mandatory
 
 argsparse_use_option max-retries:    "Maximum number of <wait>+<try-to-enter> cycles" type:uint default:10
-argsparse_use_option sleep-duration: "Amount of seconds to sleep before attempting to enter the container (during first-time container run)" type:uint default:5
+argsparse_use_option sleep-duration: "Amount of seconds to sleep before attempting to enter the container (during first-time container run)" type:uint default:10
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>

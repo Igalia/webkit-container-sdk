@@ -187,6 +187,9 @@ run() {
     try_setup_run_user_directory
     try_setup_local_sdk_repository
 
+    # Reset DEBIAN_FRONTEND again.
+    unset DEBIAN_FRONTEND
+
     echo ""
     echo "Finished initialization - sleeping forever..."
     touch "$(get_init_done_file)"

@@ -15,11 +15,11 @@ consistent development/testing environment for all our users/developers.
 
 ### Quickstart guide
 
-1. Integrate 'wkdev-sdk' with your shell environment.
+1. Integrate `wkdev-sdk` with your shell environment.
 
-Add the following to your shell configuration file (e.g. ~/.bashrc, ~/.zprofile, ...)
-to ensure that the ${WKDEV_SDK} environment variable points to the correct location
-of your 'wkdev-sdk' Git checkout. It also extends the ${PATH} to make the 'wkdev-\*' scripts
+Add the following to your shell configuration file (e.g. `~/.bashrc`, `~/.zprofile`, ...)
+to ensure that the `${WKDEV_SDK}` environment variable points to the correct location
+of your `wkdev-sdk` Git checkout. It also extends the `${PATH}` to make the `wkdev-\*` scripts
 provided by this repository accessible without having to specifcy full paths in the shell.
 
 ```
@@ -29,26 +29,26 @@ source ./register-sdk-on-host.sh
 popd &>/dev/null
 ```
 
-Launch a new shell, or `source` your shell configuration files to verify, ${WKDEV_SDK}
-now expects as intented - pointing to your wkdev-sdk checkout.
+Launch a new shell, or `source` your shell configuration files to verify, `${WKDEV_SDK}`
+now expects as intented - pointing to your `wkdev-sdk` checkout.
 
-2. Create a new 'wkdev' container for WebKit development
+2. Create a new **wkdev** container for WebKit development
 
 Execute the following command on your host system:
 
 ```wkdev-create --name wkdev --create-home --home ${HOME}/wkdev-home```
 
-This will create a container named 'wkdev', and transparently maps the current hoser user/ID
-into the container. Within the container, the ${HOME} directtory is not equal to the host
-${HOME} directory: ${HOME}/wkdev-home (from host) is bind-mounted into the container as
-"/home/hostuser". This avoids pollution of files in your host ${HOME} directory -- for
-convenience it's still exposed in the container, as ${HOST_HOME}.
+This will create a container named **wkdev**, and transparently maps the current hoser user/ID
+into the container. Within the container, the `${HOME}` directtory is not equal to the host
+`${HOME}` directory: `${HOME}/wkdev-home` (from host) is bind-mounted into the container as
+`/home/hostuser`. This avoids pollution of files in your host `${HOME}` directory -- for
+convenience it's still exposed in the container, as `${HOST_HOME}`.
 
-NOTE: wkdev-create will auto-detect the whole environment: X11, Wayland, PulseAudio, etc.
-and eventually needs 'root' permissions on the 'host' system to perform first-time-run-only
-initializations (such as allowing GPU profiling, by modifying root-owned config files, etc.)
+NOTE: `wkdev-create` will auto-detect the whole environment: X11, Wayland, PulseAudio, etc.
+and eventually needs **root** permissions on the *host system* to perform first-time-run-only
+initializations (such as allowing GPU profiling, by modifying `root`-owned config files, etc.)
 
-3. Enter the new 'wkdev' container
+3. Enter the new **wkdev** container
 
 Execute the following command on your host system:
 

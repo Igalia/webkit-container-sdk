@@ -85,6 +85,7 @@ process_command_line_arguments() {
 
             default_config_directory="$(get_container_home_defaults_directory_name)"
             shell_type=$(basename "${SHELL}")
+            mkdir --parents "${container_user_home}"/.config
             if [ "${shell_type}" = "bash" ]; then
                 cp --verbose "${default_config_directory}"/dot-bash_login "${container_user_home}"/.bash_login
                 cp --verbose "${default_config_directory}"/dot-bash_profile "${container_user_home}"/.bash_profile
@@ -93,7 +94,7 @@ process_command_line_arguments() {
                 cp --verbose "${default_config_directory}"/dot-zprofile "${container_user_home}"/.zprofile
                 cp --verbose "${default_config_directory}"/dot-zshrc "${container_user_home}"/.zshrc
             elif [ "${shell_type}" = "fish"]; then
-                mkdir -p "${container_user_home}"/.config/fish
+                mkdir "${container_user_home}"/.config/fish
                 cp --verbose "${default_config_directory}"/fish-config "${container_user_home}"/.config/fish/config.fish
             else
                 echo ""

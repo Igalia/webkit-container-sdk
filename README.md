@@ -78,3 +78,18 @@ Tools/Scripts/run-minibrowser --wpe https://browserbench.org/MotionMark1.2/
 ```
 
 6. READY!
+
+
+### Update guide
+
+You should check, once in a while, if there is a new upstream version of the `wkdev-sdk` image available.
+
+1. Use the `wkdev-update` tool.
+
+Run `wkdev-update` and following the instructions to selectively update the base images of your local
+containers. under the hood it deleted the old containers and re-creates them using the new base image
+and your previous settings. **NOTE: Any changes to the container filesystem will VANISH.**. Modifications
+to e.g. `/etc` config files in the container, manually installed packages, etc. will disappear. Only the
+container home directory will stay untouched.
+
+2. READY!

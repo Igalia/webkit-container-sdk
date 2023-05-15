@@ -48,13 +48,23 @@ process_container_image() {
     "${WKDEV_SDK}/scripts/host-only/wkdev-sdk-container-bakery" --mode "${operation_mode}" --name "${container_image_name}" ${extra_options[@]} || _abort_ "Image build failed"
 }
 
+get_md5_hash_file() {
+    local file_to_hash="${1}"
+    [[ -r "${file_to_hash}" ]] || _abort_ "Can't read file to hash: ${file_to_hash}"
+    local hash_value; hash_value="$(md5sum ${file_to_hash} | awk '{print $1}')"
+    [[ ${#hash_value} -eq 32 ]] || _abort_ "Obtained hash for file ${file_to_hash} has an unexpected length: ${#hash_value}"
+    echo "${hash_value}"
+}
+
 build_packages_defined_in_build_definitions_yaml() {
 
     echo ""
 
     local packages_build_definitions="${1}"
+    local packages_build_yaml_path="${WKDEV_SDK}/images/wkdev_sdk/custom_built_packages/${packages_build_definitions}.yaml"
+    local packages_build_yaml_hash_current; packages_build_yaml_hash_current="$(get_md5_hash_file ${packages_build_yaml_path})"
     local build_done_file="${WKDEV_SDK}/.build-done_${packages_build_definitions}"
-    if [ ! -f "${build_done_file}" ]; then
+    if [ ! -f "${build_done_file}" ] || [ "$(cat ${build_done_file})" != "${packages_build_yaml_hash_current}" ] ; then
         echo "-> Building packages denoted in '${packages_build_definitions}.yaml' configuration for inclusion in 'wkdev-sdk' image..."
 
         temporary_directory=$(mktemp --tmpdir --directory wkdevsdk.XXXXXXXXXX)
@@ -65,15 +75,26 @@ build_packages_defined_in_build_definitions_yaml() {
         argsparse_is_option_set "trace" && extra_options+=("--trace")
         argsparse_is_option_set "verbose" && extra_options+=("--verbose")
 
+        # We are just starting the build now, so if ${packages_directory} contains ay .deb or .ddeb is an artifact
+        # from a previous build attempt, which may cause issues later when we try to install it. Clean everything.
+        local packages_directory="${WKDEV_SDK}/images/wkdev_sdk/custom_built_packages/${packages_build_definitions}"
+        if [ -d "${packages_directory}" ]; then
+            local packages_directory_number=$(find "${packages_directory}" -type f -name '*deb'|wc -l)
+            echo "-> Cleaning ${packages_directory_number} old debian packages from: ${packages_directory}"
+            find "${packages_directory}" -type f -name '*deb' -delete
+        fi
+
+        # Build the packages from the yaml file
         "${WKDEV_SDK}/scripts/wkdev-setup-dependency-work-tree" \
-            --settings "${WKDEV_SDK}/images/wkdev_sdk/custom_built_packages/${packages_build_definitions}.yaml" \
+            --settings "${packages_build_yaml_path}" \
             --work-directory "${PWD}" \
-            --packages-directory "${WKDEV_SDK}/images/wkdev_sdk/custom_built_packages/${packages_build_definitions}" ${extra_options[@]} || _abort_ "Work tree setup failed"
+            --packages-directory "${packages_directory}" ${extra_options[@]} || _abort_ "Work tree setup failed"
 
         cd builds || _abort_ "Changing directory to '${PWD}/builds' failed"
         make || _abort_ "Build failed, inspect the build work directory '${temporary_directory}' to check why and remove it manually afterward"
 
-        touch "${build_done_file}"
+        # Cache the hash of the completed yaml build
+        echo "${packages_build_yaml_hash_current}" > "${build_done_file}"
         popd &>/dev/null
         rm -rf "${temporary_directory}" &>/dev/null
     else

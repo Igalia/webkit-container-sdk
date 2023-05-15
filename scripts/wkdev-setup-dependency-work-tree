@@ -129,12 +129,15 @@ run() {
 
     process_command_line_arguments "${@}"
 
+    # Ensure we stop on unchecked error or undefined variable
+    set -eu -o pipefail
+
     echo ""
     echo "-> Create work tree in '${work_directory}' directory..."
     mkdir --parents "${work_directory}/sources" &>/dev/null
     mkdir --parents "${work_directory}/builds" &>/dev/null
 
-    local apt_repository_name="$(get_custom_package_local_apt_repository_name)"
+    apt_repository_name="$(get_custom_package_local_apt_repository_name)"
     if is_running_in_container; then
         show_output=$(aptly repo show "${apt_repository_name}" 2>/dev/null)
         aptly_status=${?}
@@ -155,11 +158,18 @@ run() {
         echo "-> Local APT repository creation disabled -- we are running on the host, not in the container where this is useful."
     fi
 
-    local package_groups=()
-    local package_groups_count=$(cat "${settings}" | shyaml --quiet get-length package_groups)
+    # NOTE: If you define variables here as 'local' using the keyword 'declare', then take into account that declaration and assignment must
+    # be separate statements when the assignment value is provided by a command substitution. The exit code from the command substitution is
+    # not propagated because bash first does the assignment and the proceeds to mark the variable as local or with the declared type, so the
+    # return code in that case is always zero, because is the return code of setting the variable to local or with the declared type.
+    # And that breaks the purpose of using "set -e" above. See: https://stackoverflow.com/q/4421257
+    # Since this code is on the main() function of the program, declaring local variables here has little effective purpose, as local
+    # variables are also visible to children functions in bash. So is easier to just use standard/global variables here.
+    package_groups=()
+    package_groups_count=$(cat "${settings}" | shyaml --quiet get-length package_groups)
     for (( package_group_index=0; package_group_index<${package_groups_count}; package_group_index++ )); do
-        local package_group_name=$(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.name)
-        local package_group_entities_count=$(cat "${settings}" | shyaml --quiet get-length package_groups.${package_group_index}.entities)
+        package_group_name=$(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.name)
+        package_group_entities_count=$(cat "${settings}" | shyaml --quiet get-length package_groups.${package_group_index}.entities)
         package_groups+=("${package_group_name}")
 
         echo ""
@@ -169,25 +179,27 @@ run() {
         mkdir --parents "${work_directory}/sources/${package_group_name}" &>/dev/null
         mkdir --parents "${work_directory}/builds/${package_group_name}" &>/dev/null
 
-        local packages_in_group=()
+        packages_in_group=()
         for (( package_group_entity_index=0; package_group_entity_index<${package_group_entities_count}; package_group_entity_index++ )); do
-            local package_name=$(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.name)
+            package_name=$(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.name)
             packages_in_group+=("${package_name}")
 
-            local package_url=$(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.url)
-            local gbp_import_dsc_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.gbp_import_dsc))
+            package_url=$(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.url)
+
+            # Get optional parameters (shyaml cmd is allowed to fail)
+            gbp_import_dsc_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.gbp_import_dsc || true))
             [ -z ${gbp_import_dsc_options+x} ] && gbp_import_dsc_options=""
-            local deb_build_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.deb_build))
+            deb_build_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.deb_build || true))
             [ -z ${deb_build_options+x} ] && deb_build_options=""
-            local debuild_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.debuild))
+            debuild_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.debuild || true))
             [ -z ${debuild_options+x} ] && debuild_options=""
-            local dpkg_buildpackage_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.dpkg_buildpackage))
+            dpkg_buildpackage_options=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.options.dpkg_buildpackage || true))
             [ -z ${dpkg_buildpackage_options+x} ] && dpkg_buildpackage_options=""
 
-            local dependencies_count=$(cat "${settings}" | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on)
+            dependencies_count=$(cat "${settings}" | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on || true)
             [ -z "${dependencies_count}" ] && dependencies_count=0
 
-            local system_dependencies_count=$(cat "${settings}" | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.required_system_packages)
+            system_dependencies_count=$(cat "${settings}" | shyaml --quiet get-length package_groups.${package_group_index}.entities.${package_group_entity_index}.required_system_packages || true)
             [ -z "${system_dependencies_count}" ] && system_dependencies_count=0
 
             echo ""
@@ -199,7 +211,7 @@ run() {
             echo "     - dpkg_buildpackage_options=\"${dpkg_buildpackage_options[@]}\""
 
             # Create directories for result files and dependency packages
-            local build_directory="${work_directory}/builds/${package_group_name}/${package_name}"
+            build_directory="${work_directory}/builds/${package_group_name}/${package_name}"
             mkdir --parents "${build_directory}"
 
             # Prepare gbp.conf configuration file
@@ -207,18 +219,18 @@ run() {
             # The work directory - ${work_directory} within this script - is bind-mounted to '/builder/work'
             # within the 'wkdev_package_builder' container (see images/wkdev_package_builder/invoke-build-package.sh).
             # Therefore export_directory needs to start with '/builder/work' and follow the same directory naming scheme.
-            local export_directory="/builder/work/builds/${package_group_name}/${package_name}"
-            local package_distribution="$(get_custom_package_distribution)"
+            export_directory="/builder/work/builds/${package_group_name}/${package_name}"
+            package_distribution="$(get_custom_package_distribution)"
 
             echo ""
-            local gbp_conf_parameters=(package_distribution export_directory debuild_options[@] dpkg_buildpackage_options[@])
+            gbp_conf_parameters=(package_distribution export_directory debuild_options[@] dpkg_buildpackage_options[@])
             render_template "$(get_template_file_by_name "gbp.conf")" "${build_directory}/gbp.conf" ${gbp_conf_parameters[@]} || _abort_ "Template creation failed"
 
             export GBP_CONF_FILES="${build_directory}/gbp.conf"
             export DEBFULLNAME="$(get_sdk_maintainer_name)"
             export DEBEMAIL="$(get_sdk_maintainer_email)"
 
-            local gbp_verbose_flag=""
+            gbp_verbose_flag=""
             argsparse_is_option_set "debug" && gbp_verbose_flag="--verbose" # Not a typo: --debug should enable --verbose for gbp, which shows all Git commands it executes...
 
             # Create package source directory
@@ -238,13 +250,13 @@ run() {
             run_command_silent_unless_verbose gbp dch ${gbp_verbose_flag} --local "${package_version_suffix}" --distribution "${package_distribution}" --commit --snapshot --snapshot-number "${package_snapshot_number}" --debian-branch "ubuntu/${package_distribution}" || _abort_ "Incrementing local package version failed"
             popd &>/dev/null
 
-            local dependencies_file="${build_directory}/.dependencies"
+            dependencies_file="${build_directory}/.dependencies"
             touch "${dependencies_file}" &>/dev/null
 
             # Handle 'depends_on' field to depend on all build artifacts (.deb/.ddeb) files of a previously built package.
             if [ ${dependencies_count} -gt 0 ]; then
                 for (( dependency_index=0; dependency_index<${dependencies_count}; dependency_index++ )); do
-                    local dependency_package_name=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on.${dependency_index}))
+                    dependency_package_name=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.depends_on.${dependency_index}))
                     echo "    -> Mark this package depending on the expression '${dependency_package_name}' provided by earlier builds."
 
                     echo "${dependency_package_name}" >> "${dependencies_file}"
@@ -254,7 +266,7 @@ run() {
             # Handle 'required_system_packages' field to depend on system packages.
             if [ ${system_dependencies_count} -gt 0 ]; then
                 for (( system_dependency_index=0; system_dependency_index<${system_dependencies_count}; system_dependency_index++ )); do
-                    local system_dependency_package_name=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.required_system_packages.${system_dependency_index}))
+                    system_dependency_package_name=($(cat "${settings}" | shyaml --quiet get-value package_groups.${package_group_index}.entities.${package_group_entity_index}.required_system_packages.${system_dependency_index}))
                     echo "    -> Mark this package depending on the system package '${system_dependency_package_name}' provided in the distribution repositories."
 
                     echo "${system_dependency_package_name}" >> "${dependencies_file}"
@@ -262,26 +274,26 @@ run() {
             fi
 
             echo "    -> Generating Makefile for package '${package_name}' in '${build_directory}/Makefile'..."
-            local makefile_parameters=(apt_repository_name deb_build_options[@] work_directory package_group_name package_name packages_directory)
+            makefile_parameters=(apt_repository_name deb_build_options[@] work_directory package_group_name package_name packages_directory)
             render_template "$(get_template_file_by_name "Makefile.package")" "${build_directory}/Makefile" ${makefile_parameters[@]} || _abort_ "Template creation failed"
             popd &>/dev/null
         done
 
-        local build_directory="${work_directory}/builds/${package_group_name}"
+        build_directory="${work_directory}/builds/${package_group_name}"
         echo ""
         echo "-> Generating Makefile for package group '${package_group_name}' in '${build_directory}/Makefile'..."
-        local packages="${packages_in_group[@]}"
-        local makefile_parameters=(apt_repository_name packages packages_directory)
+        packages="${packages_in_group[@]}"
+        makefile_parameters=(apt_repository_name packages packages_directory)
         render_template "$(get_template_file_by_name "Makefile.group")" "${build_directory}/Makefile" ${makefile_parameters[@]} || _abort_ "Template creation failed"
     done
 
-    local build_directory="${work_directory}/builds"
+    build_directory="${work_directory}/builds"
     echo ""
     echo "-> Generating Makefile for all package groups in '${build_directory}/Makefile'..."
     echo "   NOTE: Use 'make' / 'make install' in '${build_directory}' to build all packages in all package groups or descend into a specific package group or single package to build exactly what's needed for the current task."
 
-    local packages="${package_groups[@]}"
-    local makefile_parameters=(apt_repository_name packages packages_directory)
+    packages="${package_groups[@]}"
+    makefile_parameters=(apt_repository_name packages packages_directory)
     render_template "$(get_template_file_by_name "Makefile.group")" "${build_directory}/Makefile" ${makefile_parameters[@]} || _abort_ "Template creation failed"
 
     echo ""

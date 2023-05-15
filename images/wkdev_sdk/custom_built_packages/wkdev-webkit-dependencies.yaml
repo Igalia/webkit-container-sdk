@@ -45,3 +45,10 @@ package_groups:
         url: 'http://archive.ubuntu.com/ubuntu/pool/universe/g/gst-plugins-ugly1.0/gst-plugins-ugly1.0_1.20.3-1.dsc'
         options: {gbp_import_dsc: '--allow-unauthenticated'}
         depends_on: ['./*gstreamer*.deb', './*gst*plugins*base*.deb', './*gir1.2-gst-plugins-bad-1.0*.deb']
+
+  - package_group:
+    name: cdm
+    entities:
+      - name: sparkle-cdm # library implementing the OpenCDM interface. Needed for -DENABLE_THUNDER=ON
+        url: 'https://people.igalia.com/clopez/wkbug/sdk-deb/sparkle-cdm/sparkle-cdm_0.20220206-1.dsc'
+        options: {gbp_import_dsc: '--allow-unauthenticated'}

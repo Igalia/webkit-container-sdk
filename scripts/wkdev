@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+init_application "${0}" "Launcher for wkdev commands" host-and-container
+
+usage() {
+    echo "${application_name} COMMAND [ARGS...]"
+    echo ""
+    echo "These are common wkdev commands used in various situations:"
+    wkdev_generic_commands
+    echo ""
+    echo "These are wkdev commands intended for execution on the host system:"
+    wkdev_host_commands
+    echo ""
+    echo "These are wkdev commands intended for execution on the container:"
+    wkdev_container_commands
+}
+
+wkdev_generic_commands() {
+    while read each; do
+        echo "  - ${each}"
+    done <<< $(ls -1 "${application_directory}" | egrep "^wkdev-")
+}
+
+wkdev_host_commands() {
+    while read each; do
+        echo "  - ${each}"
+    done <<< $(ls -1 "${application_directory}/host-only" | egrep "^wkdev-")
+}
+
+wkdev_container_commands() {
+    while read each; do
+        echo "  - ${each}"
+    done <<< $(ls -1 "${application_directory}/container-only" | egrep "^wkdev-")
+}
+
+find_wkdev_command() {
+    local command="${1}"
+
+    for dir in "${application_directory}" "${application_directory}/host-only" "${application_directory}/container-only"; do
+        while read each; do
+            if [[ "wkdev-${command}" == "${each}" ]]; then
+                echo "${dir}/${each}"
+                return
+            fi
+        done <<< $(ls -1 "${dir}" | egrep "^wkdev-")
+    done
+}
+
+# Main.
+if [[ ${#} -eq 0 ]]; then
+    usage
+fi
+
+COMMAND="${1}"
+shift
+
+# Find command in list of all available wkdev- commands.
+COMMAND=$(find_wkdev_command "${COMMAND}")
+
+# Execute command.
+if [[ -x "${COMMAND}" ]]; then
+    ${COMMAND} ${@}
+fi
+

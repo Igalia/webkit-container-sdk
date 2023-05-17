@@ -93,7 +93,7 @@ process_command_line_arguments() {
                 cp --verbose "${default_config_directory}"/dot-zlogin "${container_user_home}"/.zlogin
                 cp --verbose "${default_config_directory}"/dot-zprofile "${container_user_home}"/.zprofile
                 cp --verbose "${default_config_directory}"/dot-zshrc "${container_user_home}"/.zshrc
-            elif [ "${shell_type}" = "fish"]; then
+            elif [ "${shell_type}" = "fish" ]; then
                 mkdir "${container_user_home}"/.config/fish
                 cp --verbose "${default_config_directory}"/fish-config "${container_user_home}"/.config/fish/config.fish
             else

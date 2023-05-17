@@ -285,16 +285,6 @@ try_process_x11() {
     try_process ${1} "Access to X11 on host" ${is_x11_display_set} ${podman_argument[@]}
 }
 
-try_process_xauthority() {
-
-    local xauthority_file="${XAUTHORITY}"
-    local is_xauthority_set=$([ -z "${XAUTHORITY}" ] && echo 0 || echo 1)
-    local xauthority_dir=$(dirname $xauthority_file)
-    local podman_argument=("--mount" "type=bind,source=${xauthority_dir},destination=${xauthority_dir},rslave")
-    podman_argument+=("--env" "XAUTHORITY=${XAUTHORITY}")
-    try_process ${1} "Authorization of X resources on host" ${is_xauthority_set} ${podman_argument[@]}
-}
-
 try_process_pulseaudio() {
 
     local pulseaudio_directory="${XDG_RUNTIME_DIR}/pulse"
@@ -382,7 +372,6 @@ build_podman_create_arguments() {
     try_process_nvidia_gpu ${1}
     try_process_wayland ${1}
     try_process_x11 ${1}
-    try_process_xauthority ${1}
     try_process_pulseaudio ${1}
     try_process_podman ${1}
     set -o nounset

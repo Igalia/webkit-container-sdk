@@ -107,6 +107,10 @@ process_command_line_arguments() {
 
             echo ""
         fi
+    else
+        echo ""
+        echo "-> The passed home directory '${container_user_home}' already exists. Skipping configuration."
+        echo ""
     fi
 
     # Stop & remove existing container if '--rm' is given.

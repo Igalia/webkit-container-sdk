@@ -51,6 +51,7 @@ find_wkdev_command() {
 # Main.
 if [[ ${#} -eq 0 ]]; then
     usage
+    exit
 fi
 
 COMMAND="${1}"

@@ -4,5 +4,5 @@ fish_add_path "$(python3 -m site --user-base)/bin"
 
 # wkdev-sdk integration
 set --export WKDEV_SDK /wkdev-sdk
-fish_add_path "$WKDEV_SDK/scripts"
-fish_add_path "$WKDEV_SDK/scripts/container-only"
+set --global --export --append --path "$WKDEV_SDK/scripts"
+set --global --export --append --path "$WKDEV_SDK/scripts/container-only"

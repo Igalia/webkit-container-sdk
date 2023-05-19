@@ -1,4 +1,4 @@
 # To be sourced from your e.g. ~/.config/fish/config.fish to integrate wkdev-sdk with your host OS.
 set --export WKDEV_SDK (dirname (readlink -m (status --current-filename)))
-fish_add_path "$WKDEV_SDK/scripts"
-fish_add_path "$WKDEV_SDK/scripts/host-only"
+set --global --export --append --path "$WKDEV_SDK/scripts"
+set --global --export --append --path "$WKDEV_SDK/scripts/host-only"

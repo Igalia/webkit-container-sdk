@@ -16,6 +16,7 @@ argsparse_use_option =user:       "Container account user name" type:username de
 argsparse_use_option =group:      "Container account group name" type:group default:$(id --group --name)
 argsparse_use_option =shell:      "Specific shell to use for interactive container usage" type:file default:${SHELL}
 argsparse_use_option =create-home "Create home directory and add necessary configuration files (shell settings, etc.)"
+argsparse_use_option shared-dir:  "Path to existing or to-be-created shared directory that will map to the same path on the host"
 argsparse_use_option h=ome:       "Path to existing or to-be-created container home directory" default:${HOME}/wkdev-home
 argsparse_use_option =name:       "Name of container" default:wkdev
 argsparse_use_option rm           "Force removal of container if it already exists."
@@ -35,6 +36,7 @@ argsparse_usage_description="$(cat <<EOF
     $ ${application_name} --create-home --home \${HOME}/wkdev-home --name wkdev
     $ ${application_name} --home \${HOME}/wkdev-home --trace --name wkdev2
     $ ${application_name} --home \${HOME}/wkdev-home --debug --shell /usr/bin/bash --name wkdev3
+    $ ${application_name} --home \${HOME}/wkdev-home --shared-dir \${HOME}/wkdev-shared
 EOF
 )"
 
@@ -114,6 +116,26 @@ process_command_line_arguments() {
         echo ""
     fi
 
+    # Verify we should setup a shared folder and it's accessible
+    if argsparse_is_option_set "shared-dir"; then
+        container_shared_folder="${program_options["shared-dir"]}"
+        # Normalize relative paths so we can bind mount them
+        if [ "${container_shared_folder#/*}" == "$container_shared_folder" ]; then
+            container_shared_folder=$(realpath "$container_shared_folder")
+        fi
+
+        if [ ! -d "${container_shared_folder}" ]; then
+            echo "-> Shared folder '${container_shared_folder}' does not exist, creating."
+            echo ""
+            mkdir --parents "${container_shared_folder}"
+        else
+            echo "-> Setting up '${container_shared_folder}' as shared folder between host and container"
+            echo ""
+        fi
+    else
+        echo "-> Not setting shared folder."
+        echo ""
+    fi
     # Stop & remove existing container if '--rm' is given.
     if argsparse_is_option_set "rm"; then
         run_podman_silent stop "${container_name}"
@@ -171,6 +193,12 @@ try_process_home_directory() {
     [ -d "${HOME}/.config/systemd/user" ] && podman_argument+=("--mount" "type=bind,source=${HOME}/.config/systemd/user,destination=/home/${container_user_name}/.config/systemd/user,rslave")
 
     try_process ${1} "Expose both host & container home directory" 1 ${podman_argument[@]}
+}
+
+try_process_shared_directory() {
+    local shared_directory_wanted=$(argsparse_is_option_set "shared-dir" && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=${container_shared_folder},destination=${container_shared_folder},rslave")
+    try_process ${1} "Expose common shared directory (optional)" ${shared_directory_wanted} ${podman_argument[@]}
 }
 
 try_process_coredump_directory() {
@@ -365,6 +393,7 @@ build_podman_create_arguments() {
     try_process_user ${1}
     try_process_groups ${1}
     try_process_home_directory ${1}
+    try_process_shared_directory ${1}
     try_process_coredump_directory ${1}
     try_process_timezone ${1}
     try_process_ulimit ${1}

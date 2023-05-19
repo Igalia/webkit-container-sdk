@@ -18,34 +18,42 @@ usage() {
 }
 
 wkdev_generic_commands() {
-    while read each; do
-        echo "  - ${each}"
-    done <<< $(ls -1 "${application_directory}" | egrep "^wkdev-")
+    for item in "${application_directory}"/wkdev-* ; do
+        [[ -x $item ]] || continue
+        echo "  - ${item##*/}"
+    done
 }
 
 wkdev_host_commands() {
-    while read each; do
-        echo "  - ${each}"
-    done <<< $(ls -1 "${application_directory}/host-only" | egrep "^wkdev-")
+    for item in "${application_directory}"/host-only/wkdev-* ; do
+        [[ -x $item ]] || continue
+        echo "  - ${item##*/}"
+    done
 }
 
 wkdev_container_commands() {
-    while read each; do
-        echo "  - ${each}"
-    done <<< $(ls -1 "${application_directory}/container-only" | egrep "^wkdev-")
+    for item in "${application_directory}"/container-only/wkdev-* ; do
+        [[ -x $item ]] || continue
+        echo "  - ${item##*/}"
+    done
 }
 
 find_wkdev_command() {
     local command="${1}"
 
-    for dir in "${application_directory}" "${application_directory}/host-only" "${application_directory}/container-only"; do
-        while read each; do
-            if [[ "wkdev-${command}" == "${each}" ]]; then
-                echo "${dir}/${each}"
-                return
-            fi
-        done <<< $(ls -1 "${dir}" | egrep "^wkdev-")
+    for item in "${application_directory}"/wkdev-* \
+                "${application_directory}"/host-only/wkdev-* \
+                "${application_directory}"/container-only/wkdev-*
+    do
+        [[ -x $item ]] || continue
+
+        if [[ ${item##*/wkdev-} = $command ]] ; then
+            echo "$item"
+            return
+        fi
     done
+
+    return 1
 }
 
 # Main.

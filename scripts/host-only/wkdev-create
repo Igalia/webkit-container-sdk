@@ -64,7 +64,7 @@ process_command_line_arguments() {
     container_group_name="${program_options["group"]}"
     container_group_id=$(id --group --real "${container_group_name}")
 
-    host_hostname="$(hostname --short)"
+    host_hostname="$(hostnamectl hostname)"
     container_hostname="$(basename "${container_name}").${host_hostname}"
 
     # Verify the container home directory is accessible.

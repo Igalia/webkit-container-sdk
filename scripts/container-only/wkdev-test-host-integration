@@ -73,6 +73,9 @@ run() {
     run_test "Access to user journal: (expected to work)" \
         journalctl --no-pager --user --boot=0 --lines=10
 
+    run_test "Test Bubblewrap: (should work if host supports unprivileged user namespaces)" \
+        bwrap --ro-bind / / --dev-bind /dev /dev --unshare-all echo 'Success'
+
     # TODO: We would need to setup a subordinate GID/UID mapping that is well embedded
     # in the constraints given bythe host subordinate GID/UID mapping. If we ever want
     # that, investigate. The current approach of steering the host podman from within

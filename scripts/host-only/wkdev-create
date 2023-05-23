@@ -355,8 +355,11 @@ build_podman_create_arguments() {
     # Mount /dev/pts in container (pseudo-terminal support).
     arguments+=("--mount" "type=devpts,destination=/dev/pts")
 
-    # TODO: SELinux support. Disable SELinux isolation for now.
+    # Disable SELinux isolation.
     arguments+=("--security-opt label=disable")
+
+    # Allow for unprivileged user namespaces (bwrap) to work.
+    arguments+=("--security-opt unmask=ALL")
 
     set +o nounset
     try_process_user ${1}

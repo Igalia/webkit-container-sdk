@@ -12,7 +12,7 @@ argsparse_use_option =verbose        "Increase verbosity of this script"
 
 argsparse_use_option =root           "Login as root user in container (mapped to $(id --user --name) on host)"
 argsparse_use_option =exec           "Treat all remaining non-option arguments (or everything after the '--' character sequence) as command to execute in the container instead of spawning a shell"
-argsparse_use_option =name:          "Name of container" default:wkdev mandatory
+argsparse_use_option =name:          "Name of container" default:wkdev
 
 argsparse_use_option max-retries:    "Maximum number of <wait>+<try-to-enter> cycles" type:uint default:10
 argsparse_use_option sleep-duration: "Amount of seconds to sleep before attempting to enter the container (during first-time container run)" type:uint default:10
@@ -41,6 +41,7 @@ EOF
 
 process_command_line_arguments() {
 
+    argsparse_allow_no_argument "true"
     argsparse_parse_options "${@}"
     argsparse_is_option_set "trace" && set -o xtrace
 

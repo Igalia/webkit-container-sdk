@@ -45,17 +45,24 @@ verify_executables_exist gbp shyaml
 # | debian-revision | Package origin                                                     |
 # +-----------------+--------------------------------------------------------------------+
 # | <any>           | System packages                                                    |
-# | wkdevsdk        | Self-compiled package, during SDK image creation (on host!)        |
-# | wkdevlocalsdk   | Self-compiled package, during SDK image _usage_ (in container!)    |
+# | wkdevsdk1base   | Self-compiled package, during SDK image creation (on host!)        |
+# | wkdevsdk2local  | Self-compiled package, during SDK image _usage_ (in container!)    |
 # +-----------------+--------------------------------------------------------------------+
 #
 # '${package_snapshot_number}' is used when creating a snapshot build of the package, as
 # fixed snapshot number: 111 for SDK-included packages, and 222 for local package builds.
+#
+# The string wkdevsdk2local evaluates to a greater version number than wkdevsdk1
+# this way we ensure that this packages always have precedence (greater version number)
+# In case of doubt you can use the dpkg command as follows to quickly compare Debian versions numbers:
+# dpkg --compare-versions '1:3.19.0-ubuntu24wkdevsdk2local~1' 'gt' '1:3.19.0-ubuntu24wkdevsdk1~999' && echo "its greater" || echo "its not greater"
+# ---> output of the example above: "its greater"
+#
 package_snapshot_number=111
-package_version_suffix="wkdevsdk"
+package_version_suffix="wkdevsdk1base"
 if is_running_in_container; then
     package_snapshot_number=222
-    package_version_suffix="wkdevlocalsdk"
+    package_version_suffix="wkdevsdk2local"
 
     verify_executable_exists aptly
 fi

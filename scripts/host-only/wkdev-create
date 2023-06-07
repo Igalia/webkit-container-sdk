@@ -389,6 +389,9 @@ build_podman_create_arguments() {
     # Allow for unprivileged user namespaces (bwrap) to work.
     arguments+=("--security-opt unmask=ALL")
 
+    # Required for rr to work.
+    arguments+=("--security-opt seccomp=unconfined")
+
     set +o nounset
     try_process_user ${1}
     try_process_groups ${1}

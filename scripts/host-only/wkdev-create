@@ -426,9 +426,6 @@ build_podman_arguments() {
 
     local -n generic_arguments=${1}
 
-    # cgroups are managed via systemd, not cgroupfs.
-    generic_arguments+=("--cgroup-manager" "systemd")
-
     argsparse_is_option_set "debug" && generic_arguments+=("--log-level debug")
 }
 

@@ -136,9 +136,6 @@ run() {
 
     process_command_line_arguments "${@}"
 
-    # Ensure we stop on unchecked error or undefined variable
-    set -eu -o pipefail
-
     echo ""
     echo "-> Create work tree in '${work_directory}' directory..."
     mkdir --parents "${work_directory}/sources" &>/dev/null
@@ -164,6 +161,9 @@ run() {
         echo ""
         echo "-> Local APT repository creation disabled -- we are running on the host, not in the container where this is useful."
     fi
+
+    # Ensure we stop on unchecked error or undefined variable
+    set -eu -o pipefail
 
     # NOTE: If you define variables here as 'local' using the keyword 'declare', then take into account that declaration and assignment must
     # be separate statements when the assignment value is provided by a command substitution. The exit code from the command substitution is

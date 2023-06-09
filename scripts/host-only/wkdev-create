@@ -332,6 +332,14 @@ try_process_pulseaudio() {
     try_process ${1} "Access to PulseAudio on host" ${pulseaudio_directory_exists} ${podman_argument[@]}
 }
 
+try_process_pipewire() {
+
+    local pipewire_socket="${XDG_RUNTIME_DIR}/pipewire-0"
+    local pipewire_socket_exists=$([ -S "${pipewire_socket}" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=${pipewire_socket},destination=${pipewire_socket},rslave")
+    try_process ${1} "Access to PipeWire on host" ${pipewire_socket_exists} ${podman_argument[@]}
+}
+
 try_process_podman() {
 
     local podman_socket="${XDG_RUNTIME_DIR}/podman/podman.sock"
@@ -426,6 +434,7 @@ build_podman_create_arguments() {
     try_process_wayland ${1}
     try_process_x11 ${1}
     try_process_pulseaudio ${1}
+    try_process_pipewire ${1}
     try_process_podman ${1}
     set -o nounset
 

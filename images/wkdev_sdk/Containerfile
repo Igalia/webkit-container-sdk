@@ -90,3 +90,6 @@ ENV DEBIAN_FRONTEND dialog
 # Debian package build settings
 ENV DEBEMAIL "webkit-gtk@lists.webkit.org"
 ENV DEBFULLNAME "Igalia"
+
+# Enable debugging in WebKit's sandbox.
+ENV WEBKIT_ENABLE_DEBUG_PERMISSIONS_IN_SANDBOX "1"

@@ -93,3 +93,6 @@ ENV DEBFULLNAME "Igalia"
 
 # Enable debugging in WebKit's sandbox.
 ENV WEBKIT_ENABLE_DEBUG_PERMISSIONS_IN_SANDBOX "1"
+
+# Used in webkitdirs.pm to prefer building against system libraries instead of the Flatpak SDK.
+ENV WEBKIT_BUILD_USE_SYSTEM_LIBRARIES "1"

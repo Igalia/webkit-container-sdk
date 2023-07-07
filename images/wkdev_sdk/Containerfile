@@ -75,10 +75,17 @@ RUN ${APT_UPDATE} && \
 RUN python3 -m pip install --upgrade pip && \
     pip3 install hotdoc shyaml
 
-# Install fonts needed for running WebKit layout tests
-RUN git clone https://github.com/WebKitGTK/webkitgtk-test-fonts.git && \
-    make -C webkitgtk-test-fonts DESTDIR="/usr/share" install && \
-    rm -rf webkitgtk-test-fonts
+# Build and install libraries from jhbuild
+COPY /jhbuild /root/jhbuild-webkit-sdk
+RUN /root/jhbuild-webkit-sdk/build-and-deploy.sh
+RUN rm -fr /root/jhbuild-webkit-sdk
+# Register basic JHBuild environment
+ENV LD_LIBRARY_PATH "/usr/local/lib"
+ENV GST_PLUGIN_PATH_1_0 "/usr/local/lib/gstreamer-1.0"
+ENV PKG_CONFIG_PATH "/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
+ENV LDFLAGS "-L/usr/local/lib"
+ENV C_INCLUDE_PATH "/usr/local/include"
+ENV CPLUS_INCLUDE_PATH "/usr/local/include"
 
 # Podman proxy, connecting to host instance
 COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host

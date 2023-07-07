@@ -1,0 +1,146 @@
+<?xml version="1.0"?>
+<!DOCTYPE moduleset SYSTEM "moduleset.dtd">
+<?xml-stylesheet type="text/xsl" href="moduleset.xsl"?>
+<moduleset>
+
+  <metamodule id="webkit-sdk-deps">
+    <dependencies>
+      <dep package="dicts"/>
+      <dep package="libwpe"/>
+      <dep package="wpebackend-fdo"/>
+      <dep package="gstreamer"/>
+      <dep package="gst-plugins-base"/>
+      <dep package="gst-plugins-good"/>
+      <dep package="gst-plugins-bad"/>
+      <dep package="gst-libav"/>
+    </dependencies>
+  </metamodule>
+
+  <!-- Please use http/https to access repositories to be friendly to users stuck behind firewalls. -->
+  <repository type="tarball" name="sourceware.org-mirror"
+      href="http://mirrors.kernel.org/sources.redhat.com/"/>
+  <repository type="tarball" name="ftp.gnome.org"
+      href="http://ftp.gnome.org"/>
+  <repository type="tarball" name="download.gnome.org"
+      href="https://download.gnome.org"/>
+  <repository type="tarball" name="cairographics.org"
+      href="http://cairographics.org"/>
+  <repository type="tarball" name="freedesktop.org"
+      href="http://www.freedesktop.org"/>
+  <repository type="tarball" name="wayland.freedesktop.org"
+      href="http://wayland.freedesktop.org"/>
+  <repository type="tarball" name="savannah.gnu.org"
+      href="http://download.savannah.gnu.org/releases/"/>
+  <repository type="tarball" name="gnupg.org"
+      href="https://www.gnupg.org/ftp/gcrypt/"/>
+  <repository type="tarball" name="webkitgtk-jhbuild-mirror"
+      href="http://webkitgtk.org/jhbuild_mirror/"/>
+  <repository type="tarball" name="xmlsoft.org"
+      href="http://xmlsoft.org"/>
+  <repository type="tarball" name="gstreamer.freedesktop.org"
+      href="https://gstreamer.freedesktop.org/" />
+  <repository type="tarball" name="github-tarball"
+      href="https://github.com/"/>
+  <repository type="git" name="github.com"
+      href="https://github.com"/>
+
+
+  <distutils id="meson" python3="1">
+    <branch repo="github-tarball"
+            version="1.1.1"
+            module="mesonbuild/meson/releases/download/${version}/meson-${version}.tar.gz"
+            checkoutdir="meson-${version}"
+            hash="sha256:d04b541f97ca439fb82fab7d0d480988be4bd4e62563a5ca35fadb5400727b1c"/>
+  </distutils>
+
+  <autotools id="libffi" autogen-sh="configure">
+    <branch module="libffi/libffi-3.0.10.tar.gz" version="3.0.10"
+             repo="sourceware.org-mirror"
+             hash="sha256:f01eb9027e9eb56aeaeef636649877756d475d714ef8b47f627f65bc5f3b492f"/>
+  </autotools>
+
+  <autotools id="dicts" supports-non-srcdir-builds="no"
+             skip-autogen="true">
+    <branch repo="github.com" module="mrobinson/webkitgtk-test-dicts.git" checkoutdir="webkitgtk-test-dicts" tag="0.0.1"/>
+  </autotools>
+
+  <cmake id="libwpe">
+    <branch repo="github-tarball"
+            module="WebPlatformForEmbedded/libwpe/releases/download/${version}/libwpe-${version}.tar.xz"
+            version="1.14.1"
+            hash="sha256:b1d0cdcf0f8dbb494e65b0f7913e357106da9a0d57f4fbb7b9d1238a6dbe9ade"/>
+  </cmake>
+
+  <meson id="wpebackend-fdo">
+    <dependencies>
+      <dep package="libwpe"/>
+    </dependencies>
+    <branch repo="github-tarball"
+            module="Igalia/WPEBackend-fdo/releases/download/${version}/wpebackend-fdo-${version}.tar.xz"
+            version="1.14.2"
+            hash="sha256:93c9766ae9864eeaeaee2b0a74f22cbca08df42c1a1bdb55b086f2528e380d38">
+    </branch>
+  </meson>
+
+
+  <meson id="gstreamer" mesonargs="-Dintrospection=disabled -Dexamples=disabled -Dtests=disabled">
+    <branch repo="gstreamer.freedesktop.org"
+            module="src/gstreamer/gstreamer-${version}.tar.xz"
+            version="1.22.4"
+            hash="sha256:11cb0498bc16b93d8b99d22f75f829b8d0abfd8254840b2120618db5532dc655" />
+  </meson>
+
+  <meson id="gst-plugins-base" mesonargs="-Dintrospection=disabled -Dexamples=disabled">
+    <dependencies>
+      <dep package="gstreamer"/>
+    </dependencies>
+    <branch repo="gstreamer.freedesktop.org"
+            module="src/gst-plugins-base/gst-plugins-base-${version}.tar.xz"
+            version="1.22.4"
+            hash="sha256:292424e82dea170528c42b456f62a89532bcabc0508f192e34672fb86f68e5b8" />
+  </meson>
+
+  <meson id="gst-plugins-good" mesonargs="-Dexamples=disabled -Dgtk3=disabled">
+    <dependencies>
+      <dep package="gst-plugins-base"/>
+    </dependencies>
+       <branch repo="gstreamer.freedesktop.org"
+            module="src/gst-plugins-good/gst-plugins-good-${version}.tar.xz"
+            version="1.22.4"
+            hash="sha256:d7120c1146a9d723d53d5bfe8074da2575a81f0598438752937f39bb7c833b6a" >
+    </branch>
+  </meson>
+
+
+  <meson id="openh264" mesonargs="-Dtests=disabled">
+    <branch repo="github.com"
+            module="cisco/openh264.git"
+            tag="v2.3.1" >
+    </branch>
+  </meson>
+
+  <meson id="gst-plugins-bad" mesonargs="-Dintrospection=disabled -Dexamples=disabled -Dopenexr=disabled -Dopencv=disabled">
+    <dependencies>
+      <dep package="gst-plugins-base"/>
+      <dep package="openh264"/>
+    </dependencies>
+       <branch repo="gstreamer.freedesktop.org"
+            module="src/gst-plugins-bad/gst-plugins-bad-${version}.tar.xz"
+            version="1.22.4"
+            hash="sha256:eaaf53224565eaabd505ca39c6d5769719b45795cf532ce1ceb60e1b2ebe99ac" >
+    </branch>
+  </meson>
+
+  <meson id="gst-libav">
+    <dependencies>
+      <dep package="gst-plugins-base"/>
+    </dependencies>
+       <branch repo="gstreamer.freedesktop.org"
+            module="src/gst-libav/gst-libav-${version}.tar.xz"
+            version="1.22.4"
+            hash="sha256:9a751bc740de768e791c37a95f0a924c6a41d12fd7f37f54ce6a4e834be122d3" >
+    </branch>
+  </meson>
+
+
+</moduleset>

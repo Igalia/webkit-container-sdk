@@ -16,14 +16,14 @@ package_groups:
           dpkg_buildpackage: '--build=binary'
 
       - name: containers-common # Configuration files common to github.com/containers
-        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/containers-common_0.53.0-1.dsc'
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/containers-common_0.55.1-1.dsc'
         options:
           gbp_import_dsc: '--allow-unauthenticated'
           dpkg_buildpackage: '--build=binary'
         depends_on: ['./golang-1.20*.deb', './crun*.deb']
 
       - name: containers-storage # Configuration files storage to github.com/containers
-        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/containers-storage_1.46.1-1.dsc'
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/containers-storage_1.48.0-1.dsc'
         options:
           gbp_import_dsc: '--allow-unauthenticated'
           dpkg_buildpackage: '--build=binary'
@@ -56,14 +56,14 @@ package_groups:
         depends_on: ['./golang-1.20*.deb']
 
       - name: buildah # Tool for building OCI containers
-        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/buildah_1.30.0-1.dsc'
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/buildah_1.31.0-1.dsc'
         options:
           gbp_import_dsc: '--allow-unauthenticated'
           dpkg_buildpackage: '--build=binary'
         depends_on: ['./golang-1.20*.deb']
 
       - name: skopeo # Container image repository tool
-        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/skopeo_1.12.0-1.dsc'
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/skopeo_1.13.0-1.dsc'
         options:
           gbp_import_dsc: '--allow-unauthenticated'
           dpkg_buildpackage: '--build=binary'
@@ -90,7 +90,7 @@ package_groups:
         depends_on: ['./golang-1.20*.deb']
 
       - name: podman-netavark # OCI network stack
-        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/podman-netavark_1.6.0-1.dsc'
+        url: 'https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_22.10/podman-netavark_1.7.0-1.dsc'
         options:
           gbp_import_dsc: '--allow-unauthenticated'
           dpkg_buildpackage: '--build=binary'

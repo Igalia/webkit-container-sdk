@@ -1,10 +1,25 @@
-build image:
-    image: docker:20.10.16
-    services:
-        - docker:20.10.16-dind
+Build SDK:
+    image: ubuntu:23.04
+    stage: build
     tags:
-        - amd64
+      - amd64
+
+    # The default branch is tagged with the 'latest' tag
+    # All other branches are tagged with the escaped branch name (commit ref slug)
     script:
-        - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
-        - docker build -t $CI_REGISTRY_IMAGE .
-        - docker push $CI_REGISTRY_IMAGE
+      - |
+        if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
+          export WKDEV_SDK_TAG="latest"
+          echo "Running on default branch '$CI_DEFAULT_BRANCH': export WKDEV_SDK_TAG=$WKDEV_SDK_TAG"
+        else
+          export WKDEV_SDK_TAG="$CI_COMMIT_REF_SLUG"
+          echo "Running on branch '$CI_COMMIT_BRANCH': export WKDEV_SDK_TAG=$WKDEV_SDK_TAG"
+        fi
+      - export DEBIAN_FRONTEND=noninteractive
+      - apt-get --assume-yes update && apt-get --assume-yes install aptly debian-keyring fuse-overlayfs gettext-base podman python3 python3-pip git-buildpackage
+      - unset DEBIAN_FRONTEND
+      - pip3 install --break-system-packages shyaml
+      - source ./register-sdk-on-host.sh
+      - wkdev-sdk-bakery --mode build --verbose
+      - echo "$CI_REGISTRY_PASSWORD" | podman login -u "$CI_REGISTRY_USER" $CI_REGISTRY --password-stdin
+      - wkdev-sdk-bakery --mode deploy --verbose

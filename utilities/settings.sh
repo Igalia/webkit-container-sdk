@@ -17,11 +17,8 @@ is_running_in_wkdev_sdk_container() { is_running_in_container && [ -f "/usr/bin/
 #####
 ##### Container registry
 #####
-# TODO: Switch to 'quay.io' registry, replacing 'docker.io'?
-get_default_container_registry() { echo "docker.io"; }
-
-# TODO: Transfer ownership from 'nikolaszimmermann' to 'igalia' account.
-get_default_container_registry_user_name() { echo "nikolaszimmermann"; }
+get_default_container_registry() { echo "gitlab.igalia.com:4567"; }
+get_default_container_registry_user_name() { echo "teams/webkit/wkdev-sdk"; }
 
 #####
 ##### Container naming/versioning

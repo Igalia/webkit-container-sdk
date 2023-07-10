@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 [ ! -z "${application_ready}" ] && { echo "[FATAL] You are not allowed to source 'utilities/application.sh' more than once."; return 1; }
 

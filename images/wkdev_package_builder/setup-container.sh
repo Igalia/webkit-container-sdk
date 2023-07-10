@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 CCACHE_MAX_CAPACITY_IN_GB=8
 
 setup_ccache() {

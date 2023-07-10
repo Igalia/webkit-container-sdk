@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "The variable \${WKDEV_SDK} needs to point to the root of the wkdev-sdk checkout."; exit 1; }
 init_application "${0}" "Launch a container that runs the 'build-package.sh' script" host-and-container

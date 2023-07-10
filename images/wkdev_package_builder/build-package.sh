@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # NOTE: This runs in a container where the wkdev-sdk is not available, therefore
 # we're not making use of the standard "init_application" logic.

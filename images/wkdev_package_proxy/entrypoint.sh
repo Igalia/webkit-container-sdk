@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 chown -R proxy.proxy /data
 chown proxy.proxy /dev/stdout
 

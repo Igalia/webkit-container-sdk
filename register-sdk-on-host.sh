@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # To be sourced from your e.g. ~/.bashrc / ~.zprofile / ... to integrate wkdev-sdk with your host OS.
 my_relpath="${BASH_SOURCE[0]}"

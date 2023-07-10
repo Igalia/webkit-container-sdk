@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # FIXME: This is a legacy helper script, not integrated within the standard "init_application" logic.
 # Fix that, for consistency reasons.

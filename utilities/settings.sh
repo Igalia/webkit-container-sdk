@@ -26,9 +26,7 @@ get_default_container_registry_user_name() { echo "nikolaszimmermann"; }
 #####
 ##### Container naming/versioning
 #####
-# TODO: Enable proper versioning instead of always using 'latest'.
-# (always require latest 'wkdev-sdk' Git checkout (ToT main branch) + arbitrary versioned images)
-get_default_container_tag() { echo "latest"; }
+get_container_tag() { echo "${WKDEV_SDK_TAG:-latest}"; }
 
 # Given an image name, return the qualified image name "<registry>/<registry-user-name>/<image-name>"
 get_qualified_name() {
@@ -50,19 +48,19 @@ get_container_home_defaults_directory_name() { echo "${WKDEV_SDK}/images/wkdev_s
 
 ##### wkdev-sdk definitions
 get_sdk_image_name() { echo "wkdev-sdk"; }
-get_sdk_image_tag() { get_default_container_tag; }
+get_sdk_image_tag() { get_container_tag; }
 get_sdk_qualified_name() { get_qualified_name "$(get_sdk_image_name)"; }
 get_sdk_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_sdk_image_name)" "$(get_sdk_image_tag)"; }
 
 ##### wkdev-package-proxy definitions
 get_package_proxy_image_name() { echo "wkdev-package-proxy"; }
-get_package_proxy_image_tag() { get_default_container_tag; }
+get_package_proxy_image_tag() { get_container_tag; }
 get_package_proxy_qualified_name() { get_qualified_name "$(get_package_proxy_image_name)"; }
 get_package_proxy_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_package_proxy_image_name)" "$(get_package_proxy_image_tag)"; }
 
 ##### wkdev-package-builder definitions
 get_package_builder_image_name() { echo "wkdev-package-builder"; }
-get_package_builder_image_tag() { get_default_container_tag; }
+get_package_builder_image_tag() { get_container_tag; }
 get_package_builder_qualified_name() { get_qualified_name "$(get_package_builder_image_name)"; }
 get_package_builder_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_package_builder_image_name)" "$(get_package_builder_image_tag)"; }
 

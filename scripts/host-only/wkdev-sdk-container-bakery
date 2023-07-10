@@ -17,7 +17,6 @@ argsparse_use_option =verbose     "Increase verbosity of this script"
 
 argsparse_use_option =name:       "Name of container image" mandatory
 argsparse_use_option =mode:       "Operation mode: 'build' or 'deploy'" mandatory
-argsparse_use_option =tag:        "Tag to use for new container image" default:$(get_default_container_tag) mandatory
 argsparse_use_option idle-cores:  "Number of CPU cores to leave idle, when building the image" type:uint default:2
 
 argsparse_usage_description="$(cat <<EOF
@@ -32,7 +31,7 @@ argsparse_usage_description="$(cat <<EOF
 EOF
 )"
 
-get_tag_for_build() { get_qualified_name_and_tag "${container_image_name}" "${container_tag}";}
+get_tag_for_build() { get_qualified_name_and_tag "${container_image_name}" "$(get_container_tag)"; }
 get_number_of_cores_for_build() { nproc --ignore=${idle_cores}; }
 
 process_command_line_arguments() {
@@ -41,7 +40,6 @@ process_command_line_arguments() {
     argsparse_is_option_set "trace" && set -o xtrace
 
     container_image_name="${program_options["name"]}"
-    container_tag="${program_options["tag"]}"
     idle_cores=${program_options["idle-cores"]}
 
     operation_mode="${program_options["mode"]}"
@@ -51,7 +49,7 @@ process_command_line_arguments() {
 build_image() {
 
     echo ""
-    echo "-> Building container image '${container_image_name}'..."
+    echo "-> Building container image '${container_image_name}' using tag '$(get_tag_for_build)'..."
     echo ""
 
     pushd "$(get_image_directory_by_name "${container_image_name}")" &>/dev/null

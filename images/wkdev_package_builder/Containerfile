@@ -1,8 +1,8 @@
-FROM ubuntu:22.10
+FROM ubuntu:23.04
 
 LABEL maintainer="webkit-gtk@lists.webkit.org"
 LABEL version="1.0"
-LABEL description="Used to build Ubuntu 22.10 custom packages in a container instead of chroot environment"
+LABEL description="Used to build Ubuntu 23.04 custom packages in a container instead of chroot environment"
 
 # Container environment hardcoded settings
 ARG CONTAINER_LOCALE=en_US.UTF-8
@@ -45,8 +45,8 @@ RUN ${APT_UPDATE} &&\
 # Build hotdoc / sphinx documentation
 RUN ${APT_INSTALL} libglib2.0-dev libjson-glib-dev libxml2-dev python3-dev python3-pip && \
     ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN} && \
-    python3 -m pip install --upgrade pip && \
-    pip3 install hotdoc sphinx
+    python3 -m pip install --break-system-packages --upgrade pip && \
+    pip3 install --break-system-packages hotdoc sphinx
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

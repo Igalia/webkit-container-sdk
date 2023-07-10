@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
 init_application "${0}" "Build one of the container images that form the SDK" host-only

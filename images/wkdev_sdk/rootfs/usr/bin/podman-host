@@ -1,2 +1,2 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 exec /usr/bin/podman --remote --url "unix:${HOST_PODMAN_SOCKET}" "${@}"

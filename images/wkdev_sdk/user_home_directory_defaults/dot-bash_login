@@ -1,2 +1,2 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 "${WKDEV_SDK}/scripts/container-only/wkdev-sdk-show-welcome-message"

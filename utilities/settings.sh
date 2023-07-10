@@ -12,6 +12,7 @@ get_sdk_maintainer_email() { echo "webkit-gtk@lists.webkit.org"; }
 get_init_done_file() { echo "/run/.wkdev-init-done"; }
 is_first_time_run() { [ ! -f "$(get_init_done_file)" ]; }
 is_running_in_container() { [ -f "/run/.containerenv" ]; }
+is_running_in_wkdev_sdk_container() { is_running_in_container && [ -f "/usr/bin/podman-host" ]; }
 
 #####
 ##### Container registry

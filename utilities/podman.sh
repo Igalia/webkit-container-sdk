@@ -4,7 +4,7 @@
 source "${WKDEV_SDK}/utilities/prerequisites.sh"
 
 podman_executable="/usr/bin/podman"
-if is_running_in_container; then
+if is_running_in_wkdev_sdk_container; then
     # Requires the presence of /usr/bin/podman-host in the container image.
     # It acts as portal to access the host podman instance.
     podman_executable="/usr/bin/podman-host"

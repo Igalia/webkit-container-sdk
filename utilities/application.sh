@@ -92,10 +92,10 @@ init_application() {
     local application_constraints="${3-}" # Either "container-only", "host-only" or "host-and-container".
     if [ "${application_constraints}" = "container-only" ]; then
         # Prevent application to run on the host.
-        is_running_in_container || _abort_ "The script '${application_name}' is intended to run from within the container only"
+        is_running_in_wkdev_sdk_container || _abort_ "The script '${application_name}' is intended to run from within the wkdev-sdk container only"
     elif [ "${application_constraints}" = "host-only" ]; then
         # Prevent application to run within the container.
-        is_running_in_container && _abort_ "The script '${application_name}' is intended to run on the host only"
+        is_running_in_wkdev_sdk_container && _abort_ "The script '${application_name}' is intended to run on the host only"
     elif [ "${application_constraints}" = "host-and-container" ]; then
         true # no-op
     else

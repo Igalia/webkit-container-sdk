@@ -60,7 +60,7 @@ verify_executables_exist gbp shyaml
 #
 package_snapshot_number=111
 package_version_suffix="wkdevsdk1base"
-if is_running_in_container; then
+if is_running_in_wkdev_sdk_container; then
     package_snapshot_number=222
     package_version_suffix="wkdevsdk2local"
 
@@ -142,7 +142,7 @@ run() {
     mkdir --parents "${work_directory}/builds" &>/dev/null
 
     apt_repository_name="$(get_custom_package_local_apt_repository_name)"
-    if is_running_in_container; then
+    if is_running_in_wkdev_sdk_container; then
         show_output=$(aptly repo show "${apt_repository_name}" 2>/dev/null)
         aptly_status=${?}
         echo ""

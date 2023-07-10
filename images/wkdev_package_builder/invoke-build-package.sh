@@ -16,7 +16,7 @@ build_directory="${work_directory}/builds/${package_full_name}"
 log_file="${build_directory}/build.log"
 
 build_profile="full"
-if is_running_in_container; then
+if is_running_in_wkdev_sdk_container; then
     build_profile="fast"
 
     # Translate from container home relative path to host path.

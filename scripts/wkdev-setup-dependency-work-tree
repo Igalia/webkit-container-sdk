@@ -7,8 +7,9 @@ init_application "${0}" "Setup SDK dependencies build environment." host-and-con
 source "${WKDEV_SDK}/utilities/prerequisites.sh"
 source "${WKDEV_SDK}/utilities/resources.sh"
 
+# envsubst is needed for the yaml file interpretation
 # nproc is used to determine the number of CPU cores
-verify_executables_exist nproc
+verify_executables_exist envsubst nproc
 
 # Needed for --settings default below
 get_default_dependency_settings() { echo "${WKDEV_SDK}/images/wkdev_sdk/custom_built_packages/wkdev-webkit-dependencies.yaml"; }

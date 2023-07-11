@@ -37,7 +37,7 @@ run_podman_in_background_and_log_to_file "${log_file}" run --network host --rm \
     "${build_profile}" "${package_full_name}" "${deb_build_options}"
 
 # Grace period before attempting to tail the log.
-sleep 2
+sleep 10
 
 background_pid=${!}
 tail --lines=10000 --follow --pid=${background_pid} "${log_file}" &

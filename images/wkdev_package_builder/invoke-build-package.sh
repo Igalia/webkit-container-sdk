@@ -15,7 +15,7 @@ deb_build_options="${4}"
 build_directory="${work_directory}/builds/${package_full_name}"
 log_file="${build_directory}/build.log"
 
-build_profile="full"
+build_profile="fast"
 if is_running_in_wkdev_sdk_container; then
     build_profile="fast"
 

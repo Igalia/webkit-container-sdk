@@ -65,8 +65,6 @@ deploy_image() {
     echo "-> Deploying container image '${container_image_name}' to registry '$(get_default_container_registry)'..."
     echo ""
 
-    run_podman login --username "$(get_default_container_registry_user_name)" "$(get_default_container_registry)" || _abort_ "Login to registry failed"
-
     local image_directory="$(get_image_directory_by_name "${container_image_name}")"
     pushd "${image_directory}" &>/dev/null || _abort_ "Switching to directory '${image_directory}' failed"
     run_podman_silent_unless_verbose push "$(get_tag_for_build)" || _abort_ "Pushing to registry failed"

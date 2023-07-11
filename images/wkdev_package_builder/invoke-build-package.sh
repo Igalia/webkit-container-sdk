@@ -25,7 +25,7 @@ if is_running_in_wkdev_sdk_container; then
 fi
 
 # Ensure the package proxy service is running...
-${WKDEV_SDK}/scripts/wkdev-ensure-package-proxy-service
+${WKDEV_SDK}/scripts/wkdev-ensure-package-proxy-service --verbose
 
 # ... before invoking package builds.
 timer_start

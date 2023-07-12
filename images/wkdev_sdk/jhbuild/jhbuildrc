@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
-
 import sys
 import os
 
-# Configure jhbuild to be self-contained to this dir
-this_dir = os.path.dirname(os.path.abspath(__file__))
-modulesets_dir = this_dir
-checkoutroot = os.path.join(this_dir, 'checkout')
-
-# Deploy system wide
-prefix = '/usr/local'
+# Configure jhbuild to be self-contained to /jhbuild
+buildroot = '/jhbuild/build'
+checkoutroot = '/jhbuild/checkout'
+prefix = '/jhbuild/install'
+tarballdir = '/jhbuild/downloads'
+modulesets_dir = '/jhbuild'
 
 # Whether to use a local copy of modulesets
 use_local_modulesets = True
-
-# A list of the modules to build.  Defaults to the GNOME core and tested apps.
+# Assume we have sysdeps installed
+check_sysdeps = False
+# List of modulesets to use
+moduleset = [ '/jhbuild/webkit-sdk-deps.modules' ]
+# A list of the modules to build.
 modules = [ 'webkit-sdk-deps' ]
-
-# Enable builddir != srcdir builds.
-buildroot = checkoutroot = os.path.join(this_dir, 'build')

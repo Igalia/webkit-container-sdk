@@ -75,17 +75,23 @@ RUN ${APT_UPDATE} && \
 RUN python3 -m pip install --upgrade pip && \
     pip3 install hotdoc shyaml
 
-# Build and install libraries from jhbuild
-COPY /jhbuild /root/jhbuild-webkit-sdk
-RUN /root/jhbuild-webkit-sdk/build-and-deploy.sh
-RUN rm -fr /root/jhbuild-webkit-sdk
+# Copy jhbuild helper files and do the initial build & install
+COPY /jhbuild /jhbuild
+RUN /jhbuild/init-install.sh && rm -f /jhbuild/init-install.sh && rm -f /jhbuild/README.txt
 # Register basic JHBuild environment
-ENV LD_LIBRARY_PATH "/usr/local/lib"
-ENV GST_PLUGIN_PATH_1_0 "/usr/local/lib/gstreamer-1.0"
-ENV PKG_CONFIG_PATH "/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
-ENV LDFLAGS "-L/usr/local/lib"
-ENV C_INCLUDE_PATH "/usr/local/include"
-ENV CPLUS_INCLUDE_PATH "/usr/local/include"
+# TODO: Instead of hardcoding here the values it would be better to
+# explore the possibility of generating it dinamically with "jhbuild shell"
+# when the user enters into the container (or similar), but that may cause
+# issues with the env not exported when someone enter into the
+# container via direct command exec rather than by login
+ENV JHBUILDRC "/jhbuild/jhbuildrc"
+ENV LD_LIBRARY_PATH "/jhbuild/install/lib"
+ENV GST_PLUGIN_PATH_1_0 "/jhbuild/install/lib/gstreamer-1.0"
+ENV PKG_CONFIG_PATH "/jhbuild/install/lib/pkgconfig:/jhbuild/install/share/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
+ENV LDFLAGS "-L/jhbuild/install/lib"
+ENV C_INCLUDE_PATH "/jhbuild/install/include"
+ENV CPLUS_INCLUDE_PATH "/jhbuild/install/include"
+ENV PATH "/jhbuild/install/bin:$PATH"
 
 # Podman proxy, connecting to host instance
 COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host

@@ -177,6 +177,17 @@ try_setup_local_sdk_repository() {
     chown "${container_user_name}:${container_group_name}" "${packages_directory}" &>/dev/null
 }
 
+try_setup_permissions_jhbuild_directory() {
+
+    echo ""
+
+    local jhbuild_directory="/jhbuild"
+    echo "[9/9] Setup jhbuild '${jhbuild_directory}' directory permissions..."
+
+    chown -R "${container_user_name}:${container_group_name}" "${jhbuild_directory}" &>/dev/null
+
+}
+
 # Main functionality
 run() {
 
@@ -195,6 +206,7 @@ run() {
     try_setup_run_user_directory
     try_setup_dockerenv_file
     try_setup_local_sdk_repository
+    try_setup_permissions_jhbuild_directory
 
     # Reset DEBIAN_FRONTEND again.
     unset DEBIAN_FRONTEND

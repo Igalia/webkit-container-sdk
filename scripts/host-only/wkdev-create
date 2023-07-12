@@ -416,7 +416,7 @@ build_podman_create_arguments() {
     try_process_podman ${1}
     set -o nounset
 
-    arguments+=("$(get_sdk_qualified_name)")
+    arguments+=("$(get_sdk_qualified_name_and_tag)")
 
     # Entry point
     arguments+=("/wkdev-sdk/scripts/container-only/wkdev-init")

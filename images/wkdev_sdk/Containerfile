@@ -77,7 +77,13 @@ RUN python3 -m pip install --upgrade pip && \
 
 # Copy jhbuild helper files and do the initial build & install
 COPY /jhbuild /jhbuild
-RUN /jhbuild/init-install.sh && rm -f /jhbuild/init-install.sh && rm -f /jhbuild/README.txt
+# Build jhbuild, install it and clean built-products not needed.
+RUN /jhbuild/init-install.sh && \
+    rm -f /jhbuild/init-install.sh && \
+    rm -f /jhbuild/README.txt && \
+    rm -fr /jhbuild/build && \
+    rm -fr /jhbuild/checkout && \
+    rm -fr /jhbuild/downloads
 # Register basic JHBuild environment
 # TODO: Instead of hardcoding here the values it would be better to
 # explore the possibility of generating it dinamically with "jhbuild shell"

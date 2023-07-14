@@ -20,11 +20,11 @@ to executing the deploy script and run it manually.
 
 For example, if you have this:
 
-  STEP 26/35: COPY /jhbuild /root/jhbuild-webkit-sdk
+  STEP 26/35: COPY /jhbuild /jhbuild
   --> d7b0866719d
-  STEP 27/35: RUN /root/jhbuild-webkit-sdk/init-install.sh
+  STEP 27/35: RUN /jhbuild/init-install.sh
 
 Then you can debug step 27 with:
 
   $ podman run -it --rm d7b0866719d /bin/bash
-  root@c2ec0d851de0:~# /root/jhbuild-webkit-sdk/init-install.sh
+  root@c2ec0d851de0:~# /jhbuild/init-install.sh

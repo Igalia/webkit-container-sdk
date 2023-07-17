@@ -5,6 +5,7 @@ init_application "${0}" "Create a new container ready to use for WebKit GTK/WPE 
 
 # Source utility script fragments
 source "${WKDEV_SDK}/utilities/cpu-profiling.sh"
+source "${WKDEV_SDK}/utilities/host-setup-tasks.sh"
 source "${WKDEV_SDK}/utilities/nvidia-gpu.sh"
 source "${WKDEV_SDK}/utilities/podman.sh"
 
@@ -574,20 +575,6 @@ try_enable_user_podman_socket_service_on_host() {
     fi
 }
 
-try_enable_localuser_authorization_for_x11() {
-
-    echo ""
-
-    if type xhost >/dev/null 2>&1; then
-        if xhost | grep --quiet "localuser:${host_user_name}"; then
-            echo "-> The X11 localuser authorization for user '${host_user_name}' on host system is already enabled."
-        else
-            echo "-> Enable X11 localuser authorization for user '${host_user_name}' on host system..."
-            xhost +"si:localuser:${host_user_name}"
-        fi
-    fi
-}
-
 try_enable_nvidia_container_integration_on_host() {
 
     echo ""
@@ -635,12 +622,13 @@ run() {
 
     try_enable_lingering_on_host
     try_enable_user_podman_socket_service_on_host
-    try_enable_localuser_authorization_for_x11
 
     if is_nvidia_gpu_installed; then
         try_enable_nvidia_container_integration_on_host
         try_enable_nvidia_gpu_profiling_settings_on_host
     fi
+
+    host_setup_prerun_tasks
 
     echo ""
     echo "-> Host integration features:"

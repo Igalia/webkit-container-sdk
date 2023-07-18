@@ -58,4 +58,5 @@ make install
 
 # Build and install the moduleset
 export JHBUILDRC="${THISDIR}/jhbuildrc"
+export WKDEV_IN_IMAGE_BUILD=1
 exec /usr/local/bin/jhbuild build

@@ -4,10 +4,15 @@ import os
 
 # Configure jhbuild to be self-contained to /jhbuild
 buildroot = '/jhbuild/build'
-checkoutroot = '/jhbuild/checkout'
 prefix = '/jhbuild/install'
 tarballdir = '/jhbuild/downloads'
 modulesets_dir = '/jhbuild'
+
+if 'WKDEV_IN_IMAGE_BUILD' in os.environ:
+    checkoutroot = '/jhbuild/checkout'
+    shallow_clone = True
+else:
+    checkoutroot = os.path.expanduser('~/checkout')
 
 # Whether to use a local copy of modulesets
 use_local_modulesets = True

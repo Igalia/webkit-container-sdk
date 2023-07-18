@@ -29,6 +29,9 @@
       href="https://github.com/"/>
   <repository type="git" name="github.com"
       href="https://github.com"/>
+  <repository type="git" name="gitlab.gnome.org"
+      href="https://gitlab.gnome.org/"/>
+
 
 
   <distutils id="meson" python3="1">
@@ -144,5 +147,10 @@
     </branch>
   </meson>
 
+  <!-- These are not built by default but useful for hacking on. -->
+  <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled">
+    <branch repo="gitlab.gnome.org"
+            module="GNOME/glib.git"/>
+  </meson>
 
 </moduleset>

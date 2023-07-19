@@ -29,15 +29,6 @@
       href="https://gitlab.gnome.org/"/>
 
 
-
-  <distutils id="meson" python3="1">
-    <branch repo="github-tarball"
-            version="1.1.1"
-            module="mesonbuild/meson/releases/download/${version}/meson-${version}.tar.gz"
-            checkoutdir="meson-${version}"
-            hash="sha256:d04b541f97ca439fb82fab7d0d480988be4bd4e62563a5ca35fadb5400727b1c"/>
-  </distutils>
-
   <meson id="sparkle-cdm">
     <branch repo="github.com"
             module="Sparkle-CDM/sparkle-cdm"/>

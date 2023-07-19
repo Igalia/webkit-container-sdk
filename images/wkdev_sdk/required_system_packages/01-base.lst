@@ -8,4 +8,4 @@ iptables libcap2-bin libyajl2 uidmap
 libnvidia-egl-wayland1
 
 # General utilities
-apt-file aptly atop emacs git htop iotop iputils-ping kmod less locate man-db nano openssh-client strace sudo unzip vim wget
+apt-file aptly atop at-spi2-core emacs git htop iotop iputils-ping kmod less locate man-db nano openssh-client strace sudo unzip vim wget

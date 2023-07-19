@@ -212,7 +212,17 @@ run() {
     unset DEBIAN_FRONTEND
 
     echo ""
-    echo "Finished initialization - sleeping forever..."
+    echo "Finished initialization"
+
+    if [ -x "$HOME/.wkdev-firstrun" ]; then
+        echo ""
+        echo "Executing $HOME/.wkdev-firstrun"
+        su "${container_user_name}" --group="${container_group_name}" --login --command="$HOME/.wkdev-firstrun"
+    fi
+
+    echo ""
+    echo "Sleeping forever..."
+
     touch "$(get_init_done_file)"
     exec tail -f /dev/null
 }

@@ -104,4 +104,9 @@
             module="GNOME/glib.git"/>
   </meson>
 
+  <meson id="libsoup">
+    <branch repo="gitlab.gnome.org"
+            module="GNOME/libsoup.git"/>
+  </meson>
+
 </moduleset>

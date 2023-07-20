@@ -15,6 +15,7 @@
   </metamodule>
 
   <!-- Please use http/https to access repositories to be friendly to users stuck behind firewalls. -->
+  <repository type="system" name="system"/>
   <repository type="tarball" name="wpewebkit.org"
       href="https://wpewebkit.org/releases/"/>
   <repository type="tarball" name="xmlsoft.org"
@@ -28,6 +29,12 @@
   <repository type="git" name="gitlab.gnome.org"
       href="https://gitlab.gnome.org/"/>
 
+  <systemmodule id="meson">
+    <branch repo="system"/>
+    <systemdependencies>
+      <dep type="path" name="meson"/>
+    </systemdependencies>
+  </systemmodule>
 
   <meson id="sparkle-cdm">
     <branch repo="github.com"

@@ -100,8 +100,21 @@ container home directory will stay untouched.
 Since you will be regularly re-creating containers there is support for automatically running a script
 after each container is created. You can do this by making a `.wkdev-firstrun` script in the directory
 you specify as your SDK home (`${HOME}/wkdev-home` by default). This script runs as your user but has
-permissions to use `sudo` to install packages for example.
+permissions to use `sudo` for tasks such as installing packages. An example script:
 
+```bash
+#!/usr/bin/env bash
+# This example is a bash script but it can be any executable file.
+
+# Install extra applications like your favorite editor.
+sudo apt-get install --yes micro
+
+# The hostname is set to the name of the container so you could
+# for example have a specific one where you always work on a library.
+if [[ "$(hostname -s)" == "wkdev-foo" ]]; then
+    jhbuild --no-interact build glib
+fi
+```
 
 ### Building third-party libraries
 

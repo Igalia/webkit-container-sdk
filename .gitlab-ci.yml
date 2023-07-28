@@ -4,6 +4,17 @@ Build SDK:
     tags:
       - amd64
 
+    before_script:
+      - |
+          echo "Environment:"
+          echo "======================================================================"
+          echo "CI_PIPELINE_SOURCE=\"$CI_PIPELINE_SOURCE\""
+          echo "CI_REPOSITORY_URL=\"$CI_REPOSITORY_URL\""
+          echo "CI_COMMIT_BRANCH=\"$CI_COMMIT_BRANCH\""
+          echo "CI_COMMIT_SHA=\"$CI_COMMIT_SHA\""
+          echo "CI_COMMIT_REF_SLUG=\"$CI_COMMIT_REF_SLUG\""
+          echo "======================================================================"
+
     # The default branch is tagged with the 'latest' tag
     # All other branches are tagged with the escaped branch name (commit ref slug)
     script:

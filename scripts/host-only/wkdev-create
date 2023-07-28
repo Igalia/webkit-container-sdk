@@ -652,6 +652,8 @@ run() {
     local podman_arguments=()
     build_podman_arguments podman_arguments
 
+    run_podman_login
+
     echo ""
     echo "-> Creating container '${container_name}'..."
     if argsparse_is_option_set "verbose"; then

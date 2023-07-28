@@ -28,6 +28,16 @@ run_podman_in_background_and_log_to_file() {
     run_podman "${command}" ${@} &> "${log_file}" &
 }
 
+run_podman_login() {
+    # It is possible in the future we use a registry that does not require login.
+    # As far as i can tell all we can do in that case is try a pull and check if it fails then login.
+    # For now the Igalia registry requires login.
+    echo ""
+    echo "-> Logging in to $(get_default_container_registry)..."
+    echo ""
+    run_podman login "$(get_default_container_registry)" || _abort_ "Cannot login to registry"
+}
+
 # Queries the container status - stores result in global 'last_container_status' variable.
 get_podman_container_status() {
 

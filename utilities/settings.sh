@@ -17,8 +17,8 @@ is_running_in_wkdev_sdk_container() { is_running_in_container && [ -f "/usr/bin/
 #####
 ##### Container registry
 #####
-get_default_container_registry() { echo "gitlab.igalia.com:4567"; }
-get_default_container_registry_user_name() { echo "teams/webkit/wkdev-sdk"; }
+get_default_container_registry() { echo "${WKDEV_SDK_CONTAINER_REGISTRY:-gitlab.igalia.com:4567}"; }
+get_default_container_registry_user_name() { echo "${WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME:-teams/webkit/wkdev-sdk}"; }
 
 #####
 ##### Container naming/versioning

@@ -144,6 +144,9 @@ update_image() {
     echo ""
     local image_name="${1}"
 
+    echo "-> Logging in to $(get_default_container_registry)..."
+    run_podman_silent_unless_verbose login "$(get_default_container_registry)" || _abort_ "Cannot login to registry"    
+
     echo "-> Updating image '${image_name}'..."
     run_podman_silent_unless_verbose pull "${image_name}" || _abort_ "Cannot update image '${image_name}'"
 }

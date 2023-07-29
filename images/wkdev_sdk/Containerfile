@@ -19,6 +19,10 @@ ARG APT_DELETE_LISTS="rm -rf /var/lib/apt/lists/*"
 # Disable prompt during package configuration
 ENV DEBIAN_FRONTEND noninteractive
 
+# Delete the default ubuntu user which has a UID of 1000.
+# Podman refuses to map a user from the host if the UID is already in /etc/passwd.
+RUN userdel ubuntu
+
 # NOTE: All RUN commands contain the (autoremove / clean / rm step to ensure that no intermediate layer
 #       ever contains unncessary stuff that never appears in the final image, only in deeper layers, and
 #       thus increases the whole image size no gain, except an "easier to read" Dockerfile.

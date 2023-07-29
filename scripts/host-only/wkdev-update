@@ -141,7 +141,6 @@ update_containers_using_image() {
 
 update_image() {
 
-    echo ""
     local image_name="${1}"
 
     run_podman_login

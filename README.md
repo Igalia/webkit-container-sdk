@@ -111,13 +111,15 @@ is a tool that automates downloading, building, and installing projects and is p
 
 #### Hacking on glib with JHBuild
 
-1. Build glib master### Firstrun script
+1. Build glib master
 
-Since you will be regularly re-creating containers there is support for automatically running a script
-after each container is created. You can do this by making a `.wkdev-firstrun` script in the directory
-you specify as your SDK home (`${HOME}/wkdev-home` by default). This script runs as your user but has
-permissions to use `sudo` to install packages for example.
-ib
+```sh
+jhbuild build glib
+```
+
+This will do an initial build of glib and its dependencies.
+
+2. Modify and reinstall glib
 
 All of the sources are located in `~/checkout`.
 

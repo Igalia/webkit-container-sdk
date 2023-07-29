@@ -53,9 +53,6 @@ run() {
 
     process_command_line_arguments "${@}"
 
-    # Build or deploy auxiliary container images that belong to the SDK
-    process_container_image "$(get_package_proxy_image_name)"
-
     # Build or deploy main SDK container image.
     process_container_image "$(get_sdk_image_name)"
 

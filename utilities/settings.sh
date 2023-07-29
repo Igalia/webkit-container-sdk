@@ -47,8 +47,3 @@ get_container_home_defaults_directory_name() { echo "${WKDEV_SDK}/images/wkdev_s
 get_sdk_image_name() { echo "wkdev-sdk"; }
 get_sdk_image_tag() { get_container_tag; }
 get_sdk_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_sdk_image_name)" "$(get_sdk_image_tag)"; }
-
-##### wkdev-package-proxy definitions
-get_package_proxy_image_name() { echo "wkdev-package-proxy"; }
-get_package_proxy_image_tag() { get_container_tag; }
-get_package_proxy_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_package_proxy_image_name)" "$(get_package_proxy_image_tag)"; }

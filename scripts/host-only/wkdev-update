@@ -160,10 +160,8 @@ run() {
     try_update_sdk_repository
     popd &>/dev/null
 
-    update_image "$(get_package_proxy_qualified_name_and_tag)"
     update_image "$(get_sdk_qualified_name_and_tag)"
 
-    update_containers_using_image "$(get_package_proxy_qualified_name_and_tag)"
     update_containers_using_image "$(get_sdk_qualified_name_and_tag)"
 
     echo ""

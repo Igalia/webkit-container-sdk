@@ -8,7 +8,6 @@
       <dep package="dicts"/>
       <dep package="libwpe"/>
       <dep package="wpebackend-fdo"/>
-      <dep package="libjxl"/>
       <dep package="gstreamer"/>
       <dep package="sparkle-cdm"/>
     </dependencies>
@@ -40,24 +39,6 @@
     <branch repo="github.com"
             module="Sparkle-CDM/sparkle-cdm"/>
   </meson>
-
-  <cmake id="highway" cmakeargs="-DBUILD_SHARED_LIBS=ON -DHWY_ENABLE_TESTS=OFF -DHWY_ENABLE_EXAMPLES=OFF -DHWY_ENABLE_CONTRIB=OFF">
-    <branch repo="github-tarball"
-            version="1.0.2"
-            module="google/highway/archive/refs/tags/${version}.tar.gz"
-            checkoutdir="highway-${version}"
-            hash="sha256:e8ef71236ac0d97f12d553ec1ffc5b6375d57b5f0b860c7447dd69b6ed1072db"/>
-  </cmake>
-
-  <!-- FIXME: This still installs a static library -->
-  <cmake id="libjxl" cmakeargs="-DCMAKE_BUILD_STATIC_LIBS=OFF -DJPEGXL_FORCE_SYSTEM_BROTLI=ON -DJPEGXL_FORCE_SYSTEM_LCMS2=ON -DJPEGXL_FORCE_SYSTEM_HWY=ON -DJPEGXL_ENABLE_PLUGINS=ON -DJPEGXL_ENABLE_TOOLS=OFF -DJPEGXL_ENABLE_EXAMPLES=OFF -DJPEGXL_ENABLE_MANPAGES=OFF -DJPEGXL_ENABLE_FUZZERS=OFF -DBUILD_TESTING=OFF">
-    <dependencies>
-      <dep package="highway"/>
-    </dependencies>
-    <branch repo="github.com"
-            module="libjxl/libjxl.git"
-            tag="v0.8.2"/>
-  </cmake>
 
   <autotools id="dicts" supports-non-srcdir-builds="no"
              skip-autogen="true">

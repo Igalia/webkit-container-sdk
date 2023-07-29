@@ -52,17 +52,3 @@ get_sdk_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_sdk_image_n
 get_package_proxy_image_name() { echo "wkdev-package-proxy"; }
 get_package_proxy_image_tag() { get_container_tag; }
 get_package_proxy_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_package_proxy_image_name)" "$(get_package_proxy_image_tag)"; }
-
-##### wkdev-package-builder definitions
-get_package_builder_image_name() { echo "wkdev-package-builder"; }
-get_package_builder_image_tag() { get_container_tag; }
-get_package_builder_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_package_builder_image_name)" "$(get_package_builder_image_tag)"; }
-
-##### Custom built packages (build definitions)
-get_custom_package_distribution() { echo "lunar"; }
-get_custom_package_component() { echo "main"; }
-get_custom_package_local_apt_repository_name() { echo "wkdev-sdk-packages"; }
-get_custom_package_local_apt_repository_source_list() { echo "/etc/apt/sources.list.d/$(get_custom_package_local_apt_repository_name).list"; }
-
-# Corresponds to the list of .yaml files in 'images/wkdev_sdk/custom_built_packages'.
-get_custom_package_build_definitions() { echo "wkdev-webkit-dependencies"; }

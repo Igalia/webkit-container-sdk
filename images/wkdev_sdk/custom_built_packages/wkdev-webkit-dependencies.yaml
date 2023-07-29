@@ -1,9 +1,0 @@
-# wkdev-webkit-dependencies: useful applications + self-compiled dependencies used to compile WebKit
-package_groups:
-  - package_group:
-    name: applications
-    entities:
-      - name: valgrind # instrumentation framework for building dynamic analysis tools
-        url: 'http://archive.ubuntu.com/ubuntu/pool/main/v/valgrind/valgrind_3.19.0-1ubuntu2.dsc'
-        options: {gbp_import_dsc: '--allow-unauthenticated'}
-

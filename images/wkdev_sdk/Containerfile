@@ -69,12 +69,6 @@ RUN ${APT_UPDATE} && \
     rm -rf WebKit && \
     ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
 
-# Install packages provided by external source
-COPY /custom_built_packages/*/*.*eb /tmp/packages/
-RUN ${APT_UPDATE} && \
-    ${APT_INSTALL} /tmp/packages/*.*eb && \
-    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
-
 # Install python packages
 RUN python3 -m pip install --break-system-packages --upgrade pip && \
     pip3 install --break-system-packages hotdoc shyaml

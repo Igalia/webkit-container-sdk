@@ -1,6 +1,3 @@
-# Dependencies to run wkdev-setup-dependency-work-tree
-debian-archive-keyring debian-keyring git-buildpackage pristine-tar
-
 # Dependencies to compile WebKit
 flite1-dev libopenxr-dev qtbase5-dev qtbase5-dev-tools qtbase5-private-dev qtdeclarative5-dev libjxl-dev
 

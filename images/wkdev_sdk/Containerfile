@@ -79,11 +79,6 @@ RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/
     rm -rf WebKit && \
     ${APT_AUTOREMOVE}
 
-# Install python packages
-RUN --mount=type=cache,target=/root/.cache/pip \
-    python3 -m pip install --break-system-packages --upgrade pip && \
-    pip3 install --break-system-packages hotdoc shyaml
-
 # Copy jhbuild helper files and do the initial build & install
 ENV JHBUILDRC "/jhbuild/jhbuildrc"
 COPY /jhbuild/jhbuildrc /jhbuild/jhbuildrc

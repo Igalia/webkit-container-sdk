@@ -1,12 +1,14 @@
-This directory gets copied to the container when building it
-from the Containerfile and the script init-install.sh
-is executed.
+In `Containerfile` we copy `jhbuildrc` and our modulesets to the image.
 
-This script takes care of getting the jhbuild code and building
-and deploying the libraries from the moduleset defined here.
+Then we run:
 
-Finally the build artifacts and sources are cleaned from the image
-to save disk space from the final image.
+```
+export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1
+jhbuild --no-interact build
+```
+
+The build state is cached in `/var/tmp/jhbuild` during image generation
+but not included in the final image.
 
 If you want to hack on this, simply modify the moduleset and rebuild
 the SDK.
@@ -20,11 +22,11 @@ to executing the deploy script and run it manually.
 
 For example, if you have this:
 
-  STEP 26/35: COPY /jhbuild /jhbuild
-  --> d7b0866719d
-  STEP 27/35: RUN /jhbuild/init-install.sh
+  STEP 41/46: WORKDIR /jhbuild
+  --> 2fabea45a33f
+  STEP 42/46: RUN --mount=type=cache,target=/var/tmp/jhbuild ...
 
 Then you can debug step 27 with:
 
-  $ podman run -it --rm d7b0866719d /bin/bash
-  root@c2ec0d851de0:~# /jhbuild/init-install.sh
+  $ podman run -it --rm 2fabea45a33f /bin/bash
+  root@2fabea45a33f:~# env JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 jhbuild build

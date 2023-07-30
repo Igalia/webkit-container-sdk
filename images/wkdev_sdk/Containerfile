@@ -10,14 +10,23 @@ ARG CONTAINER_LOCALE=en_US.UTF-8
 
 # No need to modify these.
 ARG APT_UPDATE="apt-get update"
+ARG APT_BUILDDEP="apt-get --assume-yes build-dep"
 ARG APT_UPGRADE="apt-get --assume-yes upgrade"
 ARG APT_INSTALL="apt-get --assume-yes install --no-install-recommends"
 ARG APT_AUTOREMOVE="apt-get --assume-yes autoremove"
-ARG APT_CLEAN="apt-get --assume-yes clean"
-ARG APT_DELETE_LISTS="rm -rf /var/lib/apt/lists/*"
 
 # Disable prompt during package configuration
 ENV DEBIAN_FRONTEND noninteractive
+
+# Debian package build settings
+ENV DEBEMAIL "webkit-gtk@lists.webkit.org"
+ENV DEBFULLNAME "Igalia"
+
+# Enable debugging in WebKit's sandbox.
+ENV WEBKIT_ENABLE_DEBUG_PERMISSIONS_IN_SANDBOX "1"
+
+# Used in webkitdirs.pm to prefer building against system libraries instead of the Flatpak SDK.
+ENV WEBKIT_BUILD_USE_SYSTEM_LIBRARIES "1"
 
 # Delete the default ubuntu user which has a UID of 1000.
 # Podman refuses to map a user from the host if the UID is already in /etc/passwd.
@@ -33,9 +42,10 @@ RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/no-sandbox
 
 # Update package list, upgrade to latest version, install necessary packages for
 # early bootstrapping: .deb package configuration + locale generation.
-RUN ${APT_UPDATE} && \
+RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt/lists/ \
+    ${APT_UPDATE} && \
     ${APT_INSTALL} apt-utils dialog libterm-readline-gnu-perl locales && \
-    ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
+    ${APT_UPGRADE} && ${APT_AUTOREMOVE}
 
 # Disable exclusion of locales / translations / documentation (default in Ubuntu images)
 RUN yes | /usr/local/sbin/unminimize
@@ -49,16 +59,16 @@ RUN dpkg-reconfigure locales
 # Bootstrapping is done, switch to working directory /tmp to continue setup.
 WORKDIR /tmp
 
-# Install package groups in defined order.
+# Install all dependencies for WebKit/GStreamer/etc in one pass.
 COPY /required_system_packages/*.lst .
-RUN ${APT_UPDATE} && \
+RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt/lists/ \
+    sed -i '/deb-src/s/^# //' /etc/apt/sources.list && \
+    ${APT_UPDATE} && \
     for list in *.lst; do \
         ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}"); \
     done; \
-    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
-
-# Install WebKitGtk/WPE dependencies
-RUN ${APT_UPDATE} && \
+    ${APT_BUILDDEP} gst-libav1.0 gst-plugins-bad1.0 gst-plugins-base1.0 \
+	                gst-plugins-good1.0 gst-plugins-ugly1.0 && \
     git clone --filter=blob:none --no-checkout --depth=1 https://github.com/WebKit/WebKit.git && \
     cd WebKit && \
     git sparse-checkout set Tools/ && \
@@ -67,28 +77,33 @@ RUN ${APT_UPDATE} && \
     yes | ./Tools/wpe/install-dependencies && \
     cd .. && \
     rm -rf WebKit && \
-    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_DELETE_LISTS}
+    ${APT_AUTOREMOVE}
 
 # Install python packages
-RUN python3 -m pip install --break-system-packages --upgrade pip && \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python3 -m pip install --break-system-packages --upgrade pip && \
     pip3 install --break-system-packages hotdoc shyaml
 
 # Copy jhbuild helper files and do the initial build & install
-COPY /jhbuild /jhbuild
-# Build jhbuild, install it and clean built-products not needed.
-RUN /jhbuild/init-install.sh && \
-    rm -f /jhbuild/init-install.sh && \
-    rm -f /jhbuild/README.txt && \
-    rm -fr /jhbuild/build && \
-    rm -fr /jhbuild/checkout && \
-    rm -fr /jhbuild/downloads
+ENV JHBUILDRC "/jhbuild/jhbuildrc"
+COPY /jhbuild/jhbuildrc /jhbuild/jhbuildrc
+COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
+WORKDIR /jhbuild
+RUN --mount=type=cache,target=/var/tmp/jhbuild --mount=type=cache,target=/root/.cache/ \
+    git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
+    cd jhbuild && \
+    ./autogen.sh --prefix=/usr/local && \
+    make && \
+    make install && \
+    export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
+    jhbuild --no-interact build
+
 # Register basic JHBuild environment
 # TODO: Instead of hardcoding here the values it would be better to
 # explore the possibility of generating it dinamically with "jhbuild shell"
 # when the user enters into the container (or similar), but that may cause
 # issues with the env not exported when someone enter into the
 # container via direct command exec rather than by login
-ENV JHBUILDRC "/jhbuild/jhbuildrc"
 ENV LD_LIBRARY_PATH "/jhbuild/install/lib"
 ENV GST_PLUGIN_PATH_1_0 "/jhbuild/install/lib/gstreamer-1.0"
 ENV PKG_CONFIG_PATH "/jhbuild/install/lib/pkgconfig:/jhbuild/install/share/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
@@ -104,15 +119,3 @@ COPY /rootfs/wkdev-sdk-packages /wkdev-sdk-packages/README.md
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog
 
-# Debian package build settings
-ENV DEBEMAIL "webkit-gtk@lists.webkit.org"
-ENV DEBFULLNAME "Igalia"
-
-# Enable debugging in WebKit's sandbox.
-ENV WEBKIT_ENABLE_DEBUG_PERMISSIONS_IN_SANDBOX "1"
-
-# Used in webkitdirs.pm to prefer building against system libraries instead of the Flatpak SDK.
-ENV WEBKIT_BUILD_USE_SYSTEM_LIBRARIES "1"
-
-# Clean cache files from root dir not needed
-RUN rm -fr /root/.cache

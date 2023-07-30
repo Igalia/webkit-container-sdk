@@ -14,6 +14,7 @@ argsparse_use_option =shell:      "Specific shell to use for interactive contain
 argsparse_use_option =user:       "Container account user name" type:username mandatory
 argsparse_use_option =group:      "Container account group name" type:group mandatory
 argsparse_use_option =packages:   "Additional packages to install"
+argsparse_use_option exit-when-done "Instead of sleeping exit (stopping the container) when done"
 
 
 argsparse_usage_description="$(cat <<EOF
@@ -220,11 +221,13 @@ run() {
         su "${container_user_name}" --group="${container_group_name}" --login --command="$HOME/.wkdev-firstrun"
     fi
 
-    echo ""
-    echo "Sleeping forever..."
-
     touch "$(get_init_done_file)"
-    exec tail -f /dev/null
+
+    if ! argsparse_is_option_set "exit-when-done"; then
+        echo ""
+        echo "Sleeping forever..."
+        exec tail -f /dev/null
+    fi
 }
 
 run "${@}"

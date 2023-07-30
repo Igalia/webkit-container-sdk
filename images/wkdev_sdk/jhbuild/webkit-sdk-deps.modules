@@ -70,7 +70,7 @@
     </branch>
   </meson>
 
-  <meson id="gstreamer" mesonargs="-Dintrospection=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled">
+  <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=disabled -Dintrospection=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled">
     <branch repo="gstreamer.freedesktop.org"
             module="gstreamer.git"
             tag="1.22.4"/>

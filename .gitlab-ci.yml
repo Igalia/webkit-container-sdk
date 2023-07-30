@@ -1,36 +1,32 @@
-Build SDK:
-    image: ubuntu:23.04
-    stage: build
-    tags:
-      - amd64
-
-    before_script:
-      - |
-          echo "Environment:"
-          echo "======================================================================"
-          echo "CI_PIPELINE_SOURCE=\"$CI_PIPELINE_SOURCE\""
-          echo "CI_REPOSITORY_URL=\"$CI_REPOSITORY_URL\""
-          echo "CI_COMMIT_BRANCH=\"$CI_COMMIT_BRANCH\""
-          echo "CI_COMMIT_SHA=\"$CI_COMMIT_SHA\""
-          echo "CI_COMMIT_REF_SLUG=\"$CI_COMMIT_REF_SLUG\""
-          echo "======================================================================"
-
+default:
+  image: gitlab.igalia.com:4567/teams/webkit/wkdev-sdk/ci-runner:latest
+  tags:
+    - amd64
+  before_script:
     # The default branch is tagged with the 'latest' tag
     # All other branches are tagged with the escaped branch name (commit ref slug)
-    script:
-      - |
-        if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
-          export WKDEV_SDK_TAG="latest"
-          echo "Running on default branch '$CI_DEFAULT_BRANCH': export WKDEV_SDK_TAG=$WKDEV_SDK_TAG"
-        else
-          export WKDEV_SDK_TAG="$CI_COMMIT_REF_SLUG"
-          echo "Running on branch '$CI_COMMIT_BRANCH': export WKDEV_SDK_TAG=$WKDEV_SDK_TAG"
-        fi
-      - export DEBIAN_FRONTEND=noninteractive
-      - apt-get --assume-yes update && apt-get --assume-yes install aptly debian-keyring fuse-overlayfs gettext-base podman python3 python3-pip git-buildpackage
-      - unset DEBIAN_FRONTEND
-      - pip3 install --break-system-packages shyaml
-      - source ./register-sdk-on-host.sh
-      - wkdev-sdk-bakery --mode build --verbose
-      - echo "$CI_REGISTRY_PASSWORD" | podman login -u "$CI_REGISTRY_USER" $CI_REGISTRY --password-stdin
-      - wkdev-sdk-bakery --mode deploy --verbose
+    - |
+      echo "Environment:"
+      echo "======================================================================"
+      echo "CI_PIPELINE_SOURCE=\"$CI_PIPELINE_SOURCE\""
+      echo "CI_REPOSITORY_URL=\"$CI_REPOSITORY_URL\""
+      echo "CI_COMMIT_BRANCH=\"$CI_COMMIT_BRANCH\""
+      echo "CI_COMMIT_SHA=\"$CI_COMMIT_SHA\""
+      echo "CI_COMMIT_REF_SLUG=\"$CI_COMMIT_REF_SLUG\""
+      echo "======================================================================"
+    - |
+      if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
+        export WKDEV_SDK_TAG="latest"
+        echo "Running on default branch '$CI_DEFAULT_BRANCH': export WKDEV_SDK_TAG=$WKDEV_SDK_TAG"
+      else
+        export WKDEV_SDK_TAG="$CI_COMMIT_REF_SLUG"
+        echo "Running on branch '$CI_COMMIT_BRANCH': export WKDEV_SDK_TAG=$WKDEV_SDK_TAG"
+      fi
+    - source ./register-sdk-on-host.sh
+
+Build SDK:
+  stage: build
+  script:
+    - wkdev-sdk-bakery --mode build --verbose
+    - echo "$CI_REGISTRY_PASSWORD" | podman login -u "$CI_REGISTRY_USER" $CI_REGISTRY --password-stdin
+    - wkdev-sdk-bakery --mode deploy --verbose

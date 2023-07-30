@@ -9,6 +9,7 @@ source "${WKDEV_SDK}/utilities/podman.sh"
 argsparse_use_option debug        "Enable debug mode for this script"
 argsparse_use_option trace        "Enable 'xtrace' mode for this script"
 argsparse_use_option =verbose     "Increase verbosity of this script"
+argsparse_use_option =image:      "Which image to build (wkdev_sdk or ci_runner)" default:wkdev_sdk
 
 argsparse_use_option =mode:       "Operation mode: 'build' or 'deploy'" mandatory
 
@@ -52,9 +53,19 @@ process_container_image() {
 run() {
 
     process_command_line_arguments "${@}"
+    local image_arg="${program_options["image"]}"
+    local image_name
+
+    if [ "${image_arg}" = "wkdev_sdk" ]; then
+        image_name="$(get_sdk_image_name)"
+    elif [ "${image_arg}" = "ci_runner" ]; then
+        image_name="$(get_ci_runner_image_name)"
+    else
+        _abort_ "Unknown image: '${image}' (valid choices are 'wkdev_sdk' or 'ci_runner')"
+    fi
 
     # Build or deploy main SDK container image.
-    process_container_image "$(get_sdk_image_name)"
+    process_container_image "${image_name}"
 
     echo ""
     echo "-> Finished!"

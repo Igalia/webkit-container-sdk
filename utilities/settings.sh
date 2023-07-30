@@ -47,3 +47,8 @@ get_container_home_defaults_directory_name() { echo "${WKDEV_SDK}/images/wkdev_s
 get_sdk_image_name() { echo "wkdev-sdk"; }
 get_sdk_image_tag() { get_container_tag; }
 get_sdk_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_sdk_image_name)" "$(get_sdk_image_tag)"; }
+
+##### ci-runner definitions
+get_ci_runner_image_name() { echo "ci-runner"; }
+get_ci_runner_image_tag() { echo "latest"; }
+get_ci_runner_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_sdk_image_name)" "$(get_sdk_image_tag)"; }

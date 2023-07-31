@@ -11,7 +11,7 @@ argsparse_use_option trace        "Enable 'xtrace' mode for this script"
 argsparse_use_option =verbose     "Increase verbosity of this script"
 argsparse_use_option =image:      "Which image to build (wkdev_sdk or ci_runner)" default:wkdev_sdk
 
-argsparse_use_option =mode:       "Operation mode: 'build' or 'deploy'" mandatory
+argsparse_use_option =mode:       "Operation mode: 'build', 'deploy', or 'export'" mandatory
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -31,7 +31,7 @@ process_command_line_arguments() {
     argsparse_is_option_set "trace" && set -o xtrace
 
     operation_mode="${program_options["mode"]}"
-    [ "${operation_mode}" != 'build' ] && [ "${operation_mode}" != 'deploy' ] && _abort_ "Unknown operation mode: '${operation_mode}' (valid choices are 'build' or 'deploy')"
+    [ "${operation_mode}" != 'build' ] && [ "${operation_mode}" != 'deploy' ] && [ "${operation_mode}" != 'export' ] && _abort_ "Unknown operation mode: '${operation_mode}' (valid choices are 'build', 'deploy', or 'export')"
 }
 
 process_container_image() {

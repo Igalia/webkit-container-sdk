@@ -16,7 +16,7 @@ argsparse_use_option trace        "Enable 'xtrace' mode for this script"
 argsparse_use_option =verbose     "Increase verbosity of this script"
 
 argsparse_use_option =name:       "Name of container image" mandatory
-argsparse_use_option =mode:       "Operation mode: 'build' or 'deploy'" mandatory
+argsparse_use_option =mode:       "Operation mode: 'build', 'deploy', or 'export'" mandatory
 argsparse_use_option idle-cores:  "Number of CPU cores to leave idle, when building the image" type:uint default:2
 
 argsparse_usage_description="$(cat <<EOF
@@ -43,7 +43,7 @@ process_command_line_arguments() {
     idle_cores=${program_options["idle-cores"]}
 
     operation_mode="${program_options["mode"]}"
-    [ "${operation_mode}" != 'build' ] && [ "${operation_mode}" != 'deploy' ] && _abort_ "Unknown operation mode: '${operation_mode}' (valid choices are 'build' or 'deploy')"
+    [ "${operation_mode}" != 'build' ] && [ "${operation_mode}" != 'deploy' ] && [ "${operation_mode}" != 'export' ] && _abort_ "Unknown operation mode: '${operation_mode}' (valid choices are 'build', 'deploy', or 'export')"
 }
 
 build_image() {
@@ -71,6 +71,15 @@ deploy_image() {
     popd &>/dev/null
 }
 
+export_image() {
+
+    echo ""
+    echo "-> Exporting container image '${container_image_name}' to file ${container_image_name}.tar..."
+    echo ""
+
+    run_podman_silent_unless_verbose save --format=oci-archive -o "${container_image_name}.tar" "$(get_tag_for_build)"
+}
+
 # Main functionality
 run() {
 
@@ -78,6 +87,7 @@ run() {
 
     [ "${operation_mode}" = "build" ] && build_image
     [ "${operation_mode}" = "deploy" ] && deploy_image
+    [ "${operation_mode}" = "export" ] && export_image
 
     echo ""
     echo "-> Finished!"

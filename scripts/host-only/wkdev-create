@@ -22,6 +22,7 @@ argsparse_use_option h=ome:       "Path to existing or to-be-created container h
 argsparse_use_option =name:       "Name of container" default:wkdev
 argsparse_use_option rm           "Force removal of container if it already exists."
 argsparse_use_option attach       "Attach to container as it starts up."
+argsparse_use_option no-pull      "Do not login or pull images."
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -394,6 +395,10 @@ build_podman_create_arguments() {
     # Required for rr to work.
     arguments+=("--security-opt seccomp=unconfined")
 
+    if argsparse_is_option_set "no-pull"; then
+        arguments+=("--pull=never")
+    fi
+
     set +o nounset
     try_process_user ${1}
     try_process_groups ${1}
@@ -645,7 +650,9 @@ run() {
     local podman_arguments=()
     build_podman_arguments podman_arguments
 
-    run_podman_login
+    if ! argsparse_is_option_set "no-pull"; then
+        run_podman_login
+    fi
 
     echo ""
     echo "-> Creating container '${container_name}'..."

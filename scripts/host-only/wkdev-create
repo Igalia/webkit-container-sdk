@@ -163,6 +163,9 @@ try_process() {
 }
 
 try_process_user() {
+    if [[ ${EUID} == 0 ]]; then
+        return
+    fi
 
     # Map host UID/GIDs into container user namespace, unmodified!
     # The 'keep-id' mode for user namespaces is mandatory, when the container shall

@@ -166,27 +166,26 @@ try_setup_dockerenv_file() {
     sudo touch /.dockerenv
 }
 
-try_setup_local_sdk_repository() {
-
-    echo ""
-
-    local packages_directory="/wkdev-sdk-packages"
-    echo "[9/10] Initialize local '${packages_directory}' APT repository, if necessary..."
-
-    mkdir --parents "${packages_directory}" &>/dev/null
-    chmod 750 "${packages_directory}"
-    chown "${container_user_name}:${container_group_name}" "${packages_directory}" &>/dev/null
-}
-
 try_setup_permissions_jhbuild_directory() {
 
     echo ""
 
     local jhbuild_directory="/jhbuild"
-    echo "[10/10] Setup jhbuild '${jhbuild_directory}' directory permissions..."
+    echo "[9/10] Setup jhbuild '${jhbuild_directory}' directory permissions..."
 
     chown --recursive "${container_user_name}:${container_group_name}" "${jhbuild_directory}" &>/dev/null
 
+}
+
+try_firstrun_script() {
+    echo ""
+
+    if [ -x "$HOME/.wkdev-firstrun" ]; then
+        echo "[10/10] Executing $HOME/.wkdev-firstrun"
+        su "${container_user_name}" --group="${container_group_name}" --login --command="$HOME/.wkdev-firstrun"
+    else
+        echo "[10/10] Skipping $HOME/.wkdev-firstrun script, no executable found."
+    fi
 }
 
 # Main functionality
@@ -206,20 +205,14 @@ run() {
     try_setup_sudoers_file
     try_setup_run_user_directory
     try_setup_dockerenv_file
-    try_setup_local_sdk_repository
     try_setup_permissions_jhbuild_directory
+    try_firstrun_script
 
     # Reset DEBIAN_FRONTEND again.
     unset DEBIAN_FRONTEND
 
     echo ""
     echo "Finished initialization"
-
-    if [ -x "$HOME/.wkdev-firstrun" ]; then
-        echo ""
-        echo "Executing $HOME/.wkdev-firstrun"
-        su "${container_user_name}" --group="${container_group_name}" --login --command="$HOME/.wkdev-firstrun"
-    fi
 
     touch "$(get_init_done_file)"
 

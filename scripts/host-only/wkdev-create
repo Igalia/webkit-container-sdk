@@ -109,7 +109,6 @@ process_command_line_arguments() {
             fi
 
             cp --verbose "${default_config_directory}"/dot-gdbinit "${container_user_home}"/.gdbinit
-            cp --verbose "${default_config_directory}"/dot-aptly.conf "${container_user_home}"/.aptly.conf
 
             echo ""
         fi

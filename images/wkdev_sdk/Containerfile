@@ -109,7 +109,6 @@ ENV PATH "/jhbuild/install/bin:$PATH"
 
 # Podman proxy, connecting to host instance
 COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host
-COPY /rootfs/wkdev-sdk-packages /wkdev-sdk-packages/README.md
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

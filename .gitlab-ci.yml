@@ -28,5 +28,24 @@ Build SDK:
   stage: build
   script:
     - wkdev-sdk-bakery --mode build --verbose
+    - wkdev-sdk-bakery --mode export --verbose
+  artifacts:
+    paths:
+      - wkdev-sdk.tar
+    expire_in: 1 week
+
+Test SDK:
+  stage: test
+  script:
+    - podman load < wkdev-sdk.tar
+    - wkdev-create --create-home --verbose --attach --no-pull
+    - wkdev-enter --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
+    - wkdev-enter --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
+    - wkdev-enter --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
+
+Deploy SDK:
+  stage: deploy
+  script:
+    - podman load < wkdev-sdk.tar
     - echo "$CI_REGISTRY_PASSWORD" | podman login -u "$CI_REGISTRY_USER" $CI_REGISTRY --password-stdin
     - wkdev-sdk-bakery --mode deploy --verbose

@@ -652,7 +652,8 @@ run() {
     local podman_arguments=()
     build_podman_arguments podman_arguments
 
-    if ! argsparse_is_option_set "no-pull"; then
+    # If the image isn't available we have to login and pull it.    
+    if ! run_podman image exists "$(get_sdk_qualified_name_and_tag)" && ! argsparse_is_option_set "no-pull"; then
         run_podman_login
     fi
 

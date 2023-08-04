@@ -70,7 +70,8 @@ update_containers_using_image() {
     local found_containers_using_image=0
     for container_name in $(get_list_of_containers); do
         local container_image_name_with_tag="$(get_image_name_by_container_name "${container_name}")"
-        [ "${container_image_name_with_tag//:*/}" = "${image_name}" ] || continue
+        echo "${container_image_name_with_tag} = ${image_name}"
+        [ "${container_image_name_with_tag}" = "${image_name}" ] || continue
         found_containers_using_image=$((found_containers_using_image+1))
         [ ${#container_name} -gt ${max_container_name_length} ] && max_container_name_length=${#container_name}
     done
@@ -85,7 +86,7 @@ update_containers_using_image() {
     local -A outdated_container_data=()
     for container_name in $(get_list_of_containers); do
         local container_image_name_with_tag="$(get_image_name_by_container_name "${container_name}")"
-        [ "${container_image_name_with_tag//:*/}" = "${image_name}" ] || continue
+        [ "${container_image_name_with_tag}" = "${image_name}" ] || continue
 
         local existing_image_id="$(get_image_id_by_container_name "${container_name}")"
         [ -z "${existing_image_id}" ] && _abort_ "Cannot retrieve image id for container name '${container_name}'"

@@ -56,10 +56,8 @@ ENV LC_ALL ${CONTAINER_LOCALE}
 ENV LANG ${CONTAINER_LOCALE}
 RUN dpkg-reconfigure locales
 
-# Bootstrapping is done, switch to working directory /tmp to continue setup.
-WORKDIR /tmp
-
 # Install all dependencies for WebKit/GStreamer/etc in one pass.
+WORKDIR /var/tmp/wkdev-packages
 COPY /required_system_packages/*.lst .
 RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt/lists/ \
     sed -i '/deb-src/s/^# //' /etc/apt/sources.list && \

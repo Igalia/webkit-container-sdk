@@ -388,6 +388,9 @@ build_podman_create_arguments() {
     # Mount /dev/pts in container (pseudo-terminal support).
     arguments+=("--mount" "type=devpts,destination=/dev/pts")
 
+    # Mount a tmpfs.
+    arguments+=("--tmpfs" "/tmp")
+
     # Disable SELinux isolation.
     arguments+=("--security-opt label=disable")
 

@@ -2,7 +2,7 @@
 build-essential cmake ninja-build meson
 
 # Build tools
-icecc ccache
+icecc ccache sccache
 
 # Debugging / profiling / tracing
 valgrind rr perf-tools-unstable systemd-coredump

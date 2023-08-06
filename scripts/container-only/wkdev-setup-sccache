@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+if [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ]; then
+    source "${WKDEV_SDK}/utilities/application.sh"
+else
+    echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."
+    exit 1
+fi
+source "${WKDEV_SDK}/utilities/prerequisites.sh"
+
+init_application "${0}" "Configures sccache." container-only
+
+verify_executables_exist curl
+
+argsparse_allow_no_argument true
+argsparse_use_option =token: "Use a specific sccache token. If none provided it will require Igalia credentials." default:
+argsparse_use_option =url: "Use a specific sccache server URL." default:https://sccache.igalia.com
+argsparse_use_option =force "Overwrite any previous configuration."
+
+process_command_line_arguments() {
+
+    argsparse_parse_options "${@}"
+}
+
+__requested_token=
+
+request_token() {
+
+    local username
+    local password
+    local response
+
+    # This is a bit hacky, but we don't want to store any credentials and only
+    # Igalians should have access to this information. We can scrape the token
+    # from our mailinglist archive.
+
+    echo ""
+    echo "Logging in using Igalia credentials to get the sccache token."
+    read -rp 'Username: ' username
+    read -rsp 'Password: ' password
+    echo ""
+
+    response=$(curl --silent --fail --user "${username}:${password}" https://archive.igalia.com/mail/team-webkit/2023/01/msg00005.html)
+
+    if [ -z "${response}" ]; then
+        echo "Failed to authenticate."
+        exit 1
+    fi
+
+    local regex='The new token is: (\S+)'
+    if [[ ! "$response" =~ $regex ]]; then
+        echo "Failed to retrieve token."
+        exit 1
+    fi
+
+    __requested_token="${BASH_REMATCH[1]}"
+}
+
+print_how_to_use() {
+    echo ""
+    echo "In order to use sccache, you need to set the following environment variables:"
+    echo ""
+    echo "    export WEBKIT_USE_SCCACHE=1"
+    echo "    export NUMBER_OF_PROCESSORS=45 # How many jobs to queue at once."
+    echo ""
+}
+
+run() {
+
+    process_command_line_arguments "${@}"
+    local token=${program_options["token"]}
+    local url=${program_options["url"]}
+
+    local sccache_config="${XDG_CONFIG_HOME:-${HOME}/.config}/sccache/config"
+
+    if [ -f "${sccache_config}" ] && ! argsparse_is_option_set "force"; then
+        echo ""
+        echo "Already configured, you can overwrite with --force. (${sccache_config})"
+        print_how_to_use
+        exit 1
+    fi
+
+    if [ -z "${token}" ]; then
+        request_token
+        token="${__requested_token}"
+    fi
+
+    echo ""
+    echo "Creating ${sccache_config}..."
+    cat <<EOF >"${sccache_config}"
+[dist]
+scheduler_url = "${url}"
+toolchains = []
+
+[dist.auth]
+type = "token"
+token = "${token}"
+EOF
+
+    print_how_to_use
+}
+
+run "${@}"

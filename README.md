@@ -2,8 +2,8 @@
 
 Welcome to wkdev-sdk, the all-in-one SDK for WebKit GTK/WPE port development.
 
-It provides a fully-equipped container image ready for WebKit development.
-We recommend to use **podman** to execute the OCI-compatible container image.
+It provides a fully-equipped container image ready for WebKit development
+as well as scripts to run the image using `podman`.
 
 Once you entered the container, you can navigate to a WebKit checkout
 and compile using Tools/Scripts/build-webkit --gtk / --wpe, as usual.

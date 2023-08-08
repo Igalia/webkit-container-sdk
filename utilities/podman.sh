@@ -12,7 +12,9 @@ fi
 
 # systemctl to check the presence of a 'podman.socket' user service
 # podman, to control, well, podman. :-)
-verify_executables_exist systemctl ${podman_executable}
+verify_executables_exist systemctl
+
+verify_podman_is_acceptable "${podman_executable}"
 
 # Uses host podman no matter if executed within container or on host.
 run_podman() { run_command "${podman_executable}" "${@}"; }

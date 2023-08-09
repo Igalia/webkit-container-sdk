@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+if [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ]; then
+    source "${WKDEV_SDK}/utilities/application.sh"
+else
+    echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."
+    exit 1
+fi
+source "${WKDEV_SDK}/utilities/prerequisites.sh"
+
+init_application "${0}" "Configures Visual Studio Code." container-only
+
+verify_executables_exist curl
+
+argsparse_allow_no_argument true
+
+install_vscode() {
+
+    echo ""
+    echo "Installing Visual Studio Code..."
+    echo ""
+
+    if which code > /dev/null; then
+        echo "Visual Studio Code is already installed."
+        return
+    fi
+
+    if ! curl --silent --fail --location "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64" -o /tmp/code.deb; then
+        echo "Failed to download Visual Studio Code."
+        exit 1
+    fi
+
+    if ! sudo apt install /tmp/code.deb; then
+        echo "Failed to install Visual Studio Code."
+        rm /tmp/code.deb
+        exit 1
+    fi
+
+    rm /tmp/code.deb
+    echo ""
+    echo "Visual Studio Code has been installed."
+}
+
+run() {
+
+    argsparse_parse_options "${@}"
+
+    install_vscode
+}
+
+run "${@}"

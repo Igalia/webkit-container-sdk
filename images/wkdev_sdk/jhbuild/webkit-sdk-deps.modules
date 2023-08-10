@@ -90,4 +90,9 @@
             module="GNOME/libsoup.git"/>
   </meson>
 
+  <meson id="gtk4">
+    <branch repo="gitlab.gnome.org"
+            module="GNOME/gtk.git"/>
+  </meson>
+
 </moduleset>

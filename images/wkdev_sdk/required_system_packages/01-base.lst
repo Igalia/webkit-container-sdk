@@ -7,5 +7,8 @@ iptables libcap2-bin libyajl2 uidmap
 # NVIDIA/EGL/Wayland integration
 libnvidia-egl-wayland1
 
+# Pipewire support
+wireplumber
+
 # General utilities
 apt-file aptly atop at-spi2-core emacs flatpak-xdg-utils git htop iotop iputils-ping kmod less locate man-db nano openssh-client strace sudo unzip vim wget

@@ -187,11 +187,14 @@ try_setup_permissions_jhbuild_directory() {
 try_firstrun_script() {
     echo ""
 
-    if [ -x "$HOME/.wkdev-firstrun" ]; then
-        echo "[11/11] Executing $HOME/.wkdev-firstrun"
-        su "${container_user_name}" --group="${container_group_name}" --login --command="$HOME/.wkdev-firstrun"
+    local user_home
+    user_home=$(getent passwd "${container_user_name}" | cut -d: -f6)
+
+    if [ -x "${user_home}/.wkdev-firstrun" ]; then
+        echo "[11/11] Executing ${user_home}/.wkdev-firstrun"
+        su "${container_user_name}" --group="${container_group_name}" --login --command="${user_home}/.wkdev-firstrun"
     else
-        echo "[11/11] Skipping $HOME/.wkdev-firstrun script, no executable found."
+        echo "[11/11] Skipping ${user_home}/.wkdev-firstrun script, no executable found."
     fi
 }
 

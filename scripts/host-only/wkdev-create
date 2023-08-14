@@ -328,7 +328,6 @@ try_process_pulseaudio() {
     local pulseaudio_directory="${XDG_RUNTIME_DIR}/pulse"
     local pulseaudio_directory_exists=$([ -d "${pulseaudio_directory}" ] && echo 1 || echo 0)
     local podman_argument=("--mount" "type=bind,source=${pulseaudio_directory},destination=${pulseaudio_directory},rslave")
-    podman_argument+=("--mount" "type=bind,source=/etc/machine-id,destination=/etc/machine-id,ro,rslave")
     try_process ${1} "Access to PulseAudio on host" ${pulseaudio_directory_exists} ${podman_argument[@]}
 }
 
@@ -388,11 +387,12 @@ build_podman_create_arguments() {
     # Share network namepace with host.
     arguments+=("--network" "host")
 
-    # Map /etc/{hosts|localtime|resolv.conf} into container.
+    # Map /etc/{hosts|localtime|resolv.conf|machine-id} into container.
     # Note that /etc/hosts is copied into the container in wkdev-init.
     arguments+=("--mount" "type=bind,source=/etc/hosts,destination=/host/etc/hosts,ro")
     arguments+=("--mount" "type=bind,source=/etc/localtime,destination=/etc/localtime,ro")
     arguments+=("--mount" "type=bind,source=/etc/resolv.conf,destination=/etc/resolv.conf,ro")
+    arguments+=("--mount" "type=bind,source=/etc/machine-id,destination=/etc/machine-id,ro,rslave")
 
     # Mount /dev/pts in container (pseudo-terminal support).
     arguments+=("--mount" "type=devpts,destination=/dev/pts")

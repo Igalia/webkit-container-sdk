@@ -78,6 +78,22 @@ ensure_container_is_running() {
     }
 }
 
+propagate_environment_variables_from_host() {
+
+    local -r passthrough_variables=(
+        'WAYLAND_DISPLAY'
+        'DISPLAY'
+        'PULSE_SERVER'
+        'XDG_SESSION_TYPE'
+    )
+
+    for env in "${passthrough_variables[@]}"; do
+        if [ -n "${!env-}" ]; then
+            podman_exec_arguments+=("--env=${env}=${!env-}")
+        fi
+    done
+}
+
 # Main functionality
 run() {
 
@@ -127,13 +143,17 @@ run() {
         podman_exec_arguments+=("--user" "$(id --user --real):$(id --group --real)")
     fi
 
+    propagate_environment_variables_from_host
+
+    podman_exec_arguments+=("${container_name}")
+
     if argsparse_is_option_set "exec"; then
-        podman_exec_arguments+=("${container_name}" "${program_params[@]}")
+        podman_exec_arguments+=("${program_params[@]}")
     else
-        podman_exec_arguments+=("${container_name}" "/usr/bin/env" "USER=$(id --user --name)" "${SHELL}" "--login")
+        podman_exec_arguments+=("/usr/bin/env" "USER=$(id --user --name)" "${SHELL}" "--login")
     fi
 
-    run_podman ${podman_arguments[@]} exec ${podman_exec_arguments[@]}
+    run_podman "${podman_arguments[@]}" exec "${podman_exec_arguments[@]}"
 }
 
 run "${@}"

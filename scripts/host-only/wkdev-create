@@ -624,6 +624,12 @@ run() {
     # Ensure some vars are always set to their defaults.
     XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR-"/run/user/${host_user_id}"}"
 
+    if [ ! -d "${XDG_RUNTIME_DIR}" ]; then
+        # This will likely only happen when running as root like CI does.
+        echo "WARNING: ${XDG_RUNTIME_DIR} did not exist, creating it..."
+        mkdir -p --mode=700 "${XDG_RUNTIME_DIR}"
+    fi
+
     echo "-> Preparing creation of rootless podman container..."
     print_settings
 

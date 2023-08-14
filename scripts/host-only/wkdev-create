@@ -317,10 +317,9 @@ try_process_wayland() {
 
 try_process_x11() {
 
-    local is_x11_display_set=$([ -z "${DISPLAY}" ] && echo 0 || echo 1)
-    local podman_argument=("--env" "DISPLAY=${DISPLAY}")
+    local x11_directory_exists=$([ -d "/tmp/.X11-unix" ] && echo 1 || echo 0)
     podman_argument+=("--mount" "type=bind,source=/tmp/.X11-unix,destination=/tmp/.X11-unix,rslave")
-    try_process ${1} "Access to X11 on host" ${is_x11_display_set} ${podman_argument[@]}
+    try_process ${1} "Access to X11 on host" ${x11_directory_exists} ${podman_argument[@]}
 }
 
 try_process_pulseaudio() {

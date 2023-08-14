@@ -43,8 +43,28 @@ try_mount_host_wayland() {
     if [[ ! -f "${container_wayland_socket}.lock" &&  -f "${host_wayland_socket}.lock" ]]; then
         ln -s "${host_wayland_socket}.lock" "${container_wayland_socket}.lock"
     fi
+}
 
-    echo ""
+try_mount_host_pipewire() {
+
+    local host_pipewired_socket="/host/run/${PIPEWIRE_REMOTE}"
+    local container_pipewire_socket="${XDG_RUNTIME_DIR}/${PIPEWIRE_REMOTE}"
+
+    if [ -L "${container_pipewire_socket}" ]; then
+        # Silently succeed.
+        return
+    elif [ -S "${host_pipewired_socket}" ]; then
+        echo ""
+        echo "-> Mounting host Pipewire socket (${PIPEWIRE_REMOTE})."
+        ln -s "${host_pipewired_socket}" "${container_pipewire_socket}"
+    else
+        echo ""
+        echo "-> Skipping host Pipewire socket (${PIPEWIRE_REMOTE}) - not found."
+    fi
+
+    if [[ ! -f "${container_pipewire_socket}.lock" &&  -f "${host_pipewired_socket}.lock" ]]; then
+        ln -s "${host_pipewired_socket}.lock" "${container_pipewire_socket}.lock"
+    fi
 }
 
 # Main functionality
@@ -54,8 +74,12 @@ run() {
 
     XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR-"/run/user/$(id --user)"}
     WAYLAND_DISPLAY=${WAYLAND_DISPLAY-"wayland-0"}
+    PIPEWIRE_REMOTE=${PIPEWIRE_REMOTE-"pipewire-0"}
 
     try_mount_host_wayland
+    try_mount_host_pipewire
+
+    echo ""
 }
 
 run "${@}"

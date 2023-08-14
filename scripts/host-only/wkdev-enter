@@ -85,6 +85,7 @@ propagate_environment_variables_from_host() {
         'DISPLAY'
         'PULSE_SERVER'
         'XDG_SESSION_TYPE'
+        'PIPEWIRE_REMOTE'
     )
 
     for env in "${passthrough_variables[@]}"; do

@@ -304,17 +304,6 @@ try_process_nvidia_gpu() {
     try_process ${1} "Access to NVIDIA GPU on host" ${is_nvidia_gpu_available} ${podman_argument[@]}
 }
 
-try_process_wayland() {
-
-    local wayland_socket="${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}"
-    local wayland_socket_exists=$([ -S "${wayland_socket}" ] && echo 1 || echo 0)
-    local podman_argument=("--env" "WAYLAND_DISPLAY=${WAYLAND_DISPLAY}")
-    podman_argument+=("--env" "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}")
-    podman_argument+=("--env" "XDG_SESSION_TYPE=${XDG_SESSION_TYPE}")
-    podman_argument+=("--mount" "type=bind,source=${wayland_socket},destination=${wayland_socket},rslave")
-    try_process ${1} "Access to Wayland on host" ${wayland_socket_exists} ${podman_argument[@]}
-}
-
 try_process_x11() {
 
     local x11_directory_exists=$([ -d "/tmp/.X11-unix" ] && echo 1 || echo 0)
@@ -356,6 +345,7 @@ build_podman_create_arguments() {
 
     # Map our SDK git repository into the container.
     arguments+=("--mount" "type=bind,source=${WKDEV_SDK},destination=/wkdev-sdk,rslave")
+    arguments+=("--env" "WKDEV_SDK=/wkdev-sdk")
 
     # Add 'SYS_PTRACE' support, to be able to use gdb.
     arguments+=("--cap-add=SYS_PTRACE")
@@ -399,6 +389,9 @@ build_podman_create_arguments() {
     # Mount a tmpfs.
     arguments+=("--tmpfs" "/tmp")
 
+    # Mount the host runtime directory, used during wkdev-sync-runtime-state
+    arguments+=("--mount" "type=bind,source=${XDG_RUNTIME_DIR},destination=/host/run,bind-propagation=rslave")
+
     # Disable SELinux isolation.
     arguments+=("--security-opt label=disable")
 
@@ -430,7 +423,6 @@ build_podman_create_arguments() {
     try_process_fonts ${1}
     try_process_dri ${1}
     try_process_nvidia_gpu ${1}
-    try_process_wayland ${1}
     try_process_x11 ${1}
     try_process_pulseaudio ${1}
     try_process_pipewire ${1}

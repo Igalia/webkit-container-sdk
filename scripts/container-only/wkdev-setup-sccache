@@ -85,6 +85,8 @@ run() {
         token="${__requested_token}"
     fi
 
+    mkdir -p "$(dirname "${sccache_config}")"
+
     echo ""
     echo "Creating ${sccache_config}..."
     cat <<EOF >"${sccache_config}"

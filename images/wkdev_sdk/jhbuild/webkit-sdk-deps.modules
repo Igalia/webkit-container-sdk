@@ -85,6 +85,14 @@
             module="GNOME/glib.git"/>
   </meson>
 
+  <meson id="glib-networking">
+    <branch repo="gitlab.gnome.org"
+            module="GNOME/glib-networking.git"/>
+    <dependencies>
+      <dep package="glib"/>
+    </dependencies>
+  </meson>
+
   <meson id="libsoup">
     <branch repo="gitlab.gnome.org"
             module="GNOME/libsoup.git"/>

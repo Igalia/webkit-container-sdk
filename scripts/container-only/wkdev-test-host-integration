@@ -11,7 +11,7 @@ argsparse_usage_description="$(cat <<EOF
     Verifies that the container <-> host system integration behaves as expected.
 
     This script exercises systemd / dbus intgration, X11/Wayland integration, desktop notifications,
-    PulseAudio, dconf (via gedit) and runs glxgears, the glmark2 benchmark, and Epiphany. Each test
+    PulseAudio, dconf (via gtk4-demo) and runs glxgears, the glmark2 benchmark, and Epiphany. Each test
     denotes an expectation, whether the tested feature is supposed to work in the container or if
     access is forbidden.
 
@@ -50,7 +50,7 @@ run() {
     process_command_line_arguments "${@}"
 
     echo "-> Install required packages:"
-    sudo apt-get install --assume-yes epiphany-browser gedit glmark2 glmark2-drm glmark2-wayland libnotify-bin mesa-utils x11-apps
+    sudo apt-get install --assume-yes epiphany-browser gtk-4-examples glmark2 glmark2-drm glmark2-wayland libnotify-bin mesa-utils x11-apps
 
     run_test "Ping allowed in rootless container: (expected to work)" \
         ping -c 4 wpewebkit.org
@@ -96,8 +96,8 @@ run() {
     run_test "Run X11 application, xeyes: (should work if X11/Xwayland is activate on host)" \
         xeyes
 
-    run_test "Run Gtk/Wayland application, gedit: (should work if Wayland is activate on host)" \
-        gedit
+    run_test "Run Gtk/Wayland application, gtk4-demo: (should work if Wayland is activate on host)" \
+        gtk4-demo
 
     run_test "Run glxgears OpenGL application: (should work if it works on the host)" \
         glxgears -info

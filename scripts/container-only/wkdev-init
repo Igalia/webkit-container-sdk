@@ -192,7 +192,7 @@ try_firstrun_script() {
 
     if [ -x "${user_home}/.wkdev-firstrun" ]; then
         echo "[11/11] Executing ${user_home}/.wkdev-firstrun"
-        su "${container_user_name}" --group="${container_group_name}" --login --command="${user_home}/.wkdev-firstrun"
+        su "${container_user_name}" --group="${container_group_name}" --command="${user_home}/.wkdev-firstrun"
     else
         echo "[11/11] Skipping ${user_home}/.wkdev-firstrun script, no executable found."
     fi

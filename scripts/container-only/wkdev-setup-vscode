@@ -13,6 +13,7 @@ init_application "${0}" "Configures Visual Studio Code." container-only
 verify_executables_exist curl
 
 argsparse_allow_no_argument true
+argsparse_use_option "=yes" "Assume yes for all prompts."
 
 install_vscode() {
 
@@ -41,11 +42,55 @@ install_vscode() {
     echo "Visual Studio Code has been installed."
 }
 
+install_extension() {
+
+    local extension_name="${1}"
+    local description="${2}"
+    local ask="${3:-false}"
+    local response
+    local installed_extensions
+
+    readarray installed_extensions < <(code --list-extensions)
+
+    if [[ "${installed_extensions[*]}" =~ "${extension_name}" ]]; then
+        echo "VSCode extension already installed: ${extension_name}"
+        return
+    fi
+
+    if [ "${ask}" = true ] && ! argsparse_is_option_set "yes"; then
+        read -r -p "Install VSCode extension: ${extension_name} (${description})? [Y/n] " response
+        if [[ "$response" =~ ^([nN][oO]|[nN])$ ]]; then
+            return
+        fi
+    else
+        echo "Installing VSCode extension: ${extension_name} (${description})..."
+    fi
+
+    if ! code --install-extension "${extension_name}" &>/dev/null; then
+        echo "Failed to install VSCode extension: ${extension_name}"
+        exit 1
+    fi
+
+    echo "Installed"
+    echo ""
+}
+
+install_extensions() {
+
+    echo ""
+    echo "Installing extensions..."
+    echo ""
+    install_extension ms-vscode.cpptools-extension-pack "C/C++ support"
+    install_extension mads-hartmann.bash-ide-vscode "BASH support" true
+    install_extension ms-python.python "Python support" true
+}
+
 run() {
 
     argsparse_parse_options "${@}"
 
     install_vscode
+    install_extensions
 }
 
 run "${@}"

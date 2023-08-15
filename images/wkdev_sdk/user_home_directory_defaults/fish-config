@@ -6,3 +6,5 @@ fish_add_path "$(python3 -m site --user-base)/bin"
 set --export WKDEV_SDK /wkdev-sdk
 set --global --export --append --path PATH "$WKDEV_SDK/scripts"
 set --global --export --append --path PATH "$WKDEV_SDK/scripts/container-only"
+
+"$WKDEV_SDK/scripts/container-only/wkdev-sdk-show-welcome-message"

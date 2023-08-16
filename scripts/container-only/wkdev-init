@@ -198,10 +198,23 @@ try_firstrun_script() {
     fi
 }
 
+sleep_forever() {
+
+    echo ""
+    echo "Sleeping forever..."
+    exec tail -f /dev/null
+}
+
 # Main functionality
 run() {
 
     process_command_line_arguments "${@}"
+
+    if [ -f "$(get_init_done_file)" ]; then
+        echo "Initialization already performed, skipping."
+        sleep_forever
+        exit 0
+    fi
 
     # Set for the whole wkdev-init session.
     export DEBIAN_FRONTEND=noninteractive
@@ -228,9 +241,7 @@ run() {
     touch "$(get_init_done_file)"
 
     if ! argsparse_is_option_set "exit-when-done"; then
-        echo ""
-        echo "Sleeping forever..."
-        exec tail -f /dev/null
+        sleep_forever
     fi
 }
 

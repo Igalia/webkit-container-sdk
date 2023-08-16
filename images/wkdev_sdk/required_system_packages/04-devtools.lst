@@ -9,3 +9,6 @@ valgrind rr perf-tools-unstable systemd-coredump
 
 # Documentation
 asciidoc doxygen doxygen-latex doxygen-doxyparse graphviz python3-sphinx
+
+# For podman-host
+podman

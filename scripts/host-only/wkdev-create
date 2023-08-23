@@ -422,7 +422,7 @@ build_podman_create_arguments() {
     arguments+=("$(get_sdk_qualified_name_and_tag)")
 
     # Entry point
-    arguments+=("/wkdev-sdk/scripts/container-only/wkdev-init")
+    arguments+=("/wkdev-sdk/scripts/container-only/.wkdev-init")
     arguments+=("--shell" "${container_shell}")
     arguments+=("--user" "${container_user_name}")
     arguments+=("--group" "${container_group_name}")

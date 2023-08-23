@@ -151,7 +151,7 @@ run() {
 
     podman_exec_arguments+=("${container_name}")
 
-    run_podman "${podman_arguments[@]}" exec "${podman_exec_arguments[@]}" /wkdev-sdk/scripts/container-only/wkdev-sync-runtime-state
+    run_podman "${podman_arguments[@]}" exec "${podman_exec_arguments[@]}" /wkdev-sdk/scripts/container-only/.wkdev-sync-runtime-state
 
     if argsparse_is_option_set "exec"; then
         podman_exec_arguments+=("${program_params[@]}")

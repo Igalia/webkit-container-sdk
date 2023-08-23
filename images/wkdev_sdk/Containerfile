@@ -102,10 +102,12 @@ RUN --mount=type=tmpfs,target=/root/.cache --mount=type=cache,target=/root/.cach
 # container via direct command exec rather than by login
 ENV LD_LIBRARY_PATH "/jhbuild/install/lib"
 ENV GST_PLUGIN_PATH_1_0 "/jhbuild/install/lib/gstreamer-1.0"
+ENV GST_PLUGIN_SCANNER "/jhbuild/install/libexec/gstreamer-1.0/gst-plugin-scanner"
 ENV PKG_CONFIG_PATH "/jhbuild/install/lib/pkgconfig:/jhbuild/install/share/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
 ENV LDFLAGS "-L/jhbuild/install/lib"
 ENV C_INCLUDE_PATH "/jhbuild/install/include"
 ENV CPLUS_INCLUDE_PATH "/jhbuild/install/include"
+ENV GI_TYPELIB_PATH "/jhbuild/install/lib/girepository-1.0"
 ENV PATH "/jhbuild/install/bin:$PATH"
 
 # Podman proxy, connecting to host instance

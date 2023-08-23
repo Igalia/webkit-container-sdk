@@ -337,7 +337,6 @@ build_podman_create_arguments() {
 
     # Map our SDK git repository into the container.
     arguments+=("--mount" "type=bind,source=${WKDEV_SDK},destination=/wkdev-sdk,rslave")
-    arguments+=("--env" "WKDEV_SDK=/wkdev-sdk")
 
     # Add 'SYS_PTRACE' support, to be able to use gdb.
     arguments+=("--cap-add=SYS_PTRACE")

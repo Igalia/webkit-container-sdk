@@ -137,6 +137,9 @@ run() {
     # Request interactive session with pseudo-tty allocation.
     local podman_exec_arguments=("--interactive" "--tty")
 
+    # Ensure WKDEV_SDK is set. It is done here and not creation to support older containers.
+    podman_exec_arguments+=("--env" "WKDEV_SDK=/wkdev-sdk")
+
     # Choose root or regular user.
     if argsparse_is_option_set "root"; then
         podman_exec_arguments+=("--user" "0:0")

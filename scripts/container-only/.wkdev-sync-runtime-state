@@ -72,7 +72,6 @@ run() {
 
     process_command_line_arguments "${@}"
 
-    XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR-"/run/user/$(id --user)"}
     WAYLAND_DISPLAY=${WAYLAND_DISPLAY-"wayland-0"}
     PIPEWIRE_REMOTE=${PIPEWIRE_REMOTE-"pipewire-0"}
 

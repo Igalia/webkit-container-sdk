@@ -84,14 +84,15 @@ RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
 WORKDIR /jhbuild
-RUN --mount=type=cache,target=/var/tmp/jhbuild --mount=type=cache,target=/root/.cache/ \
+RUN --mount=type=tmpfs,target=/root/.cache --mount=type=cache,target=/root/.cache/sccache --mount=type=cache,target=/var/tmp/jhbuild/checkout \
     git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
     cd jhbuild && \
     ./autogen.sh --prefix=/usr/local && \
     make && \
     make install && \
     export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
-    jhbuild --no-interact build
+    jhbuild --no-interact build && \
+    rm -r /var/tmp/jhbuild/build
 
 # Register basic JHBuild environment
 # TODO: Instead of hardcoding here the values it would be better to

@@ -108,6 +108,7 @@ ENV LDFLAGS "-L/jhbuild/install/lib"
 ENV C_INCLUDE_PATH "/jhbuild/install/include"
 ENV CPLUS_INCLUDE_PATH "/jhbuild/install/include"
 ENV GI_TYPELIB_PATH "/jhbuild/install/lib/girepository-1.0"
+ENV XDG_DATA_DIRS "/jhbuild/install/share:/usr/local/share:/usr/share"
 ENV PATH "/jhbuild/install/bin:$PATH"
 
 # Podman proxy, connecting to host instance

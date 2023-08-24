@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+if [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ]; then
+    source "${WKDEV_SDK}/utilities/application.sh"
+else
+    echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."
+    exit 1
+fi
+
+init_application "${0}" "Configures devhelp to use WebKit's built documentation." container-only
+
+argsparse_use_option "webkit-=directory:" "The path to your WebKit source" "mandatory" "type:directory"
+argsparse_use_option "release" "Use the Release build's documentation" "exclude:debug"
+argsparse_use_option "debug" "Use the debug build's documentation" "exclude:release"
+argsparse_use_option "container-specific" "Install the documentation private to this container"
+
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
+
+    Sets up links to the the devhelp documentation for a specific WebKit build.
+
+    By default this will survive recreating the container and you only need to
+    run this when you want to add new books or change the directory.
+
+    However you can make the documentation private to this container by passing
+    the '--container-specific' option.
+
+<< Examples >>
+
+    $ ${application_name} --webkit-directory=./ --debug
+    $ ${application_name} --webkit-directory=\$HOME/WebKit --release
+EOF
+)"
+
+run() {
+
+    argsparse_parse_options "${@}"
+    local webkit_directory="${program_options["webkit-directory"]}"
+    local build_type="$(argsparse_is_option_set 'release' && echo 'Release' || echo 'Debug')"
+    local docs_dir="${webkit_directory}/WebKitBuild/${build_type}/Documentation"
+
+    echo ""
+
+    if [ ! -d "${webkit_directory}/WebKit.xcworkspace" ]; then
+        echo "Passed directory does not appear to be a WebKit source directory: ${webkit_directory}"
+        exit 1
+    fi
+
+    if [ ! -d "${docs_dir}" ]; then
+        echo "WebKit ${build_type} has not been built with documentation."
+        exit 1
+    fi
+
+    local books_dir
+
+    if argsparse_is_option_set "container-specific"; then
+        books_dir="/jhbuild/install/share/devhelp/books"
+    else
+        books_dir="${XDG_DATA_HOME-"${HOME}/.local/share"}/devhelp/books"
+    fi
+
+    mkdir -p "${books_dir}"
+
+    echo "Linking documentation:"
+    printf "  Source:\t %s\n" "${docs_dir}"
+    printf "  Destination:\t %s\n" "${books_dir}"
+    printf "  Books:\t"
+    for dir in "${docs_dir}"/*; do
+        echo -n " $(basename "${dir}")"
+        ln --symbolic --force "${dir}" "${books_dir}/$(basename "${dir}")"
+    done
+    echo ""
+
+    echo ""
+    echo "Simply run 'devhelp' to access the documentation."
+}
+
+run "${@}"

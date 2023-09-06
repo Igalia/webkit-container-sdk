@@ -55,14 +55,14 @@ run() {
     run_test "Ping allowed in rootless container: (expected to work)" \
         ping -c 4 wpewebkit.org
 
-    run_test "Access to system dbus: (expected to fail)" \
+    run_test "Access to system dbus: (expected to work)" \
         busctl --no-pager list
+
+    run_test "Access to session dbus: (expected to work)" \
+        busctl --no-pager --user list
 
     run_test "Access to systemd session: (expected to fail)" \
         systemctl --no-pager status
-
-    run_test "Access to user dbus: (expected to work)" \
-        busctl --no-pager --user list
 
     run_test "Accesus to systemd user session: (expected to work)" \
         systemctl --no-pager --user status

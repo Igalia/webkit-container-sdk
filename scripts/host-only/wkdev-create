@@ -244,13 +244,21 @@ try_process_keyring() {
     try_process ${1} "Share keyring with container" ${keyring_directory_exists} ${podman_argument[@]}
 }
 
-try_process_dbus_user_session() {
+try_process_system_bus() {
+
+    local dbus_system_socket="/run/dbus/system_bus_socket"
+    local dbus_system_socket_exists=$([ -S "${dbus_system_socket}" ] && echo 1 || echo 0)
+    local podman_argument=("--mount" "type=bind,source=${dbus_system_socket},destination=${dbus_system_socket},rslave")
+    try_process ${1} "Share system bus with container" ${dbus_system_socket_exists} ${podman_argument[@]}
+}
+
+try_process_session_bus() {
 
     local dbus_user_socket="${XDG_RUNTIME_DIR}/bus"
     local dbus_user_socket_exists=$([ -S "${dbus_user_socket}" ] && echo 1 || echo 0)
     local podman_argument=("--mount" "type=bind,source=${dbus_user_socket},destination=${dbus_user_socket},rslave")
     podman_argument+=("--env" "DBUS_SESSION_BUS_ADDRESS=unix:path=${dbus_user_socket}")
-    try_process ${1} "Share dbus user session with container" ${dbus_user_socket_exists} ${podman_argument[@]}
+    try_process ${1} "Share session bus with container" ${dbus_user_socket_exists} ${podman_argument[@]}
 }
 
 try_process_dconf() {
@@ -409,7 +417,8 @@ build_podman_create_arguments() {
     try_process_ulimit ${1}
     try_process_journal ${1}
     try_process_keyring ${1}
-    try_process_dbus_user_session ${1}
+    try_process_system_bus ${1}
+    try_process_session_bus ${1}
     try_process_dconf ${1}
     try_process_accessibility ${1}
     try_process_themes ${1}

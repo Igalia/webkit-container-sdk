@@ -37,16 +37,21 @@
 
   <meson id="sparkle-cdm">
     <branch repo="github.com"
+            checkoutdir="sparkle-cdm"
             module="Sparkle-CDM/sparkle-cdm"/>
   </meson>
 
   <autotools id="dicts" supports-non-srcdir-builds="no"
              skip-autogen="true">
-    <branch repo="github.com" module="mrobinson/webkitgtk-test-dicts.git" checkoutdir="webkitgtk-test-dicts" tag="0.0.1"/>
+  <branch repo="github.com"
+          checkoutdir="webkitgtk-test-dicts"
+          module="mrobinson/webkitgtk-test-dicts.git"
+          tag="0.0.1"/>
   </autotools>
 
   <cmake id="libwpe">
     <branch repo="wpewebkit.org"
+            checkoutdir="libwpe"
             module="libwpe-${version}.tar.xz"
             version="1.14.1"
             hash="sha256:b1d0cdcf0f8dbb494e65b0f7913e357106da9a0d57f4fbb7b9d1238a6dbe9ade"/>
@@ -57,6 +62,7 @@
       <dep package="libwpe"/>
     </dependencies>
     <branch repo="wpewebkit.org"
+            checkoutdir="wpebackend-fdo"
             module="wpebackend-fdo-${version}.tar.xz"
             version="1.14.2"
             hash="sha256:93c9766ae9864eeaeaee2b0a74f22cbca08df42c1a1bdb55b086f2528e380d38">
@@ -65,6 +71,7 @@
 
   <meson id="openh264" mesonargs="-Dtests=disabled">
     <branch repo="github.com"
+            checkoutdir="openh264"
             module="cisco/openh264.git"
             tag="v2.3.1" >
     </branch>
@@ -72,6 +79,7 @@
 
   <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=enabled -Dintrospection=enabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled">
     <branch repo="gstreamer.freedesktop.org"
+            checkoutdir="gstreamer"
             module="gstreamer.git"
             tag="1.22.4"/>
     <dependencies>
@@ -82,11 +90,13 @@
   <!-- These are not built by default but useful for hacking on. -->
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled">
     <branch repo="gitlab.gnome.org"
+            checkoutdir="glib"
             module="GNOME/glib.git"/>
   </meson>
 
   <meson id="glib-networking">
     <branch repo="gitlab.gnome.org"
+            checkoutdir="glib-networking"
             module="GNOME/glib-networking.git"/>
     <dependencies>
       <dep package="glib"/>
@@ -95,11 +105,13 @@
 
   <meson id="libsoup">
     <branch repo="gitlab.gnome.org"
+            checkoutdir="libsoup"
             module="GNOME/libsoup.git"/>
   </meson>
 
   <meson id="gtk4">
     <branch repo="gitlab.gnome.org"
+            checkoutdir="gtk4"
             module="GNOME/gtk.git"/>
   </meson>
 

@@ -410,6 +410,8 @@ build_podman_create_arguments() {
 
     if argsparse_is_option_set "no-pull"; then
         arguments+=("--pull=never")
+    else
+        arguments+=("--pull=newer")
     fi
 
     set +o nounset

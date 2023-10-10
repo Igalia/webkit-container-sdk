@@ -10,6 +10,7 @@
       <dep package="wpebackend-fdo"/>
       <dep package="gstreamer"/>
       <dep package="sparkle-cdm"/>
+      <dep package="libbacktrace"/>
     </dependencies>
   </metamodule>
 
@@ -86,6 +87,12 @@
       <dep package="openh264"/>
     </dependencies>
   </meson>
+
+  <autotools id="libbacktrace">
+    <branch repo="github.com"
+            module="ianlancetaylor/libbacktrace.git"
+            checkoutdir="libbacktrace"/>
+  </autotools>
 
   <!-- These are not built by default but useful for hacking on. -->
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled">

@@ -100,6 +100,8 @@ RUN --mount=type=tmpfs,target=/root/.cache --mount=type=cache,target=/root/.cach
 # when the user enters into the container (or similar), but that may cause
 # issues with the env not exported when someone enter into the
 # container via direct command exec rather than by login
+ENV LIB "/jhbuild/install/lib"
+ENV INCLUDE "/jhbuild/install/include"
 ENV LD_LIBRARY_PATH "/jhbuild/install/lib"
 ENV GST_PLUGIN_PATH_1_0 "/jhbuild/install/lib/gstreamer-1.0"
 ENV GST_PLUGIN_SCANNER "/jhbuild/install/libexec/gstreamer-1.0/gst-plugin-scanner"

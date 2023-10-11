@@ -81,6 +81,7 @@ ensure_container_is_running() {
 propagate_environment_variables_from_host() {
 
     local -r passthrough_variables=(
+        'TERM'
         'WAYLAND_DISPLAY'
         'DISPLAY'
         'PULSE_SERVER'

@@ -227,6 +227,12 @@ try_process_ulimit() {
     try_process ${1} "Share host ulimit settings with container" 1 ${podman_argument[@]}
 }
 
+try_process_pids_limit() {
+
+    local podman_argument=("--pids-limit" "-1")
+    try_process ${1} "Set unlimited pids for container" 1 ${podman_argument[@]}
+}
+
 try_process_journal() {
 
     local journal_log_directory="/var/log/journal"
@@ -422,6 +428,7 @@ build_podman_create_arguments() {
     try_process_coredump_directory ${1}
     try_process_timezone ${1}
     try_process_ulimit ${1}
+    try_process_pids_limit ${1}
     try_process_journal ${1}
     try_process_keyring ${1}
     try_process_system_bus ${1}

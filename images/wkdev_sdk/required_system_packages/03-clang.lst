@@ -1,0 +1,2 @@
+# Clang toolchain (current version: 16)
+clang-16 clangd-16 libstdc++-13-dev

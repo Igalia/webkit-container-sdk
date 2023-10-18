@@ -118,6 +118,9 @@ COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host
 
 COPY /rootfs/etc/ccache.conf /etc/ccache.conf
 
+# Convenience symlink for clangd, the VSCode extension doesn't find clangd-16 by default.
+RUN ln -s /usr/bin/clangd-16 /usr/local/bin/clangd
+
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog
 

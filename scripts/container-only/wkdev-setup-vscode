@@ -80,7 +80,8 @@ install_extensions() {
     echo ""
     echo "Installing extensions..."
     echo ""
-    install_extension ms-vscode.cpptools-extension-pack "C/C++ support"
+    install_extension ms-vscode.cmake-tools "CMake support"
+    install_extension llvm-vs-code-extensions.vscode-clangd "C/C++ support"
     install_extension mads-hartmann.bash-ide-vscode "BASH support" true
     install_extension ms-python.python "Python support" true
 }

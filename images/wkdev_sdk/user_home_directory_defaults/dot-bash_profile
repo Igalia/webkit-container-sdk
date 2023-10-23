@@ -4,10 +4,16 @@ export DEBUGINFOD_URLS="https://debuginfod.ubuntu.com"
 export WKDEV_SDK=/wkdev-sdk
 export PATH="${WKDEV_SDK}/scripts:${WKDEV_SDK}/scripts/container-only:$(python3 -m site --user-base)/bin:${PATH}"
 
-# if running bash
-if [ -n "$BASH_VERSION" ]; then
-    # include .bashrc if it exists
-    if [ -f "$HOME/.profile" ]; then
-	. "$HOME/.profile"
-    fi
+# The shell-specific profile file (.bash_profile) overrides the generic one (.profile).
+# If we have a .profile, source it as well here.
+if [ -f "$HOME/.profile" ]; then
+    . "$HOME/.profile"
+fi
+
+# If this login shell is interactive, we should source .bashrc as well.
+# Note that ~/.profile (if it exists) may or may not have also sourced
+# .bashrc. Ideally .bashrc scripts should be idempotent so as to this to not
+# cause any problems.
+if [ "${PS1-}" ] && [ -f "$HOME/.bashrc" ]; then
+    . "$HOME/.bashrc"
 fi

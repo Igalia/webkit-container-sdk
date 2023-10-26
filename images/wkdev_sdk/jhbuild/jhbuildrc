@@ -10,7 +10,7 @@ modulesets_dir = '/jhbuild'
 
 if 'WKDEV_IN_IMAGE_BUILD' in os.environ:
     # In our image build we put these in a cached directory.
-    checkoutroot = '/var/tmp/jhbuild/checkout'
+    checkoutroot = '/jhbuild/checkout'
     buildroot = '/var/tmp/jhbuild/build'
     tarballdir = '/var/tmp/jhbuild/downloads'
     shallow_clone = True

@@ -1,5 +1,0 @@
-# Dependencies to compile GStreamer
-liborc-0.4-dev libsrtp2-dev
-
-# Dependencies to compile WebKit
-flite1-dev libopenxr-dev qtbase5-dev qtbase5-dev-tools qtbase5-private-dev qtdeclarative5-dev libjxl-dev

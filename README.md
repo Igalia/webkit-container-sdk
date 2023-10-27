@@ -17,7 +17,7 @@ information the SDK provides but the guide below will cover common usage.
 
 Add the following to your shell configuration file (e.g. `~/.bashrc`, `~/.zprofile`, ...)
 to ensure that the `${WKDEV_SDK}` environment variable points to the correct location
-of your `wkdev-sdk` Git checkout. It also extends the `${PATH}` to make the `wkdev-\*` scripts
+of your `wkdev-sdk` Git checkout. It also extends the `${PATH}` to make the `wkdev-*` scripts
 provided by this repository accessible without having to specifcy full paths in the shell.
 
 ```
@@ -34,7 +34,9 @@ now expects as intented - pointing to your `wkdev-sdk` checkout.
 
 Execute the following command on your host system:
 
-```wkdev-create --name wkdev --create-home --home ${HOME}/wkdev-home```
+```
+wkdev-create --name wkdev --create-home --home ${HOME}/wkdev-home
+```
 
 This will create a container named **wkdev**.
 
@@ -53,7 +55,9 @@ initializations (such as allowing GPU profiling, by modifying `root`-owned confi
 
 Execute the following command on your host system:
 
-```wkdev-enter --name wkdev```
+```
+wkdev-enter --name wkdev
+```
 
 After a few seconds you enter the container shell.
 
@@ -61,7 +65,9 @@ After a few seconds you enter the container shell.
 
 You may optionally run the test script in the container, which tests various workloads:
 
-```wkdev-test-host-integration```
+```
+wkdev-test-host-integration
+```
 
 5. Compile WPE WebKit
 

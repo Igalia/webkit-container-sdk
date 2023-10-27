@@ -20,11 +20,8 @@ to ensure that the `${WKDEV_SDK}` environment variable points to the correct loc
 of your `wkdev-sdk` Git checkout. It also extends the `${PATH}` to make the `wkdev-*` scripts
 provided by this repository accessible without having to specifcy full paths in the shell.
 
-```
-# wkdev-sdk integration
-pushd /absolute/path/to/your/Git/checkout/of/wkdev-sdk &>/dev/null
-source ./register-sdk-on-host.sh
-popd &>/dev/null
+```sh
+source /absolute/path/to/your/Git/checkout/of/wkdev-sdk/register-sdk-on-host.sh
 ```
 
 Launch a new shell, or `source` your shell configuration files to verify, `${WKDEV_SDK}`
@@ -34,8 +31,8 @@ now expects as intented - pointing to your `wkdev-sdk` checkout.
 
 Execute the following command on your host system:
 
-```
-wkdev-create --name wkdev --create-home --home ${HOME}/wkdev-home
+```sh
+wkdev-create --name wkdev --create-home --home "${HOME}/wkdev-home"
 ```
 
 This will create a container named **wkdev**.
@@ -65,20 +62,20 @@ After a few seconds you enter the container shell.
 
 You may optionally run the test script in the container, which tests various workloads:
 
-```
+```sh
 wkdev-test-host-integration
 ```
 
 5. Compile WPE WebKit
 
-```
-cd ${HOST_HOME}/path/to/your/WebKit/checkout
+```sh
+cd "${HOST_HOME}/path/to/your/WebKit/checkout"
 ./Tools/Scripts/build-webkit --wpe --release
 ```
 
 To run tests / execute MiniBrowser, try;
 
-```
+```sh
 ./Tools/Scripts/run-webkit-tests --wpe --release fast/css # Full tests take a long time
 ./Tools/Scripts/run-minibrowser --wpe https://browserbench.org/MotionMark1.2/
 ```

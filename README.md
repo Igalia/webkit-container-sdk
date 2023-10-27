@@ -6,12 +6,10 @@ It provides a fully-equipped container image ready for WebKit development
 as well as scripts to run the image using `podman`.
 
 Once you entered the container, you can navigate to a WebKit checkout
-and compile using Tools/Scripts/build-webkit --gtk / --wpe, as usual.
+and compile using `./Tools/Scripts/build-webkit [--gtk|--wpe]`, as usual.
 
-Please refer to the documentation in the **docs** subdirectory for further
-information on what the SDK provides and how it greatly simplifies WebKit
-development and removes a lot of friction, by providing a reproducible,
-consistent development/testing environment for all our users/developers.
+There is extra documentation in the **docs** subdirectory for further
+information the SDK provides but the guide below will cover common usage.
 
 ### Quickstart guide
 
@@ -38,11 +36,14 @@ Execute the following command on your host system:
 
 ```wkdev-create --name wkdev --create-home --home ${HOME}/wkdev-home```
 
-This will create a container named **wkdev**, and transparently maps the current hoser user/ID
-into the container. Within the container, the `${HOME}` directtory is not equal to the host
-`${HOME}` directory: `${HOME}/wkdev-home` (from host) is bind-mounted into the container as
-`/home/hostuser`. This avoids pollution of files in your host `${HOME}` directory -- for
-convenience it's still exposed in the container, as `${HOST_HOME}`.
+This will create a container named **wkdev**.
+
+Within the container, the `${HOME}` directory is not equal to the host `${HOME}` directory:
+`${HOME}/wkdev-home` (from host) is bind-mounted into the container as `/home/${USER}`.
+This avoids pollution of files in your host `${HOME}` directory and for convenience
+it's still exposed in the container, as `${HOST_HOME}`.
+
+The `name` and `home` values above are the defaults so you can omit them in regular usage.
 
 NOTE: `wkdev-create` will auto-detect the whole environment: X11, Wayland, PulseAudio, etc.
 and eventually needs **root** permissions on the *host system* to perform first-time-run-only
@@ -58,7 +59,7 @@ After a few seconds you enter the container shell.
 
 4. Verify host system integration is working properly
 
-Run the test script in the container, which tests various workloads:
+You may optionally run the test script in the container, which tests various workloads:
 
 ```wkdev-test-host-integration```
 
@@ -66,15 +67,14 @@ Run the test script in the container, which tests various workloads:
 
 ```
 cd ${HOST_HOME}/path/to/your/WebKit/checkout
-git pull
-Tools/Scripts/build-webkit --wpe --release --cmakeargs "-DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_THUNDER=OFF"
+./Tools/Scripts/build-webkit --wpe --release
 ```
 
 To run tests / execute MiniBrowser, try;
 
 ```
-Tools/Scripts/run-webkit-tests --wpe --release fast/css # Full tests take a long time
-Tools/Scripts/run-minibrowser --wpe https://browserbench.org/MotionMark1.2/
+./Tools/Scripts/run-webkit-tests --wpe --release fast/css # Full tests take a long time
+./Tools/Scripts/run-minibrowser --wpe https://browserbench.org/MotionMark1.2/
 ```
 
 6. READY!

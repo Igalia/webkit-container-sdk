@@ -14,6 +14,7 @@ verify_executables_exist curl
 
 argsparse_allow_no_argument true
 argsparse_use_option "=yes" "Assume yes for all prompts."
+argsparse_use_option "no-extensions" "Don't install extensions."
 
 install_vscode() {
 
@@ -92,7 +93,10 @@ run() {
     argsparse_parse_options "${@}"
 
     install_vscode
-    install_extensions
+
+    if ! argsparse_is_option_set "no-extensions"; then
+        install_extensions
+    fi
 }
 
 run "${@}"

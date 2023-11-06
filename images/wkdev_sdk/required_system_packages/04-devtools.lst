@@ -13,8 +13,5 @@ asciidoc doxygen doxygen-latex doxygen-doxyparse graphviz python3-sphinx devhelp
 # For WebKit's scripts such as git-webkit
 python3-pip python3-cffi
 
-# For Cog's git hooks
-clang-format
-
 # For podman-host
 podman

@@ -82,6 +82,7 @@ install_extensions() {
     echo ""
     install_extension ms-vscode.cmake-tools "CMake support"
     install_extension llvm-vs-code-extensions.vscode-clangd "C/C++ support"
+    install_extension vadimcn.vscode-lldb "C/C++ debugging" true
     install_extension mads-hartmann.bash-ide-vscode "BASH support" true
     install_extension ms-python.python "Python support" true
 }

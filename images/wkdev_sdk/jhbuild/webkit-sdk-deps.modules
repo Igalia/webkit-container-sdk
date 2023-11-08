@@ -82,7 +82,7 @@
     <branch repo="gstreamer.freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer.git"
-            tag="1.22.4"/>
+            tag="1.22.6"/>
     <dependencies>
       <dep package="openh264"/>
     </dependencies>

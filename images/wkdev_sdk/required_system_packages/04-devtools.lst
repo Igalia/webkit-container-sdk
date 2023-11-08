@@ -1,5 +1,5 @@
 # Build systems
-build-essential cmake ninja-build meson
+build-essential cmake ninja-build
 
 # Build tools
 icecc ccache sccache

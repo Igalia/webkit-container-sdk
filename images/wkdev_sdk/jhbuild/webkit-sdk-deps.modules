@@ -5,7 +5,7 @@
 
   <metamodule id="webkit-sdk-deps">
     <dependencies>
-      <dep pacakge="meson"/>
+      <dep package="meson"/>
       <dep package="dicts"/>
       <dep package="libwpe"/>
       <dep package="wpebackend-fdo"/>

@@ -5,6 +5,7 @@
 
   <metamodule id="webkit-sdk-deps">
     <dependencies>
+      <dep pacakge="meson"/>
       <dep package="dicts"/>
       <dep package="libwpe"/>
       <dep package="wpebackend-fdo"/>
@@ -29,12 +30,14 @@
   <repository type="git" name="gitlab.gnome.org"
       href="https://gitlab.gnome.org/"/>
 
-  <systemmodule id="meson">
-    <branch repo="system"/>
-    <systemdependencies>
-      <dep type="path" name="meson"/>
-    </systemdependencies>
-  </systemmodule>
+  <distutils id="meson" python3="1">
+    <branch repo="github-tarball"
+            version="1.2.3"
+            module="mesonbuild/meson/releases/download/${version}/meson-${version}.tar.gz"
+            checkoutdir="meson-${version}"
+            hash="sha256:4533a43c34548edd1f63a276a42690fce15bde9409bcf20c4b8fa3d7e4d7cac1">
+    </branch>
+  </distutils>
 
   <meson id="sparkle-cdm">
     <branch repo="github.com"

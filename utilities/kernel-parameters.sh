@@ -3,6 +3,11 @@
 [ -z "${application_ready}" ] && { echo "[FATAL] You need to source 'utilities/application.sh' before sourcing this script."; return 1; }
 source "${WKDEV_SDK}/utilities/prerequisites.sh"
 
+# Some distros still have a separate /sbin and sysctl may be in it.
+if [ -d /sbin ]; then
+    PATH="/sbin:${PATH}"
+fi
+
 verify_executables_exist sudo sysctl
 
 # Helper function to read from /proc/sys/ via 'sysctl'.

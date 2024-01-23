@@ -67,6 +67,22 @@ try_mount_host_pipewire() {
     fi
 }
 
+mount_host_flatpak_instance_data() {
+    local host_flatpak_instance_dir="/host/run/.flatpak"
+    local container_flatpak_instance_dir="${XDG_RUNTIME_DIR}/.flatpak"
+
+    # WebKit's sandbox writes to this directory for xdg-desktop-portal to read
+    # our bwrapinfo.json file from to map PIDs. This works as our podman container
+    # is not in its own pidns.
+
+    if [ -d "${container_flatpak_instance_dir}" ]; then
+        rm -r "${container_flatpak_instance_dir}"
+    fi
+
+    mkdir --mode=0700 --parents "${host_flatpak_instance_dir}"
+    ln -s "${host_flatpak_instance_dir}" "${container_flatpak_instance_dir}"
+}
+
 # Main functionality
 run() {
 
@@ -77,6 +93,7 @@ run() {
 
     try_mount_host_wayland
     try_mount_host_pipewire
+    mount_host_flatpak_instance_data
 
     echo ""
 }

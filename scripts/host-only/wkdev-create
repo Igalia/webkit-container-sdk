@@ -396,6 +396,9 @@ build_podman_create_arguments() {
     # Mount /dev/pts in container (pseudo-terminal support).
     arguments+=("--mount" "type=devpts,destination=/dev/pts")
 
+    # Mount /dev/input for devices like gamepads
+    arguments+=("--device" "/dev/input")
+
     # Mount a tmpfs.
     arguments+=("--tmpfs" "/tmp")
 

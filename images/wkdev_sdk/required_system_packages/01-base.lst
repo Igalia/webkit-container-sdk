@@ -11,4 +11,4 @@ libnvidia-egl-wayland1
 wireplumber
 
 # General utilities
-apt-file aptly atop at-spi2-core emacs flatpak-xdg-utils git htop iotop iputils-ping kmod less locate man-db nano openssh-client strace sudo unzip vim wget
+apt-file aptly atop at-spi2-core emacs flatpak-xdg-utils git htop iotop iputils-ping kmod less libportal-dev libportal-gtk4-dev libxcb-cursor-dev locate man-db nano openssh-client strace sudo unzip vim wget

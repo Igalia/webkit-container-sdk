@@ -17,8 +17,8 @@ is_running_in_wkdev_sdk_container() { is_running_in_container && [ -f "/usr/bin/
 #####
 ##### Container registry
 #####
-get_default_container_registry() { echo "${WKDEV_SDK_CONTAINER_REGISTRY:-gitlab.igalia.com:4567}"; }
-get_default_container_registry_user_name() { echo "${WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME:-teams/webkit/wkdev-sdk}"; }
+get_default_container_registry() { echo "${WKDEV_SDK_CONTAINER_REGISTRY:-ghcr.io}"; }
+get_default_container_registry_user_name() { echo "${WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME:-igalia}"; }
 
 #####
 ##### Container naming/versioning
@@ -47,8 +47,3 @@ get_container_home_defaults_directory_name() { echo "${WKDEV_SDK}/images/wkdev_s
 get_sdk_image_name() { echo "wkdev-sdk"; }
 get_sdk_image_tag() { get_container_tag; }
 get_sdk_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_sdk_image_name)" "$(get_sdk_image_tag)"; }
-
-##### ci-runner definitions
-get_ci_runner_image_name() { echo "ci-runner"; }
-get_ci_runner_image_tag() { echo "latest"; }
-get_ci_runner_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_sdk_image_name)" "$(get_sdk_image_tag)"; }

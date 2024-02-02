@@ -1,0 +1,95 @@
+name: wkdev-sdk
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+defaults:
+  run:
+    shell: bash
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set tag name
+        run: |
+          if [ "${GITHUB_BASE_REF}" = 'main' ]; then
+            tag_name='latest'
+          else
+            tag_name="${GITHUB_BASE_REF}"
+          fi
+          echo "WKDEV_SDK_TAG=${tag_name}" >> "${GITHUB_OUTPUT}"
+
+      - name: Increase storage space
+        uses: easimon/maximize-build-space@master
+        with:
+          # Podman uses an insane amount of storage during creation of the image.
+          # This must be a bug as 20GB (the default) truly isn't large enough.
+          # TODO: Ensure fuse-overlayfs is working as expected.
+          root-reserve-mb: 30720
+          remove-dotnet: true
+          remove-android: true
+          remove-haskell: true
+          remove-codeql: true
+          remove-docker-images: true
+      
+      - name: Install podman
+        uses: gacts/install-podman@v1
+
+      - name: Install fuse-overlayfs
+        run: sudo apt-get -y install fuse-overlayfs
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          source ./register-sdk-on-host.sh
+          wkdev-sdk-bakery --mode=build --verbose
+          wkdev-sdk-bakery --mode=export --verbose
+
+      - name: Archive image
+        uses: actions/upload-artifact@v4
+        with:
+          name: wkdev-sdk.tar
+          path: wkdev-sdk.tar
+          retention-days: 7
+
+      - name: Test image
+        run: |
+          source ./register-sdk-on-host.sh
+          wkdev-create --create-home --verbose --attach --no-pull
+          wkdev-enter --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
+          wkdev-enter --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
+          wkdev-enter --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
+
+  deploy:
+    runs-on: ubuntu-22.04
+    needs: build
+    if: github.ref_name == 'main'
+    steps:
+      - name: Set tag name
+        run: |
+          if [ "${GITHUB_BASE_REF}" = 'main' ]; then
+            tag_name='latest'
+          else
+            tag_name="${GITHUB_BASE_REF}"
+          fi
+          echo "WKDEV_SDK_TAG=${tag_name}" >> "${GITHUB_OUTPUT}"
+
+      - name: Install podman
+        uses: gacts/install-podman@v1
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download image
+        uses: actions/download-artifact@v4
+        with:
+          name: wkdev-sdk.tar
+
+      - name: Deploy image
+        run: |
+          podman load < wkdev-sdk.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
+          source ./register-sdk-on-host.sh
+          wkdev-sdk-bakery --mode=deploy --verbose

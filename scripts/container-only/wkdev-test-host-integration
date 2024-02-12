@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2024 Igalia S.L.
+# SPDX-License: MIT
 
 [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
 init_application "${0}" "Test host system integration" container-only

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2024 Igalia S.L.
+# SPDX-License: MIT
 
 [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
 

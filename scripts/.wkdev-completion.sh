@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2024 Igalia S.L.
+# SPDX-License: MIT
 
 _wkdev_completions()
 {

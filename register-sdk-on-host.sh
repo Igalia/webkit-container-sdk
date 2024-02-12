@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2024 Igalia S.L.
+# SPDX-License: MIT
 
 # To be sourced from your e.g. ~/.bashrc / ~.zprofile / ... to integrate wkdev-sdk with your host OS.
 my_relpath="${BASH_SOURCE[0]}"

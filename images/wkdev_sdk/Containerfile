@@ -1,3 +1,6 @@
+# Copyright 2024 Igalia S.L.
+# SPDX-License: MIT
+
 FROM ubuntu:23.04
 
 LABEL maintainer="webkit-gtk@lists.webkit.org"

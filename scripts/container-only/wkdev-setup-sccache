@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2024 Igalia S.L.
+# SPDX-License: MIT
 
 if [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ]; then
     source "${WKDEV_SDK}/utilities/application.sh"

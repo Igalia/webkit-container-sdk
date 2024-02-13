@@ -683,11 +683,6 @@ run() {
     local podman_arguments=()
     build_podman_arguments podman_arguments
 
-    # If the image isn't available we have to login and pull it.    
-    if ! run_podman image exists "$(get_sdk_qualified_name_and_tag)" && ! argsparse_is_option_set "no-pull"; then
-        run_podman_login
-    fi
-
     echo ""
     echo "-> Creating container '${container_name}'..."
     if argsparse_is_option_set "verbose"; then

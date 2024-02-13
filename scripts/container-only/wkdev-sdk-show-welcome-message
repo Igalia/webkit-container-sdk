@@ -71,7 +71,7 @@ run() {
     echo "   You can find your regular host home directory in the container under $(ansi::bold)\${HOST_HOME}$(ansi::normal)=${HOST_HOME}."
     echo ""
     echo " - Instructions on how to build / debug / profile WebKit can be found in the SDK documentation, either"
-    echo "   locally in $(ansi::underline)\${WKDEV_SDK}/docs$(ansi::noUnderline) or online $(ansi::underline)https://gitlab.igalia.com/teams/webkit/wkdev-sdk/-/tree/main/docs$(ansi::noUnderline)".
+    echo "   locally in $(ansi::underline)\${WKDEV_SDK}/docs$(ansi::noUnderline) or online $(ansi::underline)https://github.com/Igalia/wkdev-sdk/tree/main/docs$(ansi::noUnderline)".
 
     popd &>/dev/null
 }

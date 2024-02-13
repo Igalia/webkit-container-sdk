@@ -20,6 +20,7 @@ jobs:
             tag_name="${GITHUB_BASE_REF}"
           fi
           echo "WKDEV_SDK_TAG=${tag_name}" >> "${GITHUB_OUTPUT}"
+          echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=${GITHUB_REPOSITORY_OWNER}" >> "${GITHUB_OUTPUT}"
 
       - name: Increase storage space
         uses: easimon/maximize-build-space@master
@@ -77,6 +78,7 @@ jobs:
             tag_name="${GITHUB_BASE_REF}"
           fi
           echo "WKDEV_SDK_TAG=${tag_name}" >> "${GITHUB_OUTPUT}"
+          echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=${GITHUB_REPOSITORY_OWNER}" >> "${GITHUB_OUTPUT}"
 
       - name: Install podman
         uses: gacts/install-podman@v1

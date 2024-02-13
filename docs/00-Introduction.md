@@ -42,7 +42,7 @@ On your **host system** ensure that **podman** is installed.
 * [podman](https://podman.io)
   * Fedora: [podman](https://packages.fedoraproject.org/pkgs/podman/podman)
   * Debian (sid): [podman](https://packages.debian.org/sid/podman)
-  * Ubuntu (starting from 22.04): [podman](https://packages.ubuntu.com/jammy/podman)
+  * Ubuntu (starting from 23.04): [podman](https://packages.ubuntu.com/lunar/podman)
   * macOS: [podman](https://formulae.brew.sh/formula/podman)
 
 That's all you need to install on your host system. Now it's the time to get a fresh WebKit source

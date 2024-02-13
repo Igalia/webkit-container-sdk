@@ -2,7 +2,9 @@ name: wkdev-sdk
 on:
   push:
     branches: [ main ]
+    paths-ignore: [ docs/*, README.md]
   pull_request:
+    paths-ignore: [ docs/*, README.md]
 defaults:
   run:
     shell: bash

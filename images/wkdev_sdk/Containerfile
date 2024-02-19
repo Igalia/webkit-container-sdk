@@ -5,7 +5,9 @@ FROM ubuntu:23.04
 
 LABEL maintainer="webkit-gtk@lists.webkit.org"
 LABEL version="1.0"
-LABEL description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 23.04"
+LABEL org.opencontainers.image.title="WebKit SDK"
+LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 23.04"
+LABEL org.opencontainers.image.source=https://github.com/Igalia/wkdev-sdk
 
 # Tweakable "make -j <x>" setting.
 ARG NUMBER_OF_PARALLEL_BUILDS=4

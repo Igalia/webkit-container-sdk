@@ -26,9 +26,9 @@ is_nvidia_gpu_installed() {
 }
 
 # This distribution also works for 23.04 -- has no official support though.
-get_nvidia_ubuntu_distribution() { echo "ubuntu22.04"; } # -> symlinks to ubuntu18.04, their only packages
+get_nvidia_ubuntu_distribution() { echo "stable/ubuntu22.04"; }     # -> symlinks to ubuntu18.04, their only packages
 get_nvidia_host_package() { echo "nvidia-container-toolkit-base"; } # to be installed on host to create CDI specs
-get_nvidia_container_package() { echo "nvidia-utils-525"; }         # to be installed in the container to have 'nvidia-smi' available
+get_nvidia_container_package() { echo "nvidia-utils-545"; }         # to be installed in the container to have 'nvidia-smi' available
 
 get_nvidia_repository_name() { echo "libnvidia-container"; }
 get_nvidia_repository_url() { echo "https://nvidia.github.io/$(get_nvidia_repository_name)"; }

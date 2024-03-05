@@ -1,12 +1,12 @@
 # Copyright 2024 Igalia S.L.
 # SPDX-License: MIT
 
-FROM ubuntu:23.04
+FROM ubuntu:23.10
 
 LABEL maintainer="webkit-gtk@lists.webkit.org"
 LABEL version="1.0"
 LABEL org.opencontainers.image.title="WebKit SDK"
-LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 23.04"
+LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 23.10"
 LABEL org.opencontainers.image.source=https://github.com/Igalia/wkdev-sdk
 
 # Tweakable "make -j <x>" setting.
@@ -130,4 +130,3 @@ RUN for command in clang clang++ clangd clang-format clang-tidy lldb lldb-server
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog
-

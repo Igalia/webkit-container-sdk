@@ -1,4 +1,4 @@
-# Daemon providing dynamic access to debug symbols (/ sources, not yet available on Ubuntu)
+# Daemon providing dynamic access to debug symbols / sources for system packages
 debuginfod
 
 # Container/capabilities support tools

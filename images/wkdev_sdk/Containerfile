@@ -1,12 +1,12 @@
 # Copyright 2024 Igalia S.L.
 # SPDX-License: MIT
 
-FROM ubuntu:23.04
+FROM ubuntu:24.04
 
 LABEL maintainer="webkit-gtk@lists.webkit.org"
 LABEL version="1.0"
 LABEL org.opencontainers.image.title="WebKit SDK"
-LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 23.04"
+LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 24.04"
 LABEL org.opencontainers.image.source=https://github.com/Igalia/wkdev-sdk
 
 # Tweakable "make -j <x>" setting.
@@ -63,7 +63,7 @@ RUN dpkg-reconfigure locales
 # Install all dependencies for WebKit/GStreamer/etc in one pass.
 WORKDIR /var/tmp/wkdev-packages
 COPY /required_system_packages/*.lst .
-RUN sed -i '/deb-src/s/^# //' /etc/apt/sources.list && \
+RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources && \
     ${APT_UPDATE} && \
     for list in *.lst; do \
         ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}"); \
@@ -95,7 +95,7 @@ RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
 
 # Register basic JHBuild environment
 # TODO: Instead of hardcoding here the values it would be better to
-# explore the possibility of generating it dinamically with "jhbuild shell"
+# explore the possibility of generating it dynamically with "jhbuild shell"
 # when the user enters into the container (or similar), but that may cause
 # issues with the env not exported when someone enter into the
 # container via direct command exec rather than by login
@@ -119,9 +119,8 @@ COPY /rootfs/etc/ccache.conf /etc/ccache.conf
 
 # Convenience symlink for clang tools, the VSCode extension doesn't find these by default.
 RUN for command in clang clang++ clangd clang-format clang-tidy lld lldb lldb-server lldb-vscode; do \
-        ln -s "/usr/bin/${command}-16" "/usr/local/bin/${command}"; \
-    done && ln -s "/usr/bin/lld-16" "/usr/local/bin/ld.lld";
+        ln -s "/usr/bin/${command}-18" "/usr/local/bin/${command}"; \
+    done && ln -s "/usr/bin/lld-18" "/usr/local/bin/ld.lld";
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog
-

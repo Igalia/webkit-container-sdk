@@ -1,7 +1,7 @@
 name: wkdev-sdk
 on:
   push:
-    branches: [ main ]
+    branches: [ main, tag/** ]
     paths-ignore: [ docs/*, README.md]
   pull_request:
     paths-ignore: [ docs/*, README.md]
@@ -16,6 +16,8 @@ jobs:
         run: |
           if [ "${GITHUB_BASE_REF}" = 'main' ]; then
             tag_name='latest'
+          elif [[ "${GITHUB_BASE_REF}" =~ ^tag/(.*)$ ]]; then
+            tag_name="${BASH_REMATCH[1]}"
           else
             tag_name="${GITHUB_BASE_REF}"
           fi
@@ -68,12 +70,14 @@ jobs:
   deploy:
     runs-on: ubuntu-22.04
     needs: build
-    if: github.ref_name == 'main'
+    if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
     steps:
       - name: Set tag name
         run: |
           if [ "${GITHUB_BASE_REF}" = 'main' ]; then
             tag_name='latest'
+          elif [[ "${GITHUB_BASE_REF}" =~ ^tag/(.*)$ ]]; then
+            tag_name="${BASH_REMATCH[1]}"
           else
             tag_name="${GITHUB_BASE_REF}"
           fi

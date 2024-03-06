@@ -61,9 +61,6 @@ ENV LC_ALL ${CONTAINER_LOCALE}
 ENV LANG ${CONTAINER_LOCALE}
 RUN dpkg-reconfigure locales
 
-# As we are in a container normal xdg-open doesn't work but we can use flatpak's portal instead.
-RUN ln -s /usr/libexec/flatpak-xdg-utils/xdg-open /usr/local/bin/xdg-open
-
 # Install all dependencies for WebKit/GStreamer/etc in one pass.
 WORKDIR /var/tmp/wkdev-packages
 COPY /required_system_packages/*.lst .

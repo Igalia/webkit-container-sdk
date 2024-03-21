@@ -18,7 +18,7 @@ argsparse_use_option =exec           "Treat all remaining non-option arguments (
 argsparse_use_option =name:          "Name of container" default:wkdev
 
 argsparse_use_option max-retries:    "Maximum number of <wait>+<try-to-enter> cycles" type:uint default:10
-argsparse_use_option sleep-duration: "Amount of seconds to sleep before attempting to enter the container (during first-time container run)" type:uint default:10
+argsparse_use_option sleep-duration: "Amount of seconds to sleep before attempting to enter the container (during first-time container run)" type:uint default:20
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -119,7 +119,7 @@ run() {
             run_podman_silent ${podman_arguments[@]} exec "${container_name}" test -f "$(get_init_done_file)" && break
 
             retries=$((retries+1))
-            [ ${retries} -eq 10 ] && _abort_ "Container does not start, please investigate"
+            [ ${retries} -eq ${max_retries} ] && _abort_ "Container does not start, please investigate using 'podman logs -f ${container_name}'"
 
             echo "   Retry ${retries}/${max_retries} in ${sleep_duration_in_seconds} seconds..."
             sleep ${sleep_duration_in_seconds}

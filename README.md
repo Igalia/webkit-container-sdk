@@ -1,6 +1,6 @@
-## wkdev-sdk
+## WebKit Container SDK
 
-Welcome to wkdev-sdk, the all-in-one SDK for WebKit GTK/WPE port development.
+Welcome to `WebKit Container SDK`, the all-in-one SDK for WebKit GTK/WPE port development.
 
 It provides a fully-equipped container image ready for WebKit development
 as well as scripts to run the image using `podman`.
@@ -13,11 +13,11 @@ information the SDK provides but the guide below will cover common usage.
 
 ### Quickstart guide
 
-1. Integrate `wkdev-sdk` with your shell environment.
+1. Integrate `WebKit Container SDK` with your shell environment.
 
 Add the following to your shell configuration file (e.g. `~/.bashrc`, `~/.zprofile`, ...)
 to ensure that the `${WKDEV_SDK}` environment variable points to the correct location
-of your `wkdev-sdk` Git checkout. It also extends the `${PATH}` to make the `wkdev-*` scripts
+of your `WebKit Container SDK` Git checkout. It also extends the `${PATH}` to make the `wkdev-*` scripts
 provided by this repository accessible without having to specifcy full paths in the shell.
 
 ```sh
@@ -25,7 +25,7 @@ source /absolute/path/to/your/Git/checkout/of/wkdev-sdk/register-sdk-on-host.sh
 ```
 
 Launch a new shell, or `source` your shell configuration files to verify, `${WKDEV_SDK}`
-now expects as intented - pointing to your `wkdev-sdk` checkout.
+now expects as intented - pointing to your `WebKit Container SDK` checkout.
 
 2. Create a new **wkdev** container for WebKit development
 
@@ -85,7 +85,7 @@ To run tests / execute MiniBrowser, try;
 
 ### Update guide
 
-You should check, once in a while, if there is a new upstream version of the `wkdev-sdk` image available.
+You should check, once in a while, if there is a new upstream version of the `WebKit Container SDK` image available.
 
 1. Use the `wkdev-update` tool.
 

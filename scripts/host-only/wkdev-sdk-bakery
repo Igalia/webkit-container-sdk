@@ -20,6 +20,7 @@ argsparse_use_option =verbose     "Increase verbosity of this script"
 argsparse_use_option =name:       "Name of container image" mandatory default:wkdev-sdk
 argsparse_use_option =env:        "Environment variable as string array, e.g. -e KEY=value,FOO=bar" cumulative
 argsparse_use_option =mode:       "Operation mode: 'build', 'deploy', or 'export'" mandatory
+argsparse_use_option =platforms:  "Build container for given set of platforms" mandatory default:"linux/amd64"
 argsparse_use_option idle-cores:  "Number of CPU cores to leave idle, when building the image" type:uint default:2
 argsparse_use_option =tag:        "Tag to use for created image." default:$(get_default_container_tag)
 argsparse_use_option =arch:       "Container architecture."
@@ -46,6 +47,7 @@ process_command_line_arguments() {
     idle_cores=${program_options["idle-cores"]}
 
     operation_mode="${program_options["mode"]}"
+    platforms="${program_options["platforms"]}"
     [ "${operation_mode}" != 'build' ] && [ "${operation_mode}" != 'deploy' ] && [ "${operation_mode}" != 'export' ] && _abort_ "Unknown operation mode: '${operation_mode}' (valid choices are 'build', 'deploy', or 'export')"
 }
 
@@ -75,7 +77,9 @@ build_image() {
         podman_argument+=("--env" "${environment_variable}")
     done
 
-    run_podman_silent_unless_verbose build ${podman_argument[@]} . || _abort_ "Container image build failed"
+    run_podman_silent manifest rm "$(get_tag_for_build)"
+    run_podman_silent_unless_verbose manifest create "$(get_tag_for_build)" || _abort_ "Container image manifest creation failed"
+    run_podman_silent_unless_verbose build --jobs ${podman_argument[@]} --platform "${platforms}" --manifest "$(get_tag_for_build)" . || _abort_ "Container image build failed"
     timer_stop
     popd &>/dev/null
 }
@@ -88,7 +92,8 @@ deploy_image() {
 
     local image_directory="$(get_image_directory_by_name "${container_image_name}")"
     pushd "${image_directory}" &>/dev/null || _abort_ "Switching to directory '${image_directory}' failed"
-    run_podman_silent_unless_verbose push "$(get_tag_for_build)" || _abort_ "Pushing to registry failed"
+    run_podman_silent_unless_verbose push "$(get_tag_for_build)" || _abort_ "Pushing image to registry failed"
+    run_podman_silent_unless_verbose manifest push "${container_image_name}:$(get_container_tag)" "docker://$(get_tag_for_build)" || _abort_ "Pushing manifest to registry failed"
     popd &>/dev/null
 }
 

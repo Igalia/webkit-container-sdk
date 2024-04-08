@@ -20,8 +20,8 @@ jobs:
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
 
-      - name: Install podman
-        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs qemu-user-static
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -29,7 +29,7 @@ jobs:
       - name: Build image
         run: |
           source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=build --verbose
+          wkdev-sdk-bakery --mode=build --platforms=linux/arm/v7,linux/amd64 --verbose
           wkdev-sdk-bakery --mode=export --verbose
 
       - name: Archive image

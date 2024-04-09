@@ -1,6 +1,6 @@
 ## WebKit Container SDK
 
-Welcome to `WebKit Container SDK`, the all-in-one SDK for WebKit GTK/WPE port development.
+Welcome to the WebKit Container SDK, the all-in-one SDK for WebKit GTK/WPE port development.
 
 It provides a fully-equipped container image ready for WebKit development
 as well as scripts to run the image using `podman`.
@@ -13,36 +13,36 @@ information the SDK provides but the guide below will cover common usage.
 
 ### Quickstart guide
 
-1. Integrate `WebKit Container SDK` with your shell environment.
+1. Integrate the SDK with your shell environment.
 
 Add the following to your shell configuration file (e.g. `~/.bashrc`, `~/.zprofile`, ...)
 to ensure that the `${WKDEV_SDK}` environment variable points to the correct location
-of your `WebKit Container SDK` Git checkout. It also extends the `${PATH}` to make the `wkdev-*` scripts
+of your `webkit-container-sdk` Git checkout. It also extends the `${PATH}` to make the `wkdev-*` scripts
 provided by this repository accessible without having to specifcy full paths in the shell.
 
 ```sh
-source /absolute/path/to/your/Git/checkout/of/wkdev-sdk/register-sdk-on-host.sh
+source /absolute/path/to/your/Git/checkout/of/webkit-container-sdk/register-sdk-on-host.sh
 ```
 
 Launch a new shell, or `source` your shell configuration files to verify, `${WKDEV_SDK}`
-now expects as intented - pointing to your `WebKit Container SDK` checkout.
+now expects as intented - pointing to your `webkit-container-sdk` checkout.
 
 2. Create a new **wkdev** container for WebKit development
 
 Execute the following command on your host system:
 
 ```sh
-wkdev-create --name wkdev --create-home --home "${HOME}/wkdev-home"
+wkdev-create --create-home
 ```
 
-This will create a container named **wkdev**.
+This will create a container named **wkdev** by default or a custom one with `--name`
+and it will create a new home directory for the sdk in `${HOME}/wkdev-home` by default
+or a custom one with `--home`.
 
 Within the container, the `${HOME}` directory is not equal to the host `${HOME}` directory:
 `${HOME}/wkdev-home` (from host) is bind-mounted into the container as `/home/${USER}`.
 This avoids pollution of files in your host `${HOME}` directory and for convenience
 it's still exposed in the container, as `${HOST_HOME}`.
-
-The `name` and `home` values above are the defaults so you can omit them in regular usage.
 
 NOTE: `wkdev-create` will auto-detect the whole environment: X11, Wayland, PulseAudio, etc.
 and eventually needs **root** permissions on the *host system* to perform first-time-run-only
@@ -85,7 +85,7 @@ To run tests / execute MiniBrowser, try;
 
 ### Update guide
 
-You should check, once in a while, if there is a new upstream version of the `WebKit Container SDK` image available.
+You should check, once in a while, if there is a new upstream version of the `wkdev-sdk` image available.
 
 1. Use the `wkdev-update` tool.
 

@@ -23,7 +23,15 @@ get_default_container_registry_user_name() { echo "${WKDEV_SDK_CONTAINER_REGISTR
 #####
 ##### Container naming/versioning
 #####
-get_container_tag() { echo "${WKDEV_SDK_TAG:-latest}"; }
+get_container_tag() {
+    local default='latest'
+
+    if [[ "$(git rev-parse --abbrev-ref HEAD)" =~ tag/(.*) ]]; then
+        default="${BASH_REMATCH[1]}" 
+    fi
+
+    echo "${WKDEV_SDK_TAG:-"${default}"}";
+}
 
 # Given an image name, return the qualified image name "<registry>/<registry-user-name>/<image-name>"
 get_qualified_name() {

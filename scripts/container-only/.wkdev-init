@@ -212,7 +212,7 @@ sleep_forever() {
 
     echo ""
     echo "Sleeping forever..."
-    exec tail -f /dev/null
+    exec sleep infinity
 }
 
 # Main functionality

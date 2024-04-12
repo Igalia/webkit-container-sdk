@@ -121,9 +121,9 @@ COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host
 COPY /rootfs/etc/ccache.conf /etc/ccache.conf
 
 # Convenience symlink for clang tools, the VSCode extension doesn't find these by default.
-RUN for command in clang clang++ clangd clang-format clang-tidy lldb lldb-server lldb-vscode; do \
+RUN for command in clang clang++ clangd clang-format clang-tidy lld lldb lldb-server lldb-vscode; do \
         ln -s "/usr/bin/${command}-16" "/usr/local/bin/${command}"; \
-    done
+    done && ln -s "/usr/bin/lld-16" "/usr/local/bin/ld.lld";
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

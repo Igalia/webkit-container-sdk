@@ -1,2 +1,2 @@
 # Clang toolchain (current version: 16)
-clang-16 clangd-16 clang-format-16 clang-tidy-16 lldb-16 libstdc++-13-dev
+clang-16 clangd-16 clang-format-16 clang-tidy-16 lld-16 lldb-16 libstdc++-13-dev

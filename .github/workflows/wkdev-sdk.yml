@@ -5,6 +5,7 @@ on:
     paths-ignore: [ docs/*, README.md]
   pull_request:
     paths-ignore: [ docs/*, README.md]
+  create:
 defaults:
   run:
     shell: bash

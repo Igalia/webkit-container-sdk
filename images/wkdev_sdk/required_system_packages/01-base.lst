@@ -1,6 +1,9 @@
 # Daemon providing dynamic access to debug symbols (/ sources, not yet available on Ubuntu)
 debuginfod
 
+# Adwaita cursors
+adwaita-icon-theme-full
+
 # Container/capabilities support tools
 iptables libcap2-bin libyajl2 uidmap
 

@@ -24,7 +24,7 @@ For example, if you have this:
 
   STEP 41/46: WORKDIR /jhbuild
   --> 2fabea45a33f
-  STEP 42/46: RUN --mount=type=cache,target=/var/tmp/jhbuild ...
+  STEP 42/46: RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git ...
 
 Then you can debug step 27 with:
 

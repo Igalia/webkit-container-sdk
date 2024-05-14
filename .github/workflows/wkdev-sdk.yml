@@ -10,7 +10,7 @@ defaults:
     shell: bash
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Set tag name
         run: |
@@ -36,12 +36,9 @@ jobs:
           remove-haskell: true
           remove-codeql: true
           remove-docker-images: true
-      
-      - name: Install podman
-        uses: gacts/install-podman@v1
 
-      - name: Install fuse-overlayfs
-        run: sudo apt-get -y install fuse-overlayfs
+      - name: Install podman
+        run: sudo apt-get -y install podman fuse-overlayfs
 
       - name: Checkout repo
         uses: actions/checkout@v4

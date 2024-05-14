@@ -47,8 +47,7 @@ RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/no-sandbox
 
 # Update package list, upgrade to latest version, install necessary packages for
 # early bootstrapping: .deb package configuration + locale generation.
-RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt/lists/ \
-    ${APT_UPDATE} && \
+RUN ${APT_UPDATE} && \
     ${APT_INSTALL} apt-utils dialog libterm-readline-gnu-perl locales && \
     ${APT_UPGRADE} && ${APT_AUTOREMOVE}
 
@@ -64,8 +63,7 @@ RUN dpkg-reconfigure locales
 # Install all dependencies for WebKit/GStreamer/etc in one pass.
 WORKDIR /var/tmp/wkdev-packages
 COPY /required_system_packages/*.lst .
-RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt/lists/ \
-    sed -i '/deb-src/s/^# //' /etc/apt/sources.list && \
+RUN sed -i '/deb-src/s/^# //' /etc/apt/sources.list && \
     ${APT_UPDATE} && \
     for list in *.lst; do \
         ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}"); \
@@ -86,8 +84,7 @@ RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
 WORKDIR /jhbuild
-RUN --mount=type=tmpfs,target=/root/.cache --mount=type=cache,target=/root/.cache/sccache \
-    git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
+RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
     cd jhbuild && \
     ./autogen.sh --prefix=/usr/local && \
     make && \

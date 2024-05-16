@@ -37,8 +37,8 @@ jobs:
           remove-codeql: true
           remove-docker-images: true
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs qemu-user-static
+      - name: Install podman
+        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -46,7 +46,7 @@ jobs:
       - name: Build image
         run: |
           source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=build --platforms=linux/arm/v7,linux/amd64 --verbose
+          wkdev-sdk-bakery --mode=build --verbose
           wkdev-sdk-bakery --mode=export --verbose
 
       - name: Archive image

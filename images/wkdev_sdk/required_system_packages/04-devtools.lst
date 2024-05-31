@@ -15,3 +15,6 @@ python3-pip python3-cffi
 
 # For podman-host
 podman
+
+# post-install for Epiphany
+desktop-file-utils

@@ -9,7 +9,6 @@
       <dep package="dicts"/>
       <dep package="libwpe"/>
       <dep package="wpebackend-fdo"/>
-      <dep package="gstreamer"/>
       <dep package="sparkle-cdm"/>
       <dep package="libbacktrace"/>
     </dependencies>
@@ -84,8 +83,7 @@
   <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=enabled -Dintrospection=enabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled">
     <branch repo="gstreamer.freedesktop.org"
             checkoutdir="gstreamer"
-            module="gstreamer.git"
-            tag="1.22.6"/>
+            module="gstreamer.git"/>
     <dependencies>
       <dep package="openh264"/>
     </dependencies>

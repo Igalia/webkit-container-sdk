@@ -25,6 +25,8 @@ argsparse_use_option =name:       "Name of container" default:wkdev
 argsparse_use_option rm           "Force removal of container if it already exists."
 argsparse_use_option attach       "Attach to container as it starts up."
 argsparse_use_option no-pull      "Do not login or pull images."
+argsparse_use_option list-tags    "List available image tags."
+argsparse_use_option =tag:        "Create the container using a specific tag, see-also --list-tags." default:$(get_default_container_tag)
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -55,6 +57,14 @@ process_command_line_arguments() {
     argsparse_allow_no_argument "true"
     argsparse_parse_options "${@}"
     argsparse_is_option_set "trace" && set -o xtrace
+
+    if argsparse_is_option_set "list-tags"; then
+        echo ""
+        podman search "$(get_sdk_qualified_name)" --list-tags --format='{{ .Tag }}'
+        exit 0
+    fi
+
+    container_tag="${program_options["tag"]}"
 
     container_shell="${program_options["shell"]}"
     container_name="${program_options["name"]}"
@@ -450,7 +460,7 @@ build_podman_create_arguments() {
     try_process_podman ${1}
     set -o nounset
 
-    arguments+=("$(get_sdk_qualified_name_and_tag)")
+    arguments+=("$(get_sdk_qualified_name):${container_tag}")
 
     # Entry point
     arguments+=("/wkdev-sdk/scripts/container-only/.wkdev-init")

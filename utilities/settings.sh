@@ -23,7 +23,7 @@ get_default_container_registry_user_name() { echo "${WKDEV_SDK_CONTAINER_REGISTR
 #####
 ##### Container naming/versioning
 #####
-get_container_tag() {
+get_default_container_tag() {
     local default='latest'
 
     if [[ "$(git rev-parse --abbrev-ref HEAD)" =~ tag/(.*) ]]; then
@@ -40,18 +40,10 @@ get_qualified_name() {
     echo "$(get_default_container_registry)/$(get_default_container_registry_user_name)/${image_name}"
 }
 
-# Given an image name, return the tagged, qualified image name "<registry>/<registry-user-name>/<image-name>:<image-tag>"
-get_qualified_name_and_tag() {
-
-    local image_name="${1}"
-    local image_tag="${2}"
-    echo "$(get_qualified_name "${image_name}"):${image_tag}"
-}
 
 # Get absolute path to 'user_home_directory_defaults' directory in the wkdev-sdk.
 get_container_home_defaults_directory_name() { echo "${WKDEV_SDK}/images/wkdev_sdk/user_home_directory_defaults"; }
 
 ##### wkdev-sdk definitions
 get_sdk_image_name() { echo "wkdev-sdk"; }
-get_sdk_image_tag() { get_container_tag; }
-get_sdk_qualified_name_and_tag() { get_qualified_name_and_tag "$(get_sdk_image_name)" "$(get_sdk_image_tag)"; }
+get_sdk_qualified_name() { get_qualified_name "$(get_sdk_image_name)"; }

@@ -122,5 +122,11 @@ RUN for command in clang clang++ clangd clang-format clang-tidy lld lldb lldb-se
         ln -s "/usr/bin/${command}-18" "/usr/local/bin/${command}"; \
     done && ln -s "/usr/bin/lld-18" "/usr/local/bin/ld.lld";
 
+# Fix Qt6 system packages - missing symlinks in the Ubuntu-provided packages.
+RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \
+    for directory in /usr/include/x86_64-linux-gnu/qt6/*; do \
+      ln -s ${directory} ${directory}/${QT_VERSION}  >/dev/null 2>&1 || true; \
+    done
+
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

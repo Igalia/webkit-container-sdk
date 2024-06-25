@@ -60,7 +60,7 @@ process_command_line_arguments() {
 
     if argsparse_is_option_set "list-tags"; then
         echo ""
-        podman search "$(get_sdk_qualified_name)" --list-tags --format='{{ .Tag }}'
+        run_podman search "$(get_sdk_qualified_name)" --list-tags --format='{{ .Tag }}'
         exit 0
     fi
 

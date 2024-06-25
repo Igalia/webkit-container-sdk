@@ -20,6 +20,7 @@ argsparse_use_option =verbose     "Increase verbosity of this script"
 argsparse_use_option =name:       "Name of container image" mandatory default:wkdev-sdk
 argsparse_use_option =mode:       "Operation mode: 'build', 'deploy', or 'export'" mandatory
 argsparse_use_option idle-cores:  "Number of CPU cores to leave idle, when building the image" type:uint default:2
+argsparse_use_option =tag:        "Tag to use for created image." default:$(get_default_container_tag)
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -33,20 +34,21 @@ argsparse_usage_description="$(cat <<EOF
 EOF
 )"
 
-get_tag_for_build() { get_qualified_name_and_tag "${container_image_name}" "$(get_container_tag)"; }
-get_number_of_cores_for_build() { nproc --ignore=${idle_cores}; }
-
 process_command_line_arguments() {
 
     argsparse_parse_options "${@}"
     argsparse_is_option_set "trace" && set -o xtrace
 
     container_image_name="${program_options["name"]}"
+    container_tag="${program_options["tag"]}"
     idle_cores=${program_options["idle-cores"]}
 
     operation_mode="${program_options["mode"]}"
     [ "${operation_mode}" != 'build' ] && [ "${operation_mode}" != 'deploy' ] && [ "${operation_mode}" != 'export' ] && _abort_ "Unknown operation mode: '${operation_mode}' (valid choices are 'build', 'deploy', or 'export')"
 }
+
+get_tag_for_build() { echo "$(get_qualified_name "${container_image_name}"):${container_tag}"; }
+get_number_of_cores_for_build() { nproc --ignore=${idle_cores}; }
 
 build_image() {
 

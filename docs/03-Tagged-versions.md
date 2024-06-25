@@ -3,24 +3,20 @@
 Over time the SDK will introduce major changes that will break behavior;
 In order to easily use older versions we support tagged versions.
 
-There are two parts to a SDK version the scripts and the image.
+To use a specific tag the `wkdev-create` and `wkdev-sdk-bakery` commands take a `--tag`
+argument. You can also set the `WKDEV_SDK_TAG` environment variable.
 
-## Images
+To get a list of available tags you can pass `--list-tags` to `wkdev-create`.
 
-To use an older image with the latest scripts you can set `WKDEV_SDK_TAG`, e.g.:
+For example using an older image when creating a container:
 
 ```sh
-export WKDEV_SDK_TAG='23.04'
-wkdev-create --name='example-name'
+wkdev-create --name='example-name' --tag='23.04'
 ```
 
 As the scripts diverge from older images this *may* fail but for now should work fine.
-
-## Scripts
-
-To use older scripts you can simply checkout the branch for that tag: `git checkout tag/23.04`.
-
-This will use the `23.04` image by default but you may override it with `WKDEV_SDK_TAG`.
+However to use older scripts you can simply checkout the branch for that tag: `git checkout tag/23.04`.
+This will use the `23.04` image by default but you may override as mentioned above.
 
 ## Creating a tag
 

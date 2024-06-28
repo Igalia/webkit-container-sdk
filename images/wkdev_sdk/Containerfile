@@ -127,5 +127,8 @@ RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \
       ln -s ${directory} ${directory}/${QT_VERSION}  >/dev/null 2>&1 || true; \
     done
 
+# Build custom sccache version (the Ubuntu provided 0.7.7 package is broken)
+RUN cargo install --root /usr/local --version 0.8.1 --locked sccache
+
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

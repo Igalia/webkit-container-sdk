@@ -29,7 +29,13 @@ install_vscode() {
         return
     fi
 
-    if ! curl --silent --fail --location "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64" -o /tmp/code.deb; then
+    local download_url='https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64'
+
+    if [ "$(uname -m)" = 'aarch64' ]; then
+        download_url='https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-arm64'
+    fi
+
+    if ! curl --silent --fail --location "${download_url}" -o /tmp/code.deb; then
         echo "Failed to download Visual Studio Code."
         exit 1
     fi

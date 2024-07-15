@@ -8,6 +8,7 @@
       <dep package="meson"/>
       <dep package="dicts"/>
       <dep package="libwpe"/>
+      <dep package="libsoup"/>
       <dep package="wpebackend-fdo"/>
       <dep package="sparkle-cdm"/>
       <dep package="libbacktrace"/>

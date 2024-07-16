@@ -230,6 +230,11 @@ sleep_forever() {
 # Main functionality
 run() {
 
+    if [ "$EUID" -ne 0 ]; then
+        echo "This script should only be ran as root."
+        exit 1
+    fi
+
     process_command_line_arguments "${@}"
 
     if [ -f "$(get_init_done_file)" ]; then

@@ -54,17 +54,12 @@ try_update_apt_cache() {
     echo ""
 
     echo "[2/13] Updating APT repositories..."
-    if is_first_time_run; then
-        if [[ "$(uname -r)" =~ asahi ]]; then
-            echo "Adding ubuntu-asahi PPA..."
-            add_ppa 'ubuntu-asahi/ubuntu-asahi' 'asahi' '39CC27E17A201624'
-        fi
-
-        update_packages || _abort_ "Cannot update APT repositories"
-    else
-        # Do not _abort_ unless this is the first time the container is entered. apt-get may fail if there is no internet connectivity on the host, but we still want to enter.
-        update_packages || _log_ "Cannot update APT repositories (continuing)"
+    if [[ "$(uname -r)" =~ asahi ]]; then
+        echo "Adding ubuntu-asahi PPA..."
+        add_ppa 'ubuntu-asahi/ubuntu-asahi' 'asahi' '39CC27E17A201624'
     fi
+
+    update_packages || _abort_ "Cannot update APT repositories"
 }
 
 try_install_shell_package() {

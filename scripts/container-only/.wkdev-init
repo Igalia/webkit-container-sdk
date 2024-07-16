@@ -45,7 +45,7 @@ process_command_line_arguments() {
 try_copy_hosts_file() {
 
     echo ""
-    echo "[1/12] Copying /etc/hosts file from host to container..."
+    echo "[1/13] Copying /etc/hosts file from host to container..."
     cp /host/etc/hosts /etc/hosts || _abort_ "Cannot copy /etc/hosts file from host to container"
 }
 
@@ -53,8 +53,13 @@ try_update_apt_cache() {
 
     echo ""
 
-    echo "[2/12] Updating APT repositories..."
+    echo "[2/13] Updating APT repositories..."
     if is_first_time_run; then
+        if [[ "$(uname -r)" =~ asahi ]]; then
+            echo "Adding ubuntu-asahi PPA..."
+            add_ppa 'ubuntu-asahi/ubuntu-asahi' 'asahi' '39CC27E17A201624'
+        fi
+
         update_packages || _abort_ "Cannot update APT repositories"
     else
         # Do not _abort_ unless this is the first time the container is entered. apt-get may fail if there is no internet connectivity on the host, but we still want to enter.
@@ -68,10 +73,22 @@ try_install_shell_package() {
 
     container_shell_package=$(basename "${container_shell}")
     if is_package_installed "${container_shell_package}"; then
-        echo "[3/12] No need to install user shell package '${container_shell_package}' - it's already present."
+        echo "[3/13] No need to install user shell package '${container_shell_package}' - it's already present."
     else
-        echo "[3/12] Installing user shell package '${container_shell_package}'..."
+        echo "[3/13] Installing user shell package '${container_shell_package}'..."
         ensure_package_installed "${container_shell_package}"
+    fi
+}
+
+try_install_optional_drivers() {
+
+    echo ""
+
+    if [[ "$(uname -r)" =~ asahi ]]; then
+        echo "[4/13] Installing Asahi drivers..."
+        upgrade_packages 'libegl-mesa0'
+    else
+        echo "[4/13] Skipping optional drivers, not needed."
     fi
 }
 
@@ -79,11 +96,11 @@ try_install_additional_packages() {
 
     echo ""
     if [ -z "${additional_packages}" ]; then
-        echo "[4/12] No need to install additional packages - none necessary."
+        echo "[5/13] No need to install additional packages - none necessary."
         return 0
     fi
 
-    echo "[4/12] Installing additional packages '${additional_packages}', if necessary..."
+    echo "[5/13] Installing additional packages '${additional_packages}', if necessary..."
     for package in ${additional_packages}; do
         if is_package_installed "${package}"; then
             echo "      Skipping '${package}' - it's already present."
@@ -99,10 +116,10 @@ try_switch_shell_for_user() {
     echo ""
 
     if ! grep "${container_user_name}" /etc/passwd | grep --quiet "${container_shell}"; then
-        echo "[5/12] Switch shell to '${container_shell}' for container user '${container_user_name}'..."
+        echo "[6/13] Switch shell to '${container_shell}' for container user '${container_user_name}'..."
         usermod --shell "${container_shell}" "${container_user_name}" || _abort_ "Cannot switch shell: executing 'usermod' failed"
     else
-        echo "[5/12] No need to switch shell to '${container_shell}' - it's already the default for user '${container_user_name}'."
+        echo "[6/13] No need to switch shell to '${container_shell}' - it's already the default for user '${container_user_name}'."
     fi
 }
 
@@ -111,7 +128,7 @@ try_setup_setgid_subuid_files() {
     echo ""
 
     if ! grep --quiet "${container_user_name}" /etc/subuid; then
-        echo "[6/12] Setup /etc/sub{gid|uid} files for user '${container_user_name}'..."
+        echo "[7/13] Setup /etc/sub{gid|uid} files for user '${container_user_name}'..."
         echo ""
 
         # FIXME: This assumes the host UID/GID subordinate range is 100000-200000. We should rather
@@ -123,7 +140,7 @@ try_setup_setgid_subuid_files() {
         # be able to figure out exactly this 'free' subordinate-range. Needs some testing.
         usermod --add-subuids 50000-99999 --add-subgids 50000-99999 "${container_user_name}" || _abort_ "Cannot add user '${container_user_name}' to /etc/subgid or /etc/subuid file: executing usermod failed"
     else
-        echo "[6/12] No need to setup /etc/sub{gid|uid} -- UID/GID mapping for container user '${container_user_name}' already present."
+        echo "[7/13] No need to setup /etc/sub{gid|uid} -- UID/GID mapping for container user '${container_user_name}' already present."
     fi
 
     echo "      -> /etc/subgid contents: $(cat /etc/subgid)"
@@ -134,7 +151,7 @@ try_setup_journal_dev_log() {
 
     echo ""
 
-    echo "[7/12] Set /dev/log symbolic link to /run/systemd/journal/dev-log ..."
+    echo "[8/13] Set /dev/log symbolic link to /run/systemd/journal/dev-log ..."
     sudo ln -sf /run/systemd/journal/dev-log /dev/log
 }
 
@@ -144,7 +161,7 @@ try_setup_sudoers_file() {
 
     local sudoers_directory="/etc/sudoers.d"
     local sudoers_file="${sudoers_directory}/sudoers"
-    echo "[8/12] Setup sudoers file '${sudoers_file}' for user '${container_user_name}', if necessary..."
+    echo "[9/13] Setup sudoers file '${sudoers_file}' for user '${container_user_name}', if necessary..."
 
     mkdir --parents "${sudoers_directory}" &>/dev/null
     chmod 750 "${sudoers_directory}"
@@ -168,7 +185,7 @@ try_setup_run_user_directory() {
 
     local container_user_id=$(id --user --real "${container_user_name}")
     local current_run_user_directory="/run/user/${container_user_id}"
-    echo "[9/12] Initialize systemd-style /run/user/ user session directory '${current_run_user_directory}', if necessary..."
+    echo "[10/13] Initialize systemd-style /run/user/ user session directory '${current_run_user_directory}', if necessary..."
 
     mkdir --parents "${current_run_user_directory}" &>/dev/null
     chmod 700 "${current_run_user_directory}"
@@ -179,7 +196,7 @@ try_setup_dockerenv_file() {
 
     echo ""
 
-    echo "[10/12] Create /.dockerenv file to make 'bwrap' detection work in legacy Epiphany/cog versions..."
+    echo "[11/13] Create /.dockerenv file to make 'bwrap' detection work in legacy Epiphany/cog versions..."
     sudo touch /.dockerenv
 }
 
@@ -188,7 +205,7 @@ try_setup_permissions_jhbuild_directory() {
     echo ""
 
     local jhbuild_directory="/jhbuild"
-    echo "[11/12] Setup jhbuild '${jhbuild_directory}' directory permissions..."
+    echo "[12/13] Setup jhbuild '${jhbuild_directory}' directory permissions..."
 
     chown --recursive "${container_user_name}:${container_group_name}" "${jhbuild_directory}" &>/dev/null
 
@@ -201,10 +218,10 @@ try_firstrun_script() {
     user_home=$(getent passwd "${container_user_name}" | cut -d: -f6)
 
     if [ -x "${user_home}/.wkdev-firstrun" ]; then
-        echo "[12/12] Executing ${user_home}/.wkdev-firstrun"
+        echo "[13/13] Executing ${user_home}/.wkdev-firstrun"
         su "${container_user_name}" --group="${container_group_name}" --command="${user_home}/.wkdev-firstrun"
     else
-        echo "[12/12] Skipping ${user_home}/.wkdev-firstrun script, no executable found."
+        echo "[13/13] Skipping ${user_home}/.wkdev-firstrun script, no executable found."
     fi
 }
 
@@ -233,6 +250,7 @@ run() {
     try_copy_hosts_file
     try_update_apt_cache
     try_install_shell_package
+    try_install_optional_drivers
     try_install_additional_packages
     try_switch_shell_for_user
     try_setup_setgid_subuid_files

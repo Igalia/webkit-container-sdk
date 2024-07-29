@@ -26,7 +26,7 @@ get_default_container_registry_user_name() { echo "${WKDEV_SDK_CONTAINER_REGISTR
 get_default_container_tag() {
     local default='latest'
 
-    if [[ "$(git rev-parse --abbrev-ref HEAD)" =~ tag/(.*) ]]; then
+    if [[ "$(git -C "${WKDEV_SDK}" rev-parse --abbrev-ref HEAD)" =~ tag/(.*) ]]; then
         default="${BASH_REMATCH[1]}" 
     fi
 

@@ -1,5 +1,8 @@
 export DEBUGINFOD_URLS="https://debuginfod.ubuntu.com"
 
+# Otherwise one has to pass --break-system-packages to python, when installing custom packages.
+export PIP_BREAK_SYSTEM_PACKAGES=1
+
 # wkdev-sdk integration
 export WKDEV_SDK=/wkdev-sdk
 export PATH="${WKDEV_SDK}/scripts:${WKDEV_SDK}/scripts/container-only:$(python3 -m site --user-base)/bin:${PATH}"

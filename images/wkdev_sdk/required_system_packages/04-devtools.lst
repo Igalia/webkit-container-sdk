@@ -8,7 +8,8 @@ icecc ccache cargo
 valgrind rr perf-tools-unstable systemd-coredump
 
 # Documentation
-asciidoc doxygen doxygen-latex doxygen-doxyparse graphviz python3-sphinx devhelp libglib2.0-doc libgtk-4-doc libsoup-3.0-doc
+asciidoc doxygen doxygen-latex doxygen-doxyparse graphviz python3-sphinx
+devhelp libglib2.0-doc libgtk-4-doc libsoup-3.0-doc libsysprof-capture-4-dev
 
 # For WebKit's scripts such as git-webkit
 python3-pip python3-cffi

@@ -12,6 +12,7 @@
       <dep package="wpebackend-fdo"/>
       <dep package="sparkle-cdm"/>
       <dep package="libbacktrace"/>
+      <dep package="sysprof"/>
     </dependencies>
   </metamodule>
 
@@ -64,6 +65,28 @@
     </branch>
   </meson>
 
+  <meson id="gtk4">
+    <branch repo="gitlab.gnome.org"
+            checkoutdir="gtk4"
+            module="GNOME/gtk.git" tag="4.15.6"/>
+  </meson>
+
+  <meson id="libadwaita" mesonargs="-Dvapi=false -Dgtk_doc=true">
+    <branch repo="gitlab.gnome.org"
+            module="GNOME/libadwaita.git" tag="1.6.beta"/>
+    <dependencies>
+      <dep package="gtk4"/>
+      <dep package="sassc"/>
+    </dependencies>
+  </meson>
+
+  <autotools id="libbacktrace">
+    <branch repo="github.com"
+            module="ianlancetaylor/libbacktrace.git"
+            checkoutdir="libbacktrace"/>
+  </autotools>
+
+  <!-- These are not built by default but useful for hacking on. -->
   <meson id="openh264" mesonargs="-Dtests=disabled">
     <branch repo="github.com"
             checkoutdir="openh264"
@@ -81,13 +104,6 @@
     </dependencies>
   </meson>
 
-  <autotools id="libbacktrace">
-    <branch repo="github.com"
-            module="ianlancetaylor/libbacktrace.git"
-            checkoutdir="libbacktrace"/>
-  </autotools>
-
-  <!-- These are not built by default but useful for hacking on. -->
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled">
     <branch repo="gitlab.gnome.org"
             checkoutdir="glib"
@@ -109,12 +125,6 @@
             module="GNOME/libsoup.git"/>
   </meson>
 
-  <meson id="gtk4">
-    <branch repo="gitlab.gnome.org"
-            checkoutdir="gtk4"
-            module="GNOME/gtk.git"/>
-  </meson>
-
   <!-- Everything in this section is just for Epiphany. -->
   <systemmodule id="sassc">
     <branch repo="system"/>
@@ -122,27 +132,6 @@
       <dep type="path" name="sassc" />
     </systemdependencies>
   </systemmodule>
-
-  <systemmodule id="libyaml">
-    <pkg-config>yaml-0.1.pc</pkg-config>
-    <branch repo="system"/>
-  </systemmodule>
-
-  <systemmodule id="libappstream">
-    <pkg-config>appstream.pc</pkg-config>
-    <branch repo="system"/>
-  </systemmodule>
-
-  <meson id="libadwaita" mesonargs="-Dvapi=false -Dgtk_doc=true">
-    <branch repo="gitlab.gnome.org"
-            module="GNOME/libadwaita.git"/>
-    <dependencies>
-      <dep package="libyaml"/>
-      <dep package="libappstream"/>
-      <dep package="gtk4"/>
-      <dep package="sassc"/>
-    </dependencies>
-  </meson>
 
   <systemmodule id="gcr">
     <pkg-config>gcr-4.pc</pkg-config>
@@ -167,6 +156,32 @@
       <dep package="libarchive"/>
       <dep package="libportal-gtk4"/>
       <dep package="libadwaita"/>
+    </dependencies>
+  </meson>
+
+  <!-- Everything in this section is just for sysprof. -->
+  <meson id="libpanel" mesonargs="-Dvapi=false">
+    <branch repo="gitlab.gnome.org"
+            module="GNOME/libpanel.git" tag="1.7.1"/>
+    <dependencies>
+      <dep package="libadwaita"/>
+    </dependencies>
+  </meson>
+
+  <meson id="libdex" mesonargs="-Dvapi=false">
+    <branch repo="gitlab.gnome.org"
+            module="GNOME/libdex.git" tag="0.7.1"/>
+  </meson>
+
+  <!-- TODO: Switch to sysprof 47.0 release, once it's ready -->
+  <meson id="sysprof" mesonargs="-Dsysprofd=host -Dpolkit-agent=disabled">
+    <branch repo="gitlab.gnome.org"
+            module="GNOME/sysprof.git" tag="master" revision="10217bb0e231c820d0012150151511d99c877ff3">
+    </branch>
+    <dependencies>
+      <dep package="libadwaita"/>
+      <dep package="libdex"/>
+      <dep package="libpanel"/>
     </dependencies>
   </meson>
 

@@ -110,6 +110,11 @@ run() {
     run_test "Test PulseAudio: (should work if it works on the host)" \
         pactl info
 
+    # Our self-compiled GStreamer interferes with the system-provided one, avoid that for testing epiphany.
+    unset GST_PLUGIN_PATH_1_0
+    unset GST_PLUGIN_SCANNER
+    unset LD_LIBRARY_PATH
+
     run_test "Test Epiphany browser: (try youtube.com, CSS 3D demos, WebGL, etc.)" \
         epiphany
 }

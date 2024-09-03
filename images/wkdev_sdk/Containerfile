@@ -93,9 +93,6 @@ RUN rustup toolchain install 1.78 && \
     cargo install --root /usr/local cargo-c && \
     rm -rf ~/.cargo
 
-# Verify Rust installation.
-RUN rustc --version && cargo --version
-
 # Copy jhbuild helper files and do the initial build & install
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules

@@ -80,6 +80,11 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     rm -rf WebKit && \
     ${APT_AUTOREMOVE}
 
+# Add Rust environment.
+ENV RUSTUP_HOME="/opt/rust" \
+    CARGO_HOME="/opt/rust" \
+    PATH="/root/.cargo/bin:${PATH}"
+
 # Install any necessary rust projects
 # The Ubuntu provided sccache 0.7.7 package is broken
 # Building GStreamer needs cargo-c
@@ -87,6 +92,9 @@ RUN rustup toolchain install 1.78 && \
     cargo install --root /usr/local --version 0.8.1 --locked sccache && \
     cargo install --root /usr/local cargo-c && \
     rm -rf ~/.cargo
+
+# Verify Rust installation.
+RUN rustc --version && cargo --version
 
 # Copy jhbuild helper files and do the initial build & install
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc

@@ -80,6 +80,14 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     rm -rf WebKit && \
     ${APT_AUTOREMOVE}
 
+# Install any necessary rust projects
+# The Ubuntu provided sccache 0.7.7 package is broken
+# Building GStreamer needs cargo-c
+RUN rustup toolchain install 1.78 && \
+    cargo install --root /usr/local --version 0.8.1 --locked sccache && \
+    cargo install --root /usr/local cargo-c && \
+    rm -rf ~/.cargo
+
 # Copy jhbuild helper files and do the initial build & install
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
@@ -126,9 +134,6 @@ RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \
     for directory in /usr/include/x86_64-linux-gnu/qt6/*; do \
       ln -s ${directory} ${directory}/${QT_VERSION}  >/dev/null 2>&1 || true; \
     done
-
-# Build custom sccache version (the Ubuntu provided 0.7.7 package is broken)
-RUN cargo install --root /usr/local --version 0.8.1 --locked sccache
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

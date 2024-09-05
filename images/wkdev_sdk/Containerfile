@@ -138,7 +138,10 @@ RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \
     done
 
 # Check GStreamer plugins are installed.
-RUN gst-inspect-1.0
+RUN gst-inspect-1.0 audiornnoise && \
+    gst-inspect-1.0 cea608tott && \
+    gst-inspect-1.0 livesync && \
+    gst-inspect-1.0 rsrtp
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

@@ -5,7 +5,6 @@
 
   <metamodule id="webkit-sdk-deps">
     <dependencies>
-      <dep package="meson"/>
       <dep package="dicts"/>
       <dep package="libwpe"/>
       <dep package="libsoup"/>

@@ -95,12 +95,21 @@
     </branch>
   </meson>
 
-  <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=enabled -Dintrospection=enabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Drs=enabled -Dwebrtc=enabled">
+  <meson id="dav1d" mesonargs="-Denable_docs=false -Denable_examples=false -Denable_tests=false -Dxxhash_muxer=disabled">
+    <branch repo="github.com"
+            checkoutdir="dav1d"
+            module="videolan/dav1d.git"
+            tag="1.4.2" >
+    </branch>
+  </meson>
+
+  <meson id="gstreamer" mesonargs="-Dintrospection=enabled -Dlibnice=enabled -Dpython=enabled -Drs=enabled -Dwebrtc=enabled -Ddoc=disabled -Dexamples=disabled -Dgtk_doc=disabled -Dtests=disabled -Dgst-plugins-bad:av1=enabled -Dgst-plugins-bad:avtp=disabled -Dgst-plugins-bad:microdns=disabled">
     <branch repo="gstreamer.freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer.git"
             tag="1.24.6"/>
     <dependencies>
+      <dep package="dav1d"/>
       <dep package="openh264"/>
     </dependencies>
   </meson>

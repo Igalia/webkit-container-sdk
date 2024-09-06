@@ -39,6 +39,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Free disk space
+        run: .github/workflows/scripts/free_disk_space.sh
+
       - name: Build image
         run: |
           source ./register-sdk-on-host.sh

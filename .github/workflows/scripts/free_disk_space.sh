@@ -20,7 +20,6 @@ echo ""
 # Remove packages
 echo ""
 echo "Removing large packages"
-sudo apt-get remove -y '^dotnet-.*'
 sudo apt-get remove -y '^llvm-.*'
 sudo apt-get remove -y 'php.*'
 sudo apt-get remove -y '^mongodb-.*'
@@ -36,13 +35,11 @@ echo ""
 # Large dirs
 echo "Removing large directories"
 # https://github.com/apache/flink/blob/master/tools/azure-pipelines/free_disk_space.sh
-sudo rm -rf /usr/share/dotnet/
-sudo rm -rf /usr/local/graalvm/
 sudo rm -rf /usr/local/.ghcup/
-sudo rm -rf /usr/local/share/powershell
+sudo rm -rf /usr/local/graalvm/
+sudo rm -rf /usr/local/lib/node_modules
 sudo rm -rf /usr/local/share/chromium
-sudo rm -rf /usr/local/lib/android
-sudo rm -rf /opt/ghc
+sudo rm -rf /usr/local/share/powershell
 echo ""
 echo "Disk space after removing large directories:"
 df -h

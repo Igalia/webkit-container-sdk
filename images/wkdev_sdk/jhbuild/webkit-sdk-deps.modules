@@ -64,13 +64,13 @@
     </branch>
   </meson>
 
-  <meson id="gtk4">
+  <meson id="gtk4" mesonargs="-Dbuild-demos=false -Dbuild-examples=false -Dbuild-tests=false -Dbuild-testsuite=false">
     <branch repo="gitlab.gnome.org"
             checkoutdir="gtk4"
             module="GNOME/gtk.git" tag="4.15.6"/>
   </meson>
 
-  <meson id="libadwaita" mesonargs="-Dvapi=false -Dgtk_doc=true">
+  <meson id="libadwaita" mesonargs="-Dexamples=false -Dgtk_doc=true -Dtests=false -Dvapi=false">
     <branch repo="gitlab.gnome.org"
             module="GNOME/libadwaita.git" tag="1.6.beta"/>
     <dependencies>
@@ -103,7 +103,7 @@
     </dependencies>
   </meson>
 
-  <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled">
+  <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">
     <branch repo="gitlab.gnome.org"
             checkoutdir="glib"
             module="GNOME/glib.git"/>
@@ -118,7 +118,7 @@
     </dependencies>
   </meson>
 
-  <meson id="libsoup">
+  <meson id="libsoup" mesonargs="-Dtests=false">
     <branch repo="gitlab.gnome.org"
             checkoutdir="libsoup"
             module="GNOME/libsoup.git"/>
@@ -173,7 +173,7 @@
   </meson>
 
   <!-- TODO: Switch to sysprof 47.0 release, once it's ready -->
-  <meson id="sysprof" mesonargs="-Dsysprofd=host -Dpolkit-agent=disabled">
+  <meson id="sysprof" mesonargs="-Dexamples=false -Dpolkit-agent=disabled -Dsysprofd=host -Dtests=false -Dtools=false">
     <branch repo="gitlab.gnome.org"
             module="GNOME/sysprof.git" tag="master" revision="10217bb0e231c820d0012150151511d99c877ff3">
     </branch>

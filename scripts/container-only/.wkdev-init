@@ -188,6 +188,16 @@ try_setup_permissions_jhbuild_directory() {
 
 }
 
+try_setup_permissions_rust_directory() {
+
+    echo ""
+
+    local rust_directory="/opt/rust"
+    echo "[12/13] Setup rust '${rust_directory}' directory permissions..."
+
+    chown --recursive "${container_user_name}:${container_group_name}" "${rust_directory}" &>/dev/null
+}
+
 try_firstrun_script() {
 
     local user_home
@@ -222,6 +232,7 @@ TASKS=(
     "try_setup_run_user_directory"
     "try_setup_dockerenv_file"
     "try_setup_permissions_jhbuild_directory"
+    "try_setup_permissions_rust_directory"
     "try_firstrun_script"
 )
 

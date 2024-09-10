@@ -80,6 +80,16 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     rm -rf WebKit && \
     ${APT_AUTOREMOVE}
 
+# Add Rust environment.
+ENV RUSTUP_HOME="/opt/rust" \
+    CARGO_HOME="/opt/rust" \
+    PATH="/opt/rust/bin:${PATH}"
+
+RUN rustup default stable && \
+    rustup component remove rust-docs && \
+    cargo install --root /usr/local --version 0.8.1 --locked sccache && \
+    cargo install --root /usr/local cargo-c
+
 # Copy jhbuild helper files and do the initial build & install
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
@@ -127,8 +137,11 @@ RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \
       ln -s ${directory} ${directory}/${QT_VERSION}  >/dev/null 2>&1 || true; \
     done
 
-# Build custom sccache version (the Ubuntu provided 0.7.7 package is broken)
-RUN cargo install --root /usr/local --version 0.8.1 --locked sccache
+# Check GStreamer plugins are installed.
+RUN gst-inspect-1.0 audiornnoise && \
+    gst-inspect-1.0 cea608tott && \
+    gst-inspect-1.0 livesync && \
+    gst-inspect-1.0 rsrtp
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

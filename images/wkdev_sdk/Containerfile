@@ -141,6 +141,7 @@ RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \
 # Check GStreamer plugins are installed.
 RUN gst-inspect-1.0 audiornnoise && \
     gst-inspect-1.0 cea608tott && \
+    gst-inspect-1.0 dav1ddec && \
     gst-inspect-1.0 livesync && \
     gst-inspect-1.0 rsrtp
 

@@ -13,6 +13,7 @@
       <dep package="sparkle-cdm"/>
       <dep package="libbacktrace"/>
       <dep package="sysprof"/>
+      <dep package="libspiel"/>
     </dependencies>
   </metamodule>
 
@@ -85,6 +86,15 @@
             module="ianlancetaylor/libbacktrace.git"
             checkoutdir="libbacktrace"/>
   </autotools>
+
+  <meson id="libspiel" mesonargs="-Dtests=false -Ddocs=false -Dlibspeechprovider:docs=false -Dlibspeechprovider:introspection=false">
+    <branch repo="github.com"
+            checkoutdir="libspiel"
+            module="project-spiel/libspiel"/>
+    <dependencies>
+      <dep package="gstreamer"/>
+    </dependencies>
+  </meson>
 
   <!-- These are not built by default but useful for hacking on. -->
   <meson id="openh264" mesonargs="-Dtests=disabled">

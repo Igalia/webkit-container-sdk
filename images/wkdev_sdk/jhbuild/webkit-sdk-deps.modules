@@ -184,10 +184,9 @@
             module="GNOME/libdex.git" tag="0.7.1"/>
   </meson>
 
-  <!-- TODO: Switch to sysprof 47.0 release, once it's ready -->
-  <meson id="sysprof" mesonargs="-Dexamples=false -Dpolkit-agent=disabled -Dsysprofd=host -Dtests=false -Dtools=false">
+  <meson id="sysprof" mesonargs="-Dexamples=false -Dpolkit-agent=disabled -Dsysprofd=host -Dtests=false">
     <branch repo="github.com"
-            module="GNOME/sysprof.git" tag="master" revision="10217bb0e231c820d0012150151511d99c877ff3">
+            module="GNOME/sysprof.git" tag="47.0">
     </branch>
     <dependencies>
       <dep package="libadwaita"/>

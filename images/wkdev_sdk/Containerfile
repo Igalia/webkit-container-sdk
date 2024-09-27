@@ -52,7 +52,7 @@ RUN ${APT_UPDATE} && \
     ${APT_UPGRADE} && ${APT_AUTOREMOVE}
 
 # Disable exclusion of locales / translations / documentation (default in Ubuntu images)
-RUN yes | /usr/local/sbin/unminimize
+RUN yes | /usr/bin/unminimize
 
 # Switch to fixed locale.
 RUN locale-gen ${CONTAINER_LOCALE}

@@ -11,7 +11,7 @@ defaults:
     shell: bash
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
     steps:
       - name: Set tag name
         run: |
@@ -64,7 +64,7 @@ jobs:
           wkdev-enter --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
 
   deploy:
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
     needs: build
     if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
     steps:

@@ -11,7 +11,6 @@ source "${WKDEV_SDK}/utilities/podman.sh"
 
 argsparse_use_option debug        "Enable debug logging for podman (useful to debug container issues)"
 argsparse_use_option trace        "Enable 'xtrace' mode for this script"
-argsparse_use_option =verbose     "Increase verbosity of this script"
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -35,7 +34,7 @@ try_update_sdk_repository() {
 
     if [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] && [ -z "$(git status --untracked-files=no --porcelain)" ]; then
         echo "-> Updating Git repository 'wkdev-sdk' located in \${WKDEV_SDK}..."
-        run_command_silent_unless_verbose git pull --rebase || _abort_ "Cannot update wkdev-sdk repository"
+        run_command git pull --rebase || _abort_ "Cannot update wkdev-sdk repository"
     else
         echo "-> Not updating Git repository 'wkdev-sdk' located in \${WKDEV_SDK} - there are local modifications!"
     fi
@@ -148,7 +147,7 @@ update_image() {
 
     echo ""
     echo "-> Updating image '${image_name}'..."
-    run_podman_silent_unless_verbose pull "${image_name}" || _abort_ "Cannot update image '${image_name}'"
+    run_podman pull "${image_name}" || _abort_ "Cannot update image '${image_name}'"
 }
 
 # Main functionality

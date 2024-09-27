@@ -41,11 +41,13 @@ jobs:
 
       - name: Test image
         run: |
+          CONTAINER="wkdev-$(date +%s)"
           source ./register-sdk-on-host.sh
-          wkdev-create --create-home --verbose --attach --no-pull
-          wkdev-enter --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
-          wkdev-enter --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
-          wkdev-enter --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
+          wkdev-create --create-home --verbose --attach --no-pull -n ${CONTAINER}
+          wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
+          wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
+          wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
+          podman stop ${CONTAINER} || true
 
   deploy:
     runs-on: self-hosted

@@ -20,27 +20,11 @@ jobs:
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=${GITHUB_REPOSITORY_OWNER}" >> "${GITHUB_OUTPUT}"
 
-      - name: Increase storage space
-        uses: easimon/maximize-build-space@master
-        with:
-          # Podman uses an insane amount of storage during creation of the image.
-          # This must be a bug as 20GB (the default) truly isn't large enough.
-          # TODO: Ensure fuse-overlayfs is working as expected.
-          root-reserve-mb: 30720
-          remove-dotnet: true
-          remove-android: true
-          remove-haskell: true
-          remove-codeql: true
-          remove-docker-images: true
-
       - name: Install podman
         run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
 
       - name: Checkout repo
         uses: actions/checkout@v4
-
-      - name: Free disk space
-        run: .github/workflows/scripts/free_disk_space.sh
 
       - name: Build image
         run: |
@@ -57,11 +41,13 @@ jobs:
 
       - name: Test image
         run: |
+          CONTAINER="wkdev-$(date +%s)"
           source ./register-sdk-on-host.sh
-          wkdev-create --create-home --verbose --attach --no-pull
-          wkdev-enter --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
-          wkdev-enter --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
-          wkdev-enter --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
+          wkdev-create --create-home --verbose --attach --no-pull -n ${CONTAINER}
+          wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
+          wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
+          wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
+          podman stop ${CONTAINER} || true
 
   deploy:
     runs-on: self-hosted

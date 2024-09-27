@@ -67,13 +67,13 @@
   </meson>
 
   <meson id="gtk4" mesonargs="-Dbuild-demos=false -Dbuild-examples=false -Dbuild-tests=false -Dbuild-testsuite=false">
-    <branch repo="gitlab.gnome.org"
+    <branch repo="github.com"
             checkoutdir="gtk4"
             module="GNOME/gtk.git" tag="4.15.6"/>
   </meson>
 
   <meson id="libadwaita" mesonargs="-Dexamples=false -Dgtk_doc=true -Dtests=false -Dvapi=false">
-    <branch repo="gitlab.gnome.org"
+    <branch repo="github.com"
             module="GNOME/libadwaita.git" tag="1.6.beta"/>
     <dependencies>
       <dep package="gtk4"/>
@@ -116,13 +116,13 @@
   </meson>
 
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">
-    <branch repo="gitlab.gnome.org"
+    <branch repo="github.com"
             checkoutdir="glib"
             module="GNOME/glib.git"/>
   </meson>
 
   <meson id="glib-networking">
-    <branch repo="gitlab.gnome.org"
+    <branch repo="github.com"
             checkoutdir="glib-networking"
             module="GNOME/glib-networking.git"/>
     <dependencies>
@@ -131,7 +131,7 @@
   </meson>
 
   <meson id="libsoup" mesonargs="-Dtests=false">
-    <branch repo="gitlab.gnome.org"
+    <branch repo="github.com"
             checkoutdir="libsoup"
             module="GNOME/libsoup.git"/>
   </meson>
@@ -160,7 +160,7 @@
   </systemmodule>
 
   <meson id="epiphany">
-    <branch repo="gitlab.gnome.org"
+    <branch repo="github.com"
             module="GNOME/epiphany.git"/>
     <dependencies>
       <dep package="gcr"/>
@@ -172,7 +172,7 @@
 
   <!-- Everything in this section is just for sysprof. -->
   <meson id="libpanel" mesonargs="-Dvapi=false">
-    <branch repo="gitlab.gnome.org"
+    <branch repo="github.com"
             module="GNOME/libpanel.git" tag="1.7.1"/>
     <dependencies>
       <dep package="libadwaita"/>
@@ -180,13 +180,13 @@
   </meson>
 
   <meson id="libdex" mesonargs="-Dvapi=false">
-    <branch repo="gitlab.gnome.org"
+    <branch repo="github.com"
             module="GNOME/libdex.git" tag="0.7.1"/>
   </meson>
 
   <!-- TODO: Switch to sysprof 47.0 release, once it's ready -->
   <meson id="sysprof" mesonargs="-Dexamples=false -Dpolkit-agent=disabled -Dsysprofd=host -Dtests=false -Dtools=false">
-    <branch repo="gitlab.gnome.org"
+    <branch repo="github.com"
             module="GNOME/sysprof.git" tag="master" revision="10217bb0e231c820d0012150151511d99c877ff3">
     </branch>
     <dependencies>

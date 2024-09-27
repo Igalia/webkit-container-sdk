@@ -50,8 +50,8 @@
     <branch repo="wpewebkit.org"
             checkoutdir="libwpe"
             module="libwpe-${version}.tar.xz"
-            version="1.14.2"
-            hash="sha256:8ae38022c50cb340c96fdbee1217f1e46ab57fbc1c8ba98142565abbedbe22ef"/>
+            version="1.16.0"
+            hash="sha256:c7f3a3c6b3d006790d486dc7cceda2b6d2e329de07f33bc47dfc53f00f334b2a"/>
   </cmake>
 
   <meson id="wpebackend-fdo">
@@ -61,20 +61,20 @@
     <branch repo="wpewebkit.org"
             checkoutdir="wpebackend-fdo"
             module="wpebackend-fdo-${version}.tar.xz"
-            version="1.14.2"
-            hash="sha256:93c9766ae9864eeaeaee2b0a74f22cbca08df42c1a1bdb55b086f2528e380d38">
+            version="1.14.3"
+            hash="sha256:10121842595a850291db3e82f3db0b9984df079022d386ce42c2b8508159dc6c">
     </branch>
   </meson>
 
   <meson id="gtk4" mesonargs="-Dbuild-demos=false -Dbuild-examples=false -Dbuild-tests=false -Dbuild-testsuite=false">
     <branch repo="github.com"
             checkoutdir="gtk4"
-            module="GNOME/gtk.git" tag="4.15.6"/>
+            module="GNOME/gtk.git" tag="4.16.2"/>
   </meson>
 
   <meson id="libadwaita" mesonargs="-Dexamples=false -Dgtk_doc=true -Dtests=false -Dvapi=false">
     <branch repo="github.com"
-            module="GNOME/libadwaita.git" tag="1.6.beta"/>
+            module="GNOME/libadwaita.git" tag="1.6.0"/>
     <dependencies>
       <dep package="gtk4"/>
       <dep package="sassc"/>
@@ -96,12 +96,11 @@
     </dependencies>
   </meson>
 
-  <!-- These are not built by default but useful for hacking on. -->
   <meson id="openh264" mesonargs="-Dtests=disabled">
     <branch repo="github.com"
             checkoutdir="openh264"
             module="cisco/openh264.git"
-            tag="v2.3.1" >
+            tag="v2.4.1" >
     </branch>
   </meson>
 
@@ -109,7 +108,7 @@
     <branch repo="gstreamer.freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer.git"
-            tag="1.24.6"/>
+            tag="1.24.8"/>
     <dependencies>
       <dep package="openh264"/>
     </dependencies>
@@ -118,13 +117,13 @@
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">
     <branch repo="github.com"
             checkoutdir="glib"
-            module="GNOME/glib.git"/>
+            module="GNOME/glib.git" tag="2.82.1"/>
   </meson>
 
   <meson id="glib-networking">
     <branch repo="github.com"
             checkoutdir="glib-networking"
-            module="GNOME/glib-networking.git"/>
+            module="GNOME/glib-networking.git" tag="2.80.0"/>
     <dependencies>
       <dep package="glib"/>
     </dependencies>
@@ -133,7 +132,7 @@
   <meson id="libsoup" mesonargs="-Dtests=false">
     <branch repo="github.com"
             checkoutdir="libsoup"
-            module="GNOME/libsoup.git"/>
+            module="GNOME/libsoup.git" tag="3.6.0"/>
   </meson>
 
   <!-- Everything in this section is just for Epiphany. -->
@@ -161,7 +160,7 @@
 
   <meson id="epiphany">
     <branch repo="github.com"
-            module="GNOME/epiphany.git"/>
+            module="GNOME/epiphany.git" tag="47.0"/>
     <dependencies>
       <dep package="gcr"/>
       <dep package="libarchive"/>
@@ -173,7 +172,7 @@
   <!-- Everything in this section is just for sysprof. -->
   <meson id="libpanel" mesonargs="-Dvapi=false">
     <branch repo="github.com"
-            module="GNOME/libpanel.git" tag="1.7.1"/>
+            module="GNOME/libpanel.git" tag="1.8.0"/>
     <dependencies>
       <dep package="libadwaita"/>
     </dependencies>
@@ -181,7 +180,7 @@
 
   <meson id="libdex" mesonargs="-Dvapi=false">
     <branch repo="github.com"
-            module="GNOME/libdex.git" tag="0.7.1"/>
+            module="GNOME/libdex.git" tag="0.8.0"/>
   </meson>
 
   <meson id="sysprof" mesonargs="-Dexamples=false -Dpolkit-agent=disabled -Dsysprofd=host -Dtests=false">

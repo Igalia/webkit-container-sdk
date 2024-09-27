@@ -133,8 +133,8 @@ try_setup_setgid_subuid_files() {
 
 try_setup_journal_dev_log() {
 
-    task_step "Set /dev/task_step symbolic link to /run/systemd/journal/dev-task_step ..."
-    sudo ln -sf /run/systemd/journal/dev-task_step /dev/task_step
+    task_step "Set /dev/log symbolic link to /run/systemd/journal/dev-log ..."
+    sudo ln -sf /run/systemd/journal/dev-log /dev/log
 }
 
 try_setup_sudoers_file() {
@@ -190,10 +190,9 @@ try_setup_permissions_jhbuild_directory() {
 
 try_setup_permissions_rust_directory() {
 
-    echo ""
-
     local rust_directory="/opt/rust"
-    echo "[12/13] Setup rust '${rust_directory}' directory permissions..."
+
+    task_step "Setup rust '${rust_directory}' directory permissions..."
 
     chown --recursive "${container_user_name}:${container_group_name}" "${rust_directory}" &>/dev/null
 }
@@ -227,8 +226,8 @@ TASKS=(
     "try_install_additional_packages"
     "try_switch_shell_for_user"
     "try_setup_setgid_subuid_files"
-    "try_setup_journal_dev_log"
     "try_setup_sudoers_file"
+    "try_setup_journal_dev_log"
     "try_setup_run_user_directory"
     "try_setup_dockerenv_file"
     "try_setup_permissions_jhbuild_directory"
@@ -241,7 +240,7 @@ task_step() {
     TASK_TOTAL=${TASK_TOTAL:-${#TASKS[@]}}
 
     echo ""
-    echo -n "[${TASK_STEP}/${TASK_TOTAL}] "
+    echo "[${TASK_STEP}/${TASK_TOTAL}] ${1}"
     TASK_STEP=$(( TASK_STEP + 1 ))
 }
 

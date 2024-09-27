@@ -9,7 +9,6 @@
       <dep package="libwpe"/>
       <dep package="libsoup"/>
       <dep package="wpebackend-fdo"/>
-      <dep package="gstreamer"/>
       <dep package="sparkle-cdm"/>
       <dep package="libbacktrace"/>
       <dep package="sysprof"/>
@@ -90,10 +89,8 @@
   <meson id="libspiel" mesonargs="-Dtests=false -Ddocs=false -Dlibspeechprovider:docs=false -Dlibspeechprovider:introspection=false">
     <branch repo="github.com"
             checkoutdir="libspiel"
-            module="project-spiel/libspiel"/>
-    <dependencies>
-      <dep package="gstreamer"/>
-    </dependencies>
+            module="project-spiel/libspiel"
+            tag="SPIEL_1_0_1"/>
   </meson>
 
   <meson id="openh264" mesonargs="-Dtests=disabled">

@@ -231,7 +231,6 @@ TASKS=(
     "try_setup_run_user_directory"
     "try_setup_dockerenv_file"
     "try_setup_permissions_jhbuild_directory"
-    "try_setup_permissions_rust_directory"
     "try_firstrun_script"
 )
 

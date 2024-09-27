@@ -48,7 +48,7 @@ RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/no-sandbox
 # Update package list, upgrade to latest version, install necessary packages for
 # early bootstrapping: .deb package configuration + locale generation.
 RUN ${APT_UPDATE} && \
-    ${APT_INSTALL} apt-utils dialog libterm-readline-gnu-perl locales && \
+    ${APT_INSTALL} apt-utils dialog libterm-readline-gnu-perl locales unminimize && \
     ${APT_UPGRADE} && ${APT_AUTOREMOVE}
 
 # Disable exclusion of locales / translations / documentation (default in Ubuntu images)

@@ -123,6 +123,13 @@ run() {
 
             echo "   Retry ${retries}/${max_retries} in ${sleep_duration_in_seconds} seconds..."
             sleep ${sleep_duration_in_seconds}
+
+            echo ""
+            echo "   Last 5 lines from container log (invoke 'podman logs ${container_name}' to see the full output):"
+            echo "   ------------------------------------------------------------------"
+            run_podman ${podman_arguments[@]} logs --tail 5 "${container_name}"
+            echo "   ------------------------------------------------------------------"
+            echo ""
         done;
     }
 

@@ -133,8 +133,15 @@ try_setup_setgid_subuid_files() {
 
 try_setup_journal_dev_log() {
 
-    task_step "Set /dev/log symbolic link to /run/systemd/journal/dev-log ..."
-    sudo ln -sf /run/systemd/journal/dev-log /dev/log
+    task_step "Check if /dev/log exists, if not set symbolic link to /run/systemd/journal/dev-log ..."
+    echo ""
+
+    if [ ! -e /dev/log ]; then
+        sudo ln -s /run/systemd/journal/dev-log /dev/log
+        echo "      -> /dev/log symbolic link created."
+    else
+        echo "      -> /dev/log already exists, skipping symbolic link creation."
+    fi
 }
 
 try_setup_sudoers_file() {

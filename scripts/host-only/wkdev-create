@@ -85,6 +85,10 @@ process_command_line_arguments() {
     host_hostname="$(hostnamectl hostname)"
     container_hostname="$(basename "${container_name}").${host_hostname}"
 
+    if argsparse_is_option_set "create-home" && -d "${container_user_home}"; then
+        rm -rf "${container_user_home}"
+    fi
+
     # Verify the container home directory is accessible.
     if [ ! -d "${container_user_home}" ]; then
         if ! argsparse_is_option_set "create-home"; then

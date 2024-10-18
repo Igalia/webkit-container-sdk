@@ -13,6 +13,7 @@ init_application "${0}" "Configures devhelp to use WebKit's built documentation.
 
 argsparse_use_option "webkit-=directory:" "The path to your WebKit source" "mandatory" "type:directory"
 argsparse_use_option "release" "Use the Release build's documentation" "exclude:debug"
+argsparse_use_option "wpe" "Use the WPE port's documentation instead of GTK"
 argsparse_use_option "debug" "Use the debug build's documentation" "exclude:release"
 argsparse_use_option "container-specific" "Install the documentation private to this container"
 
@@ -39,7 +40,8 @@ run() {
     argsparse_parse_options "${@}"
     local webkit_directory="${program_options["webkit-directory"]}"
     local build_type="$(argsparse_is_option_set 'release' && echo 'Release' || echo 'Debug')"
-    local docs_dir="${webkit_directory}/WebKitBuild/${build_type}/Documentation"
+    local port="$(argsparse_is_option_set 'wpe' && echo 'WPE' || echo 'GTK')"
+    local docs_dir="${webkit_directory}/WebKitBuild/${port}/${build_type}/Documentation"
 
     echo ""
 

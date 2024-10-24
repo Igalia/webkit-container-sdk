@@ -2,7 +2,7 @@
 # Copyright 2024 Igalia S.L.
 # SPDX-License: MIT
 
-[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
+[ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { _log_ "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
 init_application "${0}" "Install NVIDIA GPU Container Toolkit on host system" host-only
 
 # Source utility script fragments
@@ -38,43 +38,43 @@ run() {
     process_command_line_arguments "${@}"
 
     if [ -f "$(get_nvidia_cdi_config_file)" ]; then
-        echo ""
-        echo "-> Configuration file '$(get_nvidia_cdi_config_file)' already exists, skipping creation."
-        echo "   NOTE: If your system GPU configuration changed, remove the file and re-run '${application_name}'."
+        _log_ ""
+        _log_ "-> Configuration file '$(get_nvidia_cdi_config_file)' already exists, skipping creation."
+        _log_ "   NOTE: If your system GPU configuration changed, remove the file and re-run '${application_name}'."
         exit 0
     fi
 
     distribution=$(. /etc/os-release; echo $ID; )
     if [ "${distribution}" = "ubuntu" ]; then
         if [ ! -f "$(get_nvidia_gpg_key_file)" ]; then
-            echo "-> Download & deploy NVIDIA GPG key to '$(get_nvidia_gpg_key_file)'..."
+            _log_ "-> Download & deploy NVIDIA GPG key to '$(get_nvidia_gpg_key_file)'..."
 
             set -o pipefail
             curl --silent --location "$(get_nvidia_repository_url)/gpgkey" | gpg --dearmor | sudo tee "$(get_nvidia_gpg_key_file)" &>/dev/null
             [ ${?} -eq 0 ] || _abort_ "Adding new GPG key failed"
             set +o pipefail
         else
-            echo "-> No need to download & deploy NVIDIA GPG key, already present in '$(get_nvidia_gpg_key_file)'."
+            _log_ "-> No need to download & deploy NVIDIA GPG key, already present in '$(get_nvidia_gpg_key_file)'."
         fi
 
         if [ ! -f "$(get_nvidia_apt_source_file)" ]; then
-            echo ""
-            echo "-> Add '$(get_nvidia_repository_url)' to APT source file '$(get_nvidia_apt_source_file)'..."
+            _log_ ""
+            _log_ "-> Add '$(get_nvidia_repository_url)' to APT source file '$(get_nvidia_apt_source_file)'..."
 
             set -o pipefail
             curl --silent --location "$(get_nvidia_repository_url)/$(get_nvidia_ubuntu_distribution)/$(get_nvidia_repository_name).list" | sudo tee "$(get_nvidia_apt_source_file)" &>/dev/null
             [ ${?} -eq 0 ] || _abort_ "Adding new repository failed"
             set +o pipefail
         else
-            echo "-> No need to create new APT source file, already present in '$(get_nvidia_apt_source_file)'."
+            _log_ "-> No need to create new APT source file, already present in '$(get_nvidia_apt_source_file)'."
         fi
 
-        echo ""
-        echo "-> Updating APT repositories..."
+        _log_ ""
+        _log_ "-> Updating APT repositories..."
         sudo apt-get update || _abort_ "'apt-get update' failed"
 
-        echo ""
-        echo "-> Installing '$(get_nvidia_host_package)'..."
+        _log_ ""
+        _log_ "-> Installing '$(get_nvidia_host_package)'..."
         sudo apt-get install --assume-yes "$(get_nvidia_host_package)" || _abort_ "'apt-get install' failed"
     elif [ "${distribution}" = "fedora" ]; then
         # local nvidia_distribution="$(. /etc/os-release; echo $ID$VERSION_ID;)"
@@ -82,8 +82,8 @@ run() {
         local yum_repo_file="/etc/yum.repos.d/$(get_nvidia_repository_name).repo"
 
         if [ ! -f "${yum_repo_file}" ]; then
-            echo ""
-            echo "-> Add '$(get_nvidia_repository_url)' to YUM repo file '${yum_repo_file}'..."
+            _log_ ""
+            _log_ "-> Add '$(get_nvidia_repository_url)' to YUM repo file '${yum_repo_file}'..."
 
             set -o pipefail
             curl --silent --location "$(get_nvidia_repository_url)/${nvidia_distribution}/$(get_nvidia_repository_name).repo" | sudo tee "${yum_repo_file}" &>/dev/null
@@ -91,25 +91,25 @@ run() {
             set +o pipefail
         fi
 
-        echo ""
-        echo "-> Updating DNF cache..."
+        _log_ ""
+        _log_ "-> Updating DNF cache..."
         sudo dnf clean expire-cache || _abort_ "'dnf clean expire-cache' failed"
 
-        echo ""
-        echo "-> Installing '$(get_nvidia_host_package)'..."
+        _log_ ""
+        _log_ "-> Installing '$(get_nvidia_host_package)'..."
         sudo dnf install -y "$(get_nvidia_host_package)" || _abort_ "'dnf install' failed"
     fi
 
     if [ ! -f "$(get_nvidia_cdi_config_file)" ]; then
-        echo ""
-        echo "-> Generating CDI specification '$(get_nvidia_cdi_config_file)'..."
+        _log_ ""
+        _log_ "-> Generating CDI specification '$(get_nvidia_cdi_config_file)'..."
         verify_executable_exists nvidia-ctk
         sudo nvidia-ctk cdi generate --output "$(get_nvidia_cdi_config_file)" || _abort_ "CDI generation failed"
         sudo chmod 644 "$(get_nvidia_cdi_config_file)"
     fi
 
-    echo ""
-    echo "-> Finished!"
+    _log_ ""
+    _log_ "-> Finished!"
 }
 
 run "${@}"

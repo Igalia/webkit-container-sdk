@@ -20,12 +20,12 @@ argsparse_use_option "no-extensions" "Don't install extensions."
 
 install_vscode() {
 
-    echo ""
-    echo "Installing Visual Studio Code..."
-    echo ""
+    _log_ ""
+    _log_ "Installing Visual Studio Code..."
+    _log_ ""
 
     if which code > /dev/null; then
-        echo "Visual Studio Code is already installed."
+        _log_ "Visual Studio Code is already installed."
         return
     fi
 
@@ -36,19 +36,19 @@ install_vscode() {
     fi
 
     if ! curl --silent --fail --location "${download_url}" -o /tmp/code.deb; then
-        echo "Failed to download Visual Studio Code."
+        _log_ "Failed to download Visual Studio Code."
         exit 1
     fi
 
     if ! sudo apt install /tmp/code.deb; then
-        echo "Failed to install Visual Studio Code."
+        _log_ "Failed to install Visual Studio Code."
         rm /tmp/code.deb
         exit 1
     fi
 
     rm /tmp/code.deb
-    echo ""
-    echo "Visual Studio Code has been installed."
+    _log_ ""
+    _log_ "Visual Studio Code has been installed."
 }
 
 install_extension() {
@@ -62,7 +62,7 @@ install_extension() {
     readarray installed_extensions < <(code --list-extensions)
 
     if [[ "${installed_extensions[*]}" =~ "${extension_name}" ]]; then
-        echo "VSCode extension already installed: ${extension_name}"
+        _log_ "VSCode extension already installed: ${extension_name}"
         return
     fi
 
@@ -72,23 +72,23 @@ install_extension() {
             return
         fi
     else
-        echo "Installing VSCode extension: ${extension_name} (${description})..."
+        _log_ "Installing VSCode extension: ${extension_name} (${description})..."
     fi
 
     if ! code --install-extension "${extension_name}" &>/dev/null; then
-        echo "Failed to install VSCode extension: ${extension_name}"
+        _log_ "Failed to install VSCode extension: ${extension_name}"
         exit 1
     fi
 
-    echo "Installed"
-    echo ""
+    _log_ "Installed"
+    _log_ ""
 }
 
 install_extensions() {
 
-    echo ""
-    echo "Installing extensions..."
-    echo ""
+    _log_ ""
+    _log_ "Installing extensions..."
+    _log_ ""
     install_extension ms-vscode.cmake-tools "CMake support"
     install_extension llvm-vs-code-extensions.vscode-clangd "C/C++ support"
     install_extension vadimcn.vscode-lldb "C/C++ debugging" true

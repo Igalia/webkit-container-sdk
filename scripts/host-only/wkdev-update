@@ -30,13 +30,13 @@ process_command_line_arguments() {
 
 try_update_sdk_repository() {
 
-    echo ""
+    _log_ ""
 
     if [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] && [ -z "$(git status --untracked-files=no --porcelain)" ]; then
-        echo "-> Updating Git repository 'wkdev-sdk' located in \${WKDEV_SDK}..."
+        _log_ "-> Updating Git repository 'wkdev-sdk' located in \${WKDEV_SDK}..."
         run_command git pull --rebase || _abort_ "Cannot update wkdev-sdk repository"
     else
-        echo "-> Not updating Git repository 'wkdev-sdk' located in \${WKDEV_SDK} - there are local modifications!"
+        _log_ "-> Not updating Git repository 'wkdev-sdk' located in \${WKDEV_SDK} - there are local modifications!"
     fi
 }
 
@@ -51,19 +51,19 @@ ask_for_confirmation() {
         case "${answer}" in
             [Yy]* ) return 0;;
             [Nn]* ) return 1;;
-                * ) echo "Please answer 'y'es or 'n'o.";;
+                * ) _log_ "Please answer 'y'es or 'n'o.";;
         esac
     done
 }
 
 update_containers_using_image() {
 
-    echo ""
+    _log_ ""
     local image_name="${1}"
 
     local latest_image_id="$(get_image_id_by_image_name "${image_name}")"
     if [ -z "${latest_image_id}" ]; then
-        echo "-> Skipping update of image "${image_name}" - no containers use this image."
+        _log_ "-> Skipping update of image "${image_name}" - no containers use this image."
         return
     fi
 
@@ -71,18 +71,18 @@ update_containers_using_image() {
     local found_containers_using_image=0
     for container_name in $(get_list_of_containers); do
         local container_image_name_with_tag="$(get_image_name_by_container_name "${container_name}")"
-        echo "${container_image_name_with_tag} = ${image_name}"
+        _log_ "${container_image_name_with_tag} = ${image_name}"
         [ "${container_image_name_with_tag}" = "${image_name}" ] || continue
         found_containers_using_image=$((found_containers_using_image+1))
         [ ${#container_name} -gt ${max_container_name_length} ] && max_container_name_length=${#container_name}
     done
 
     if [ ${found_containers_using_image} -eq 0 ]; then
-        echo "-> No containers use this image, no need to recreate any of them."
+        _log_ "-> No containers use this image, no need to recreate any of them."
         return
     fi
 
-    echo "-> Found ${found_containers_using_image} container(s) using the image '${image_name}', checking status:"
+    _log_ "-> Found ${found_containers_using_image} container(s) using the image '${image_name}', checking status:"
 
     local -A outdated_container_data=()
     for container_name in $(get_list_of_containers); do
@@ -110,15 +110,15 @@ update_containers_using_image() {
 
     local outdated_container_names="${!outdated_container_data[@]}"
     if [ -z "${outdated_container_names}" ]; then
-        echo ""
-        echo "-> No containers need to be re-created, all use the latest image version."
+        _log_ ""
+        _log_ "-> No containers need to be re-created, all use the latest image version."
         return
     fi
 
-    echo ""
-    echo "-> Trying to re-create containers, if desired..."
-    echo "   NOTE: Remember that all changes made to your local image are $(ansi::bold)gone$(ansi::normal) if you re-create the container."
-    echo ""
+    _log_ ""
+    _log_ "-> Trying to re-create containers, if desired..."
+    _log_ "   NOTE: Remember that all changes made to your local image are $(ansi::bold)gone$(ansi::normal) if you re-create the container."
+    _log_ ""
 
     # Loop over outdated containers and re-create them, if desired.
     for key in ${outdated_container_names}; do
@@ -128,14 +128,14 @@ update_containers_using_image() {
 
         # TODO: Handle re-creation of home directories, if the default shell configuration files, change?
         # At least we have to warn if there is e.g. a new '.bashrc' file...
-        echo ""
-        echo "       -> Stopping container..."
+        _log_ ""
+        _log_ "       -> Stopping container..."
         run_podman_silent stop "${container_name}"
 
-        echo "       -> Deleting container..."
+        _log_ "       -> Deleting container..."
         run_podman_silent rm "${container_name}"
 
-        echo "       -> Re-creating container..."
+        _log_ "       -> Re-creating container..."
         "${WKDEV_SDK}/scripts/host-only/wkdev-create" --verbose --name "${container_name}" ${recreate_arguments[@]}
     done
 }
@@ -145,8 +145,8 @@ update_image() {
 
     local image_name="${1}"
 
-    echo ""
-    echo "-> Updating image '${image_name}'..."
+    _log_ ""
+    _log_ "-> Updating image '${image_name}'..."
     run_podman pull "${image_name}" || _abort_ "Cannot update image '${image_name}'"
 }
 
@@ -163,8 +163,8 @@ run() {
 
     update_containers_using_image "$(get_sdk_qualified_name):$(get_default_container_tag)"
 
-    echo ""
-    echo "-> Finished."
+    _log_ ""
+    _log_ "-> Finished."
 }
 
 run "${@}"

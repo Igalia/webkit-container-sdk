@@ -41,8 +41,8 @@ run_test() {
 
     read -p "Press any key to continue.."
 
-    echo ""
-    echo "-> ${description}:"
+    _log_ ""
+    _log_ "-> ${description}:"
     "${command}" "${@}"
 }
 
@@ -51,7 +51,7 @@ run() {
 
     process_command_line_arguments "${@}"
 
-    echo "-> Install required packages:"
+    _log_ "-> Install required packages:"
     sudo apt-get install --assume-yes epiphany-browser gtk-4-examples glmark2 glmark2-drm glmark2-wayland libnotify-bin mesa-utils x11-apps
 
     run_test "Ping allowed in rootless container: (expected to work)" \

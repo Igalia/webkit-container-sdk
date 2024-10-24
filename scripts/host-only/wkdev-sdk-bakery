@@ -52,9 +52,9 @@ get_number_of_cores_for_build() { nproc --ignore=${idle_cores}; }
 
 build_image() {
 
-    echo ""
-    echo "-> Building container image '${container_image_name}' using tag '$(get_tag_for_build)'..."
-    echo ""
+    _log_ ""
+    _log_ "-> Building container image '${container_image_name}' using tag '$(get_tag_for_build)'..."
+    _log_ ""
 
     pushd "$(get_image_directory_by_name "${container_image_name}")" &>/dev/null
     timer_start
@@ -65,9 +65,9 @@ build_image() {
 
 deploy_image() {
 
-    echo ""
-    echo "-> Deploying container image '${container_image_name}' to registry '$(get_default_container_registry)'..."
-    echo ""
+    _log_ ""
+    _log_ "-> Deploying container image '${container_image_name}' to registry '$(get_default_container_registry)'..."
+    _log_ ""
 
     local image_directory="$(get_image_directory_by_name "${container_image_name}")"
     pushd "${image_directory}" &>/dev/null || _abort_ "Switching to directory '${image_directory}' failed"
@@ -77,9 +77,9 @@ deploy_image() {
 
 export_image() {
 
-    echo ""
-    echo "-> Exporting container image '${container_image_name}' to file ${container_image_name}.tar..."
-    echo ""
+    _log_ ""
+    _log_ "-> Exporting container image '${container_image_name}' to file ${container_image_name}.tar..."
+    _log_ ""
 
     run_podman_silent_unless_verbose save --format=oci-archive -o "${container_image_name}.tar" "$(get_tag_for_build)"
 }
@@ -93,8 +93,8 @@ run() {
     [ "${operation_mode}" = "deploy" ] && deploy_image
     [ "${operation_mode}" = "export" ] && export_image
 
-    echo ""
-    echo "-> Finished!"
+    _log_ ""
+    _log_ "-> Finished!"
 }
 
 run "${@}"

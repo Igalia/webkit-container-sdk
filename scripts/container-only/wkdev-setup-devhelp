@@ -43,15 +43,15 @@ run() {
     local port="$(argsparse_is_option_set 'wpe' && echo 'WPE' || echo 'GTK')"
     local docs_dir="${webkit_directory}/WebKitBuild/${port}/${build_type}/Documentation"
 
-    echo ""
+    _log_ ""
 
     if [ ! -d "${webkit_directory}/WebKit.xcworkspace" ]; then
-        echo "Passed directory does not appear to be a WebKit source directory: ${webkit_directory}"
+        _log_ "Passed directory does not appear to be a WebKit source directory: ${webkit_directory}"
         exit 1
     fi
 
     if [ ! -d "${docs_dir}" ]; then
-        echo "WebKit ${build_type} has not been built with documentation."
+        _log_ "WebKit ${build_type} has not been built with documentation."
         exit 1
     fi
 
@@ -65,18 +65,20 @@ run() {
 
     mkdir -p "${books_dir}"
 
-    echo "Linking documentation:"
-    printf "  Source:\t %s\n" "${docs_dir}"
-    printf "  Destination:\t %s\n" "${books_dir}"
-    printf "  Books:\t"
-    for dir in "${docs_dir}"/*; do
-        echo -n " $(basename "${dir}")"
-        ln --symbolic --force "${dir}" "${books_dir}/$(basename "${dir}")"
-    done
-    echo ""
+    _log_ "$(
+        echo "Linking documentation:"
+        printf "  Source:\t %s\n" "${docs_dir}"
+        printf "  Destination:\t %s\n" "${books_dir}"
+        printf "  Books:\t"
+        for dir in "${docs_dir}"/*; do
+            echo -n " $(basename "${dir}")"
+            ln --symbolic --force "${dir}" "${books_dir}/$(basename "${dir}")"
+        done
+        echo ""
+    )"
 
-    echo ""
-    echo "Simply run 'devhelp' to access the documentation."
+    _log_ ""
+    _log_ "Simply run 'devhelp' to access the documentation."
 }
 
 run "${@}"

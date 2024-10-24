@@ -25,11 +25,11 @@ enable_perf_settings_for_cpu_profiling() {
     local current_value="$(read_kernel_parameter "${perf_event_setting}")"
     local desired_value="$(get_desired_perf_event_kernel_setting_value_for_profiling)"
     if [ "${current_value}" != "${desired_value}" ]; then
-        echo "-> The kernel parameter 'kernel.${perf_event_setting}' needs to be modified to allow for CPU profiling (current value: '${current_value}'), switching to '${desired_value}'..."
-        echo "${current_value}" > "$(get_preserved_perf_event_kernel_setting_file)"
+        _log_ "-> The kernel parameter 'kernel.${perf_event_setting}' needs to be modified to allow for CPU profiling (current value: '${current_value}'), switching to '${desired_value}'..."
+        _log_ "${current_value}" > "$(get_preserved_perf_event_kernel_setting_file)"
         write_kernel_parameter "$(get_perf_event_kernel_setting)" "$(get_desired_perf_event_kernel_setting_value_for_profiling)"
     else
-        echo "-> The kernel parameter 'kernel.${perf_event_setting}' is set to the correct value '${current_value}' - no need to modify."
+        _log_ "-> The kernel parameter 'kernel.${perf_event_setting}' is set to the correct value '${current_value}' - no need to modify."
     fi
 }
 
@@ -41,10 +41,10 @@ disable_perf_settings_for_cpu_profiling() {
     if [ -f "${perf_event_preserved_file}" ]; then
         local current_value="$(read_kernel_parameter "${perf_event_setting}")"
         local preserved_value="$(cat "${perf_event_preserved_file}")"
-        echo "-> Restoring kernel parameter 'kernel.${perf_event_setting}' (current value: '${current_value}') to its original value '${preserved_value}'..."
+        _log_ "-> Restoring kernel parameter 'kernel.${perf_event_setting}' (current value: '${current_value}') to its original value '${preserved_value}'..."
         write_kernel_parameter "$(get_perf_event_kernel_setting)" "${preserved_value}"
         rm -f "${perf_event_preserved_file}"
     else
-        echo "-> The kernel parameter 'kernel.${perf_event_setting}' was not modified by the SDK -- no need to restore a value."
+        _log_ "-> The kernel parameter 'kernel.${perf_event_setting}' was not modified by the SDK -- no need to restore a value."
     fi
 }

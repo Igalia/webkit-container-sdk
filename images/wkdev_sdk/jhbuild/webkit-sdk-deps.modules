@@ -9,6 +9,7 @@
       <dep package="libwpe"/>
       <dep package="libsoup"/>
       <dep package="wpebackend-fdo"/>
+      <dep package="gst-plugins-rs"/>
       <dep package="gstreamer"/>
       <dep package="sparkle-cdm"/>
       <dep package="libbacktrace"/>
@@ -104,7 +105,7 @@
     </branch>
   </meson>
 
-  <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=enabled -Dintrospection=enabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Drs=enabled -Dwebrtc=enabled">
+  <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=enabled -Dintrospection=enabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dgst-examples=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Dwebrtc=enabled">
     <branch repo="gstreamer.freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer.git"
@@ -116,6 +117,24 @@
     <dependencies>
       <dep package="openh264"/>
     </dependencies>
+  </meson>
+
+  <meson id="dav1d" mesonargs="-Denable_examples=false -Denable_tests=false -Denable_tools=false -Dxxhash_muxer=disabled">
+    <branch repo="github.com"
+            module="videolan/dav1d.git"
+            tag="1.4.2"
+            version="1.4.2" />
+  </meson>
+
+  <meson id="gst-plugins-rs" mesonargs="-Ddoc=disabled -Dexamples=disabled -Dtests=disabled">
+    <dependencies>
+      <dep package="dav1d"/>
+      <dep package="gstreamer"/>
+    </dependencies>
+    <branch repo="gstreamer.freedesktop.org"
+            module="gst-plugins-rs"
+            tag="0.13.1"
+            version="0.13.1" />
   </meson>
 
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">

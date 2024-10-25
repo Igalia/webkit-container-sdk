@@ -69,12 +69,12 @@ ensure_container_is_running() {
 
     # Check if container is running, if not - start or create it.
     container_status="$(get_podman_container_status "${container_name}")"
-    argsparse_is_option_set "debug" && echo "## Status for '${container_name}' container: '${container_status}'"
+    argsparse_is_option_set "debug" && _log_ "## Status for '${container_name}' container: '${container_status}'"
 
     [ "${container_status}" == "unknown" ] && _abort_ "Cannot find container '${container_name}'"
     [ "${container_status}" == "running" ] || {
-        echo "";
-        echo "-> Container '${container_name}' is not yet running. Starting it before attempting to enter...";
+        _log_ "";
+        _log_ "-> Container '${container_name}' is not yet running. Starting it before attempting to enter...";
         host_setup_prerun_tasks
         run_podman_silent start "${container_name}"
     }
@@ -111,8 +111,8 @@ run() {
     build_podman_arguments podman_arguments
 
     run_podman_silent ${podman_arguments[@]} exec "${container_name}" test -f "$(get_init_done_file)" || {
-        echo ""
-        echo "-> Wait for '${container_name}' to finish initialization..."
+        _log_ ""
+        _log_ "-> Wait for '${container_name}' to finish initialization..."
 
         local retries=0
         while : ; do
@@ -121,26 +121,26 @@ run() {
             retries=$((retries+1))
             [ ${retries} -eq ${max_retries} ] && _abort_ "Container does not start, please investigate using 'podman logs -f ${container_name}'"
 
-            echo "   Retry ${retries}/${max_retries} in ${sleep_duration_in_seconds} seconds..."
+            _log_ "   Retry ${retries}/${max_retries} in ${sleep_duration_in_seconds} seconds..."
             sleep ${sleep_duration_in_seconds}
 
-            echo ""
-            echo "   Last 5 lines from container log (invoke 'podman logs ${container_name}' to see the full output):"
-            echo "   ------------------------------------------------------------------"
+            _log_ ""
+            _log_ "   Last 5 lines from container log (invoke 'podman logs ${container_name}' to see the full output):"
+            _log_ "   ------------------------------------------------------------------"
             run_podman ${podman_arguments[@]} logs --tail 5 "${container_name}"
-            echo "   ------------------------------------------------------------------"
-            echo ""
+            _log_ "   ------------------------------------------------------------------"
+            _log_ ""
         done;
     }
 
     # Prepare to call "podman exec".
     if argsparse_is_option_set "verbose"; then
-        echo ""
+        _log_ ""
 
         if argsparse_is_option_set "exec"; then
-            echo "-> Spawn non-interactive shell session in '${container_name}' container ('--exec' mode enabled)..."
+            _log_ "-> Spawn non-interactive shell session in '${container_name}' container ('--exec' mode enabled)..."
         else
-            echo "-> Spawn interactive shell session in '${container_name}' container..."
+            _log_ "-> Spawn interactive shell session in '${container_name}' container..."
         fi
     fi
 

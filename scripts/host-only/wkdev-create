@@ -59,7 +59,7 @@ process_command_line_arguments() {
     argsparse_is_option_set "trace" && set -o xtrace
 
     if argsparse_is_option_set "list-tags"; then
-        echo ""
+        _log_ ""
         run_podman search "$(get_sdk_qualified_name)" --list-tags --format='{{ .Tag }}'
         exit 0
     fi
@@ -90,9 +90,9 @@ process_command_line_arguments() {
         if ! argsparse_is_option_set "create-home"; then
             _abort_ "The passed home directory '${container_user_home}' does not exist (pass --create-home, if you want to automatically create them)"
         else
-            echo ""
-            echo "-> The passed home directory '${container_user_home}' does not exist, creating..."
-            echo ""
+            _log_ ""
+            _log_ "-> The passed home directory '${container_user_home}' does not exist, creating..."
+            _log_ ""
 
             # Copy shell configuration skeleton files from host.
             cp --recursive --verbose /etc/skel "${container_user_home}"
@@ -115,19 +115,19 @@ process_command_line_arguments() {
                 mkdir "${container_user_home}"/.config/fish
                 cp --verbose "${default_config_directory}"/fish-config "${container_user_home}"/.config/fish/config.fish
             else
-                echo ""
-                echo "-> Shell '${shell_type}' auto configuration is unsupported. Please setup the configuration files for your shell " \
+                _log_ ""
+                _log_ "-> Shell '${shell_type}' auto configuration is unsupported. Please setup the configuration files for your shell " \
                      "on your own (see $(get_container_home_defaults_directory_name)/dot-* to examine the default settings for other shells."
             fi
 
             cp --verbose "${default_config_directory}"/dot-gdbinit "${container_user_home}"/.gdbinit
 
-            echo ""
+            _log_ ""
         fi
     else
-        echo ""
-        echo "-> The passed home directory '${container_user_home}' already exists. Skipping configuration."
-        echo ""
+        _log_ ""
+        _log_ "-> The passed home directory '${container_user_home}' already exists. Skipping configuration."
+        _log_ ""
     fi
 
     # Verify we should setup a shared folder and it's accessible
@@ -139,16 +139,16 @@ process_command_line_arguments() {
         fi
 
         if [ ! -d "${container_shared_folder}" ]; then
-            echo "-> Shared folder '${container_shared_folder}' does not exist, creating."
-            echo ""
+            _log_ "-> Shared folder '${container_shared_folder}' does not exist, creating."
+            _log_ ""
             mkdir --parents "${container_shared_folder}"
         else
-            echo "-> Setting up '${container_shared_folder}' as shared folder between host and container"
-            echo ""
+            _log_ "-> Setting up '${container_shared_folder}' as shared folder between host and container"
+            _log_ ""
         fi
     else
-        echo "-> Not setting shared folder."
-        echo ""
+        _log_ "-> Not setting shared folder."
+        _log_ ""
     fi
     # Stop & remove existing container if '--rm' is given.
     if argsparse_is_option_set "rm"; then
@@ -166,10 +166,10 @@ try_process() {
 
     local -a key_value_pair=(${@})
     if [ ${test_condition} -eq 1 ]; then
-        echo "     [x] ${operation}"
+        _log_ "     [x] ${operation}"
         arguments+=(${key_value_pair[@]})
     else
-        echo "     [ ] ${operation}"
+        _log_ "     [ ] ${operation}"
     fi
 }
 
@@ -508,9 +508,9 @@ print_table() {
 
 print_host_settings() {
 
-    echo ""
-    echo "     Host settings:"
-    echo ""
+    _log_ ""
+    _log_ "     Host settings:"
+    _log_ ""
 
     print_table "$(print_table_header_border)"
     print_table "$(print_table_header "Key" "Value")"
@@ -548,9 +548,9 @@ print_host_settings() {
 
 print_container_settings() {
 
-    echo ""
-    echo "     Container settings:"
-    echo ""
+    _log_ ""
+    _log_ "     Container settings:"
+    _log_ ""
 
     print_table "$(print_table_header_border)"
     print_table "$(print_table_header "Key" "Value")"
@@ -563,20 +563,20 @@ print_container_settings() {
 
 print_user_namespace_settings() {
 
-    echo ""
-    echo "     Host -> Container UID/GID mapping configuration for rootless mode:"
-    echo ""
+    _log_ ""
+    _log_ "     Host -> Container UID/GID mapping configuration for rootless mode:"
+    _log_ ""
 
-    echo "         $ podman unshare cat /proc/self/uid_map:"
+    _log_ "         $ podman unshare cat /proc/self/uid_map:"
     podman unshare cat /proc/self/uid_map
-    echo ""
+    _log_ ""
 
-    echo "         $ podman unshare cat /proc/self/gid_map:"
+    _log_ "         $ podman unshare cat /proc/self/gid_map:"
     podman unshare cat /proc/self/gid_map
-    echo ""
+    _log_ ""
 
-    echo "         The '/proc/self/{uid|gid}_map' contains N rows with triplets, that describe a mapping of UIDs/GIDs"
-    echo "         \"<host-id> <container-id> <count>\" ---> [<container-id>, ..., <container-id> + <count>]."
+    _log_ "         The '/proc/self/{uid|gid}_map' contains N rows with triplets, that describe a mapping of UIDs/GIDs"
+    _log_ "         \"<host-id> <container-id> <count>\" ---> [<container-id>, ..., <container-id> + <count>]."
 }
 
 print_settings() {
@@ -588,62 +588,62 @@ print_settings() {
 
 try_enable_lingering_on_host() {
 
-    echo ""
+    _log_ ""
 
     local linger_status=$(loginctl show-user "${host_user_name}" | grep Linger | sed -e s/Linger=//)
     if [ "${linger_status}" = "no" ]; then
-        echo "-> Enable lingering for user '${host_user_name}' on host system..."
+        _log_ "-> Enable lingering for user '${host_user_name}' on host system..."
         loginctl enable-linger ${host_user_name}
     else
-        echo "-> Lingering for user '${host_user_name}' is already activated."
+        _log_ "-> Lingering for user '${host_user_name}' is already activated."
     fi
 }
 
 try_enable_user_podman_socket_service_on_host() {
 
-    echo ""
+    _log_ ""
 
     local service="podman.socket"
     local socket_status=$(systemctl --user is-enabled "${service}")
     if [ "${socket_status}" = "disabled" ]; then
-        echo "-> Enable '${service}' systemd user service for user '${host_user_name}' on host system..."
+        _log_ "-> Enable '${service}' systemd user service for user '${host_user_name}' on host system..."
         systemctl --user enable "${service}"
         systemctl --user start "${service}"
     else
-        echo "-> The systemd user service '${service}' is already enabled."
+        _log_ "-> The systemd user service '${service}' is already enabled."
     fi
 
     if argsparse_is_option_set "verbose"; then
-        echo ""
-        echo "systemctl --user status ${service}:"
+        _log_ ""
+        _log_ "systemctl --user status ${service}:"
         systemctl --user status "${service}"
     fi
 }
 
 try_enable_nvidia_container_integration_on_host() {
 
-    echo ""
+    _log_ ""
 
     if [ ! -f "$(get_nvidia_cdi_config_file)" ]; then
-        echo "-> Enable NVIDIA GPU container integration on host system, running 'wkdev-setup-nvidia-gpu-for-container'..."
+        _log_ "-> Enable NVIDIA GPU container integration on host system, running 'wkdev-setup-nvidia-gpu-for-container'..."
         # Continue gracefully, as long as the setup script is not widely tested.
         "${WKDEV_SDK}/scripts/host-only/wkdev-setup-nvidia-gpu-for-container" || _log_ "Script failed, please investigate."
     else
-        echo "-> The NVIDIA GPU container integration is already enabled on host system."
+        _log_ "-> The NVIDIA GPU container integration is already enabled on host system."
     fi
 }
 
 try_enable_nvidia_gpu_profiling_settings_on_host() {
 
-    echo ""
+    _log_ ""
 
     if [ -f "$(get_nvidia_gpu_profiling_conf_file)" ]; then
-        echo "-> The NVIDIA kernel module settings were already deployed to $(get_nvidia_gpu_profiling_conf_file) - no need to modify."
+        _log_ "-> The NVIDIA kernel module settings were already deployed to $(get_nvidia_gpu_profiling_conf_file) - no need to modify."
     else
-        echo "-> Deploying NVIDIA kernel module settings to $(get_nvidia_gpu_profiling_conf_file)..."
+        _log_ "-> Deploying NVIDIA kernel module settings to $(get_nvidia_gpu_profiling_conf_file)..."
         echo 'options nvidia "NVreg_RestrictProfilingToAdminUsers=0"' | sudo tee "$(get_nvidia_gpu_profiling_conf_file)" &>/dev/null
 
-        echo "-> Updating /boot/initrd.img files..."
+        _log_ "-> Updating /boot/initrd.img files..."
         if does_executable_exist dracut; then
             sudo dracut --regenerate-all --force
         elif does_executable_exist update-initramfs; then
@@ -652,8 +652,8 @@ try_enable_nvidia_gpu_profiling_settings_on_host() {
             _abort_ "Cannot update initram - which method to use?"
         fi
 
-        echo ""
-        echo "NOTE: YOU NEED TO REBOOT THE HOST SYSTEM ONCE!"
+        _log_ ""
+        _log_ "NOTE: YOU NEED TO REBOOT THE HOST SYSTEM ONCE!"
     fi
 }
 
@@ -667,11 +667,11 @@ run() {
 
     if [ ! -d "${XDG_RUNTIME_DIR}" ]; then
         # This will likely only happen when running as root like CI does.
-        echo "WARNING: ${XDG_RUNTIME_DIR} did not exist, creating it..."
+        _log_ "WARNING: ${XDG_RUNTIME_DIR} did not exist, creating it..."
         mkdir -p --mode=700 "${XDG_RUNTIME_DIR}"
     fi
 
-    echo "-> Preparing creation of rootless podman container..."
+    _log_ "-> Preparing creation of rootless podman container..."
     print_settings
 
     try_enable_lingering_on_host
@@ -684,9 +684,9 @@ run() {
 
     host_setup_prerun_tasks
 
-    echo ""
-    echo "-> Host integration features:"
-    echo ""
+    _log_ ""
+    _log_ "-> Host integration features:"
+    _log_ ""
 
     local podman_create_arguments=()
     build_podman_create_arguments podman_create_arguments
@@ -694,29 +694,29 @@ run() {
     local podman_arguments=()
     build_podman_arguments podman_arguments
 
-    echo ""
-    echo "-> Creating container '${container_name}'..."
+    _log_ ""
+    _log_ "-> Creating container '${container_name}'..."
     if argsparse_is_option_set "verbose"; then
-        echo ""
-        echo "     $ podman ${podman_arguments[@]} create ${podman_create_arguments[@]}"
+        _log_ ""
+        _log_ "     $ podman ${podman_arguments[@]} create ${podman_create_arguments[@]}"
     fi
 
     container_id=$(run_podman ${podman_arguments[@]} create ${podman_create_arguments[@]})
     [ -z "${container_id}" ] && _abort_ "Container creation failed - please check the logs and report any issue"
 
-    echo ""
-    echo "-> Starting container '${container_name}'..."
+    _log_ ""
+    _log_ "-> Starting container '${container_name}'..."
 
     if argsparse_is_option_set "attach"; then
         run_podman_silent_unless_verbose start --attach "${container_id}"
     else
-        echo "   NOTE: Use \`podman logs -f ${container_name}\` to follow the initialization."
+        _log_ "   NOTE: Use \`podman logs -f ${container_name}\` to follow the initialization."
         run_podman_silent start "${container_id}"
     fi
 
-    echo ""
-    echo "-> Finished creation of container '${container_name}'!"
-    echo "   NOTE: Use \`wkdev-enter --name ${container_name}\` to launch an interactive shell."
+    _log_ ""
+    _log_ "-> Finished creation of container '${container_name}'!"
+    _log_ "   NOTE: Use \`wkdev-enter --name ${container_name}\` to launch an interactive shell."
 }
 
 run "${@}"

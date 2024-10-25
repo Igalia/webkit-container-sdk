@@ -38,8 +38,8 @@ run_test() {
     shift 2
 
 
-    echo ""
-    echo "-> ${description}:"
+    _log_ ""
+    _log_ "-> ${description}:"
     "${command}" "${@}"
 }
 
@@ -50,28 +50,28 @@ run() {
 
     pushd "${WKDEV_SDK}" &>/dev/null
 
-    echo ""
-    echo '          _        ______   _______                  _______  ______   _       '
-    echo '|\     /|| \    /\(  __  \ (  ____ \|\     /|       (  ____ \(  __  \ | \    /\'
-    echo '| )   ( ||  \  / /| (  \  )| (    \/| )   ( |       | (    \/| (  \  )|  \  / /'
-    echo '| | _ | ||  (_/ / | |   ) || (__    | |   | | _____ | (_____ | |   ) ||  (_/ / '
-    echo '| |( )| ||   _ (  | |   | ||  __)   ( (   ) )(_____)(_____  )| |   | ||   _ (  '
-    echo '| || || ||  ( \ \ | |   ) || (       \ \_/ /              ) || |   ) ||  ( \ \ '
-    echo '| () () ||  /  \ \| (__/  )| (____/\  \   /         /\____) || (__/  )|  /  \ \'
-    echo '(_______)|_/    \/(______/ (_______/   \_/          \_______)(______/ |_/    \/'
-    echo ""
-    echo ""
-    echo "Git repository 'wkdev-sdk' ($(ansi::bold) $(git branch --show-current) @ $(git rev-parse HEAD) $(ansi::normal))"
-    echo " 🠲  Last commit: $(ansi::bold)$(git log -1 --format=%cd)$(ansi::normal)"
-    echo ""
-    echo "NOTE:"
-    echo " - Be sure to try $(ansi::bold)\`wkdev-test-host-integration\`$(ansi::normal) to verify your container setup behaves as expected."
-    echo ""
-    echo " - The home directory $(ansi::bold)\${HOME}$(ansi::normal)=${HOME} within the container is $(ansi::underline)$(ansi::bold)not the same$(ansi::normal)$(ansi::noUnderline) as your host home directory."
-    echo "   You can find your regular host home directory in the container under $(ansi::bold)\${HOST_HOME}$(ansi::normal)=${HOST_HOME}."
-    echo ""
-    echo " - Instructions on how to build / debug / profile WebKit can be found in the SDK documentation, either"
-    echo "   locally in $(ansi::underline)\${WKDEV_SDK}/docs$(ansi::noUnderline) or online $(ansi::underline)https://github.com/Igalia/wkdev-sdk/tree/main/docs$(ansi::noUnderline)".
+    _log_ ""
+    _log_ '          _        ______   _______                  _______  ______   _       '
+    _log_ '|\     /|| \    /\(  __  \ (  ____ \|\     /|       (  ____ \(  __  \ | \    /\'
+    _log_ '| )   ( ||  \  / /| (  \  )| (    \/| )   ( |       | (    \/| (  \  )|  \  / /'
+    _log_ '| | _ | ||  (_/ / | |   ) || (__    | |   | | _____ | (_____ | |   ) ||  (_/ / '
+    _log_ '| |( )| ||   _ (  | |   | ||  __)   ( (   ) )(_____)(_____  )| |   | ||   _ (  '
+    _log_ '| || || ||  ( \ \ | |   ) || (       \ \_/ /              ) || |   ) ||  ( \ \ '
+    _log_ '| () () ||  /  \ \| (__/  )| (____/\  \   /         /\____) || (__/  )|  /  \ \'
+    _log_ '(_______)|_/    \/(______/ (_______/   \_/          \_______)(______/ |_/    \/'
+    _log_ ""
+    _log_ ""
+    _log_ "Git repository 'wkdev-sdk' ($(ansi::bold) $(git branch --show-current) @ $(git rev-parse HEAD) $(ansi::normal))"
+    _log_ " 🠲  Last commit: $(ansi::bold)$(git log -1 --format=%cd)$(ansi::normal)"
+    _log_ ""
+    _log_ "NOTE:"
+    _log_ " - Be sure to try $(ansi::bold)\`wkdev-test-host-integration\`$(ansi::normal) to verify your container setup behaves as expected."
+    _log_ ""
+    _log_ " - The home directory $(ansi::bold)\${HOME}$(ansi::normal)=${HOME} within the container is $(ansi::underline)$(ansi::bold)not the same$(ansi::normal)$(ansi::noUnderline) as your host home directory."
+    _log_ "   You can find your regular host home directory in the container under $(ansi::bold)\${HOST_HOME}$(ansi::normal)=${HOST_HOME}."
+    _log_ ""
+    _log_ " - Instructions on how to build / debug / profile WebKit can be found in the SDK documentation, either"
+    _log_ "   locally in $(ansi::underline)\${WKDEV_SDK}/docs$(ansi::noUnderline) or online $(ansi::underline)https://github.com/Igalia/wkdev-sdk/tree/main/docs$(ansi::noUnderline)".
 
     popd &>/dev/null
 }

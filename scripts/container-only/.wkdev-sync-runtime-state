@@ -34,12 +34,12 @@ try_mount_host_wayland() {
         # Silently succeed.
         return
     elif [ -S "${host_wayland_socket}" ]; then
-        echo ""
-        echo "-> Mounting host Wayland socket (${WAYLAND_DISPLAY})."
+        _log_ ""
+        _log_ "-> Mounting host Wayland socket (${WAYLAND_DISPLAY})."
         ln -s "${host_wayland_socket}" "${container_wayland_socket}"
     else
-        echo ""
-        echo "-> Skipping host Wayland socket (${WAYLAND_DISPLAY}) - not found."
+        _log_ ""
+        _log_ "-> Skipping host Wayland socket (${WAYLAND_DISPLAY}) - not found."
     fi
 
     if [[ ! -f "${container_wayland_socket}.lock" &&  -f "${host_wayland_socket}.lock" ]]; then
@@ -56,12 +56,12 @@ try_mount_host_pipewire() {
         # Silently succeed.
         return
     elif [ -S "${host_pipewired_socket}" ]; then
-        echo ""
-        echo "-> Mounting host Pipewire socket (${PIPEWIRE_REMOTE})."
+        _log_ ""
+        _log_ "-> Mounting host Pipewire socket (${PIPEWIRE_REMOTE})."
         ln -s "${host_pipewired_socket}" "${container_pipewire_socket}"
     else
-        echo ""
-        echo "-> Skipping host Pipewire socket (${PIPEWIRE_REMOTE}) - not found."
+        _log_ ""
+        _log_ "-> Skipping host Pipewire socket (${PIPEWIRE_REMOTE}) - not found."
     fi
 
     if [[ ! -f "${container_pipewire_socket}.lock" &&  -f "${host_pipewired_socket}.lock" ]]; then
@@ -102,7 +102,7 @@ run() {
     try_mount_host_pipewire
     mount_host_flatpak_instance_data
 
-    echo ""
+    _log_ ""
 }
 
 run "${@}"

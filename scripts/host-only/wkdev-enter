@@ -3,7 +3,7 @@
 # SPDX-License: MIT
 
 [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ] && source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
-init_application "${0}" "Launch a command or spawn an interactive shell in a container built by 'wkdev-create'" host-only
+init_application "${0}" "Launch a command or spawn an interactive shell in a container built by 'wkdev-create'" host-only with-quiet-support
 
 # Source utility script fragments
 source "${WKDEV_SDK}/utilities/host-setup-tasks.sh"
@@ -14,6 +14,9 @@ argsparse_use_option trace           "Enable 'xtrace' mode for this script"
 argsparse_use_option =verbose        "Increase verbosity of this script"
 
 argsparse_use_option =root           "Login as root user in container (mapped to $(id --user --name) on host)"
+argsparse_use_option no-tty          "Disable tty allocation (you need this if you need want stdout and stderr to be different streams)" short:T
+argsparse_use_option no-interactive  "Disable stdin (useful in scripts, see Caveats)" short:I
+
 argsparse_use_option =exec           "Treat all remaining non-option arguments (or everything after the '--' character sequence) as command to execute in the container instead of spawning a shell"
 argsparse_use_option =name:          "Name of container" default:wkdev
 
@@ -39,6 +42,18 @@ argsparse_usage_description="$(cat <<EOF
     $ ${application_name} --name <container-name>
     $ ${application_name} --root --name <container-name>
     $ ${application_name} --exec --name <container-name> -- uptime
+
+<< Caveats >>
+
+    By default, this command uses podman exec --interactive under the hood.
+
+    podman exec --interactive uses sockets to pipe stdin to the contained process, and as a
+    consequence it will read as much input from stdin as it is available, even if the
+    contained process doesn't request it. This can lead to hangs or corrupted stdin if the
+    same stdin is connected to a script that calls wkdev-enter as anything but the last
+    command. Therefore, when writing scripts, use non-interactive mode where stdin is not
+    necessary and avoid sharing stdin with several interactive executions.
+
 EOF
 )"
 
@@ -144,8 +159,12 @@ run() {
         fi
     fi
 
-    # Request interactive session with pseudo-tty allocation.
-    local podman_exec_arguments=("--interactive" "--tty")
+    local podman_exec_arguments=()
+
+    # Request pseudo-tty allocation unless explicitly disabled
+    if ! argsparse_is_option_set "no-tty"; then
+        podman_exec_arguments+=("--tty")
+    fi
 
     # Ensure WKDEV_SDK is set. It is done here and not creation to support older containers.
     podman_exec_arguments+=("--env" "WKDEV_SDK=/wkdev-sdk")
@@ -161,7 +180,8 @@ run() {
 
     podman_exec_arguments+=("${container_name}")
 
-    run_podman "${podman_arguments[@]}" exec "${podman_exec_arguments[@]}" /wkdev-sdk/scripts/container-only/.wkdev-sync-runtime-state
+    # Mount pipewire, wayland, etc...
+    run_podman "${podman_arguments[@]}" exec "${podman_exec_arguments[@]}" /wkdev-sdk/scripts/container-only/.wkdev-sync-runtime-state "${quiet_args[@]}" </dev/null
 
     if argsparse_is_option_set "exec"; then
         podman_exec_arguments+=("${program_params[@]}")
@@ -169,6 +189,12 @@ run() {
         podman_exec_arguments+=("/usr/bin/env" "USER=$(id --user --name)" "${SHELL}" "--login")
     fi
 
+    # --interactive is needed so that the process has access to *any* stdin.
+    # It is important that we use --interactive *only here*, as doing so in the
+    # previous podman exec call would eat stdin away.  (See the Caveats section in Usage.)
+    if ! argsparse_is_option_set no-interactive; then
+        podman_exec_arguments=(--interactive "${podman_exec_arguments[@]}")
+    fi
     run_podman "${podman_arguments[@]}" exec "${podman_exec_arguments[@]}"
 }
 

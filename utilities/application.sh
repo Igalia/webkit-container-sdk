@@ -16,11 +16,43 @@ application_description=""
 # The 'init_application' method serves as common entry point for all scripts in the wkdev-sdk.
 # Is is assumed that all scripts call 'init_application' in their preamble, before executing any logic.
 
+log_to_stdout_enabled=1  # Disabled by --quiet.
+quiet_args=()            # Contains --quiet if --quiet is passed in argv, used
+                         # to propagate it to other scripts.
+app_argv=("${@}")        # init_application requires argv to check for --quiet.
+
+enable_quiet_support() {
+    # Register the option for the sake of --help.
+    argsparse_use_option =quiet "Silence all WebKit container SDK messages (use this when you need \
+to launch a program in the container from the host with clean output)"
+
+    # We do the argument parsing ourselves instead of with argsparse
+    # as we need to know whether we need to be quiet before printing the
+    # application description message, before the application has set all
+    # its own argsparse settings.
+    for flag in "${app_argv[@]}"; do
+        case "${flag}" in
+            --quiet|-q)
+                log_to_stdout_enabled=0
+                quiet_args=(--quiet)
+                ;;
+            --)
+                break
+                ;;
+        esac
+    done
+}
+
 # Add log message to stdout.
 _log_() {
 
     local log_message="${1-}"
-    echo "${log_message}"
+    if [ $log_to_stdout_enabled -eq 1 ]; then
+        echo "${log_message}"
+    fi
+    # Log to journald if available. This can help users troubleshoot issues when
+    # using `wkdev-enter --quiet` inside scripts.
+    logger -p local0.info -t "${application_name}" -- "${log_message}" || true
 }
 
 # Aborts the application/script.
@@ -100,6 +132,11 @@ init_application() {
         true # no-op
     else
        _abort_ "Unknown constraints '${application_constraints}' passed as third parameter to 'init_application'"
+    fi
+
+    local extra_options="${4-}" # Currently either "with-quiet-support" or nothing
+    if [ "${extra_options}" == "with-quiet-support" ]; then
+        enable_quiet_support
     fi
 
     [ -z "${application_description}" ] || _log_ "${application_name}: ${application_description}"

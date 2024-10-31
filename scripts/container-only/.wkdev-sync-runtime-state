@@ -3,7 +3,7 @@
 # SPDX-License: MIT
 
 source "${WKDEV_SDK}/utilities/application.sh" || { echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."; exit 1; }
-init_application "${0}" "" container-only
+init_application "${0}" "" container-only with-quiet-support
 
 argsparse_allow_no_argument true
 argsparse_use_option trace        "Enable 'xtrace' mode for this script"

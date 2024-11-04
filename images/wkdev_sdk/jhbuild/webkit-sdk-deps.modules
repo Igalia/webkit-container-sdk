@@ -126,7 +126,7 @@
             version="1.4.2" />
   </meson>
 
-  <meson id="gst-plugins-rs" mesonargs="-Ddoc=disabled -Dexamples=disabled -Dtests=disabled -Daws=disabled -Dwebrtc=disabled -Dwebrtchttp=disabled">
+  <meson id="gst-plugins-rs" mesonargs="-Ddoc=disabled -Dexamples=disabled -Dtests=disabled --auto-features=disabled -Daudiofx=enabled -Dclosedcaption=enabled -Ddav1d=enabled -Dlivesync=enabled -Drtp=enabled">
     <dependencies>
       <dep package="dav1d"/>
       <dep package="gstreamer"/>

@@ -1,7 +1,7 @@
-From cad3e63546b17570e284b544afebb5566d75c6d7 Mon Sep 17 00:00:00 2001
+From 8615a8ac712bc173c0c3585392683053b7b8ee94 Mon Sep 17 00:00:00 2001
 From: Carlos Bentzen <cadubentzen@igalia.com>
 Date: Fri, 2 Aug 2024 11:19:56 +0200
-Subject: [PATCH] webrtcbin: reverse direction from remote media
+Subject: [PATCH 2/9] webrtcbin: reverse direction from remote media
 
 This had been overlooked from the spec. We need to reverse
 the remote media direction when setting the transceiver direction.
@@ -12,7 +12,7 @@ Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/72
  1 file changed, 26 insertions(+), 3 deletions(-)
 
 diff --git a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
-index 7cb0eb6ffc..6433d123b2 100644
+index b4196e3435..5ad6550d88 100644
 --- a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 +++ b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 @@ -6280,6 +6280,22 @@ get_last_generated_description (GstWebRTCBin * webrtc, SDPSource source,
@@ -83,5 +83,5 @@ index 7cb0eb6ffc..6433d123b2 100644
        /* Let transport be the RTCDtlsTransport object representing the RTP/RTCP component of the media transport
         * used by transceiver's associated media description, according to [RFC8843]. */
 -- 
-2.46.0
+2.47.0
 

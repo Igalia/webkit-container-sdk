@@ -1,7 +1,7 @@
-From 48ae40f477523bed4cd709d163f541e748356071 Mon Sep 17 00:00:00 2001
+From 8edcb3957601ba1237d3f60bbfc0f115a614aa75 Mon Sep 17 00:00:00 2001
 From: Carlos Bentzen <cadubentzen@igalia.com>
 Date: Wed, 10 Jul 2024 10:34:19 +0200
-Subject: [PATCH] webrtcbin: create and associate transceivers earlier in
+Subject: [PATCH 1/9] webrtcbin: create and associate transceivers earlier in
  negotation
 
 According to https://w3c.github.io/webrtc-pc/#set-the-session-description
@@ -31,7 +31,7 @@ Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/71
  4 files changed, 388 insertions(+), 240 deletions(-)
 
 diff --git a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
-index 9b84fa317d..7cb0eb6ffc 100644
+index f170f512bf..b4196e3435 100644
 --- a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 +++ b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 @@ -748,6 +748,13 @@ transceiver_match_for_mid (GstWebRTCRTPTransceiver * trans, const gchar * mid)
@@ -69,7 +69,7 @@ index 9b84fa317d..7cb0eb6ffc 100644
  typedef gboolean (*FindTransportFunc) (TransportStream * p1,
      gconstpointer data);
  
-@@ -4543,146 +4564,51 @@ _create_answer_task (GstWebRTCBin * webrtc, const GstStructure * options,
+@@ -4553,146 +4574,51 @@ _create_answer_task (GstWebRTCBin * webrtc, const GstStructure * options,
  
        _remove_optional_offer_fields (offer_caps);
  
@@ -660,7 +660,7 @@ index 80d21203c2..abeb5dba33 100644
                                                                               GstWebRTCRTPTransceiverDirection answer);
  G_GNUC_INTERNAL
 diff --git a/subprojects/gst-plugins-bad/tests/check/elements/webrtcbin.c b/subprojects/gst-plugins-bad/tests/check/elements/webrtcbin.c
-index 8fa8eeaf76..1dd2ddf3c2 100644
+index 7fa337e9ba..adf5014e02 100644
 --- a/subprojects/gst-plugins-bad/tests/check/elements/webrtcbin.c
 +++ b/subprojects/gst-plugins-bad/tests/check/elements/webrtcbin.c
 @@ -50,9 +50,11 @@ typedef enum
@@ -890,7 +890,7 @@ index 8fa8eeaf76..1dd2ddf3c2 100644
  
    p = gst_promise_new_with_change_func (_on_stats, t, NULL);
    g_signal_emit_by_name (t->webrtc1, "get-stats", NULL, p);
-@@ -5905,7 +5968,7 @@ GST_START_TEST (test_sdp_session_setup_attribute)
+@@ -5955,7 +6018,7 @@ GST_START_TEST (test_sdp_session_setup_attribute)
    fail_if (gst_element_set_state (t->webrtc2, GST_STATE_READY) ==
        GST_STATE_CHANGE_FAILURE);
    test_webrtc_create_offer (t);
@@ -899,7 +899,7 @@ index 8fa8eeaf76..1dd2ddf3c2 100644
  
    test_webrtc_wait_for_ice_gathering_complete (t);
  
-@@ -5943,6 +6006,7 @@ webrtcbin_suite (void)
+@@ -5993,6 +6056,7 @@ webrtcbin_suite (void)
      tcase_add_test (tc, test_media_direction);
      tcase_add_test (tc, test_add_transceiver);
      tcase_add_test (tc, test_get_transceivers);
@@ -908,5 +908,5 @@ index 8fa8eeaf76..1dd2ddf3c2 100644
      tcase_add_test (tc, test_recvonly_sendonly);
      tcase_add_test (tc, test_payload_types);
 -- 
-2.46.0
+2.47.0
 

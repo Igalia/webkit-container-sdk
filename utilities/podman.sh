@@ -89,6 +89,6 @@ is_podman_user_socket_available() {
     [ -S "${podman_socket}" ] || return 1
 
     # ... and it should be controlled by the systemd user session.
-    systemctl status --user podman.socket >/dev/null
+    systemctl status --user podman.socket &>/dev/null
     return ${?}
 }

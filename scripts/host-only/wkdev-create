@@ -25,6 +25,7 @@ argsparse_use_option =name:       "Name of container" default:wkdev
 argsparse_use_option rm           "Force removal of container if it already exists."
 argsparse_use_option attach       "Attach to container as it starts up."
 argsparse_use_option no-pull      "Do not login or pull images."
+argsparse_use_option no-pid       "Do not share pid namespace with the host."
 argsparse_use_option list-tags    "List available image tags."
 argsparse_use_option =tag:        "Create the container using a specific tag, see-also --list-tags." default:$(get_default_container_tag)
 
@@ -390,7 +391,9 @@ build_podman_create_arguments() {
     # with PID 1 via dbus. Therefore one either has to provide a session within the
     # container (use systemd init mechanism) or share the PID namespace with the host,
     # and let 'systemctl --user' communicate with the host PID 1 (require systemd host).
-    arguments+=("--pid" "host")
+    if ! argsparse_is_option_set "no-pid"; then
+        arguments+=("--pid" "host")
+    fi
 
     # Share IPC namepace with host -- otherwise /dev/shm access (e.g. in glxgears) won't work.
     arguments+=("--ipc" "host")

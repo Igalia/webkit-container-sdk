@@ -113,6 +113,7 @@
       <patch file="0001-webrtcbin-create-and-associate-transceivers-earlier-.patch" strip="1"/>
       <patch file="0002-webrtcbin-reverse-direction-from-remote-media.patch" strip="1"/>
       <patch file="0003-webrtcbin-connect-output-stream-on-recv-transceivers.patch" strip="1"/>
+      <patch file="0004-pad-Never-push-sticky-events-in-response-to-a-FLUSH_.patch" strip="1"/>
     </branch>
     <dependencies>
       <dep package="openh264"/>

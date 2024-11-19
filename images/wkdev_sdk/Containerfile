@@ -141,5 +141,11 @@ RUN gst-inspect-1.0 audiornnoise && \
     gst-inspect-1.0 livesync && \
     gst-inspect-1.0 rsrtp
 
+# Remove systemd services that would startup by default, when spawning
+# systemd as PID 1 within the container (usually, we don't spawn systemd
+# within the wkdev-sdk container, for interactive usage, but we do so
+# when deploying the wkdev-sdk image as bot).
+RUN find /etc/systemd/ -type l -name '*.service' -print -exec rm {} \;
+
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

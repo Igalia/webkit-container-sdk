@@ -3,7 +3,10 @@
 [ -z "${application_ready}" ] && { echo "[FATAL] You need to source 'utilities/application.sh' before sourcing this script."; return 1; }
 
 # Internal helpers
-_get_sdk_images_directory() { echo "${WKDEV_SDK}/images"; }
+_get_sdk_images_directory() {
+    local default="${WKDEV_SDK}/images";
+    echo "${WKDEV_SDK_IMAGES_DIRECTORY:-"${default}"}";
+}
 
 # Get absolute path to '<wkdev-sdk>/images/<image>' directory, given an image name.
 # The subdirectory name is equal to the image name, except that hyphens transform to

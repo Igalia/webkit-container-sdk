@@ -7,7 +7,7 @@ LABEL maintainer="webkit-gtk@lists.webkit.org"
 LABEL version="1.0"
 LABEL org.opencontainers.image.title="WebKit SDK"
 LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 24.04"
-LABEL org.opencontainers.image.source=https://github.com/Igalia/wkdev-sdk
+LABEL org.opencontainers.image.source=https://github.com/Igalia/webkit-container-sdk
 
 # Tweakable "make -j <x>" setting.
 ARG NUMBER_OF_PARALLEL_BUILDS=4
@@ -22,10 +22,6 @@ ARG APT_AUTOREMOVE="apt-get --assume-yes autoremove"
 
 # Disable prompt during package configuration
 ENV DEBIAN_FRONTEND noninteractive
-
-# Debian package build settings
-ENV DEBEMAIL "webkit-gtk@lists.webkit.org"
-ENV DEBFULLNAME "Igalia"
 
 # Enable debugging in WebKit's sandbox.
 ENV WEBKIT_ENABLE_DEBUG_PERMISSIONS_IN_SANDBOX "1"
@@ -144,6 +140,12 @@ RUN gst-inspect-1.0 audiornnoise && \
     gst-inspect-1.0 dav1ddec && \
     gst-inspect-1.0 livesync && \
     gst-inspect-1.0 rsrtp
+
+# Remove systemd services that would startup by default, when spawning
+# systemd as PID 1 within the container (usually, we don't spawn systemd
+# within the wkdev-sdk container, for interactive usage, but we do so
+# when deploying the wkdev-sdk image as bot).
+RUN find /etc/systemd/ -type l -name '*.service' -print -exec rm {} \;
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

@@ -16,9 +16,9 @@ jobs:
       - name: Set tag name
         run: |
           if [ "${GITHUB_BASE_REF}" = 'main' ]; then
-            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_OUTPUT}"
+            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
           fi
-          echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=${GITHUB_REPOSITORY_OWNER}" >> "${GITHUB_OUTPUT}"
+          echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
 
       - name: Install podman
         run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
@@ -59,9 +59,9 @@ jobs:
       - name: Set tag name
         run: |
           if [ "${GITHUB_BASE_REF}" = 'main' ]; then
-            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_OUTPUT}"
+            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
           fi
-          echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=${GITHUB_REPOSITORY_OWNER}" >> "${GITHUB_OUTPUT}"
+          echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
 
       - name: Install podman
         run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs

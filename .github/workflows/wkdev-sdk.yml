@@ -26,6 +26,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Prune podman containers/images
+        run: |
+          podman system prune --all --force
+
       - name: Build image
         run: |
           source ./register-sdk-on-host.sh

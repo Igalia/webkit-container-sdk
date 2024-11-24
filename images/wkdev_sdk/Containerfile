@@ -138,7 +138,7 @@ RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \
 RUN gst-inspect-1.0 audiornnoise && \
     gst-inspect-1.0 cea608tott && \
     gst-inspect-1.0 dav1ddec && \
-    gst-inspect-1.0 livesync && \
+    gst-inspect-1.0 isofmp4mux && \
     gst-inspect-1.0 rsrtp
 
 # Remove systemd services that would startup by default, when spawning

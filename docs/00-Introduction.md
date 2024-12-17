@@ -15,7 +15,7 @@ run commands within the **wkdev** container or launch one or more interactive sh
 sessions, in which you can compile WebKit / run tests / etc.
 
 To run CLI applications within a container, requires no effort: it works out of the box.
-Runing graphical applications, that utilize e.g. [Wayland](https://wayland.freedesktop.org)
+Running graphical applications, that utilize e.g. [Wayland](https://wayland.freedesktop.org)
 for screen presentation, need [D-Bus](https://freedesktop.org/wiki/Software/dbus) to communicate
 with other system components, or use [SystemD](https://freedesktop.org/wiki/Software/systemd)
 APIs to query network / power / etc. information, require a substantial amount of configuration
@@ -63,14 +63,14 @@ Let it run, and move on to the **Quickstart guide**.
 Add the following to your shell configuration file (e.g. `~/.bashrc`, `~/.zprofile`, ...)
 to ensure that the `${WKDEV_SDK}` environment variable points to the correct location
 of your `wkdev-sdk` Git checkout. It also extends the `${PATH}` to make the `wkdev-*` scripts
-provided by this repository accessible without having to specifcy full paths in the shell.
+provided by this repository accessible without having to specify full paths in the shell.
 
 ```sh
 source /absolute/path/to/your/Git/checkout/of/wkdev-sdk/register-sdk-on-host.sh
 ```
 
-Launch a new shell, or `source` your shell configuration files to verify, `${WKDEV_SDK}`
-now expects as intented - pointing to your `wkdev-sdk` checkout.
+Launch a new shell, or `source` your shell configuration files, to verify `${WKDEV_SDK}`
+now works as intended -- pointing to your `webkit-container-sdk` checkout.
 
 2. Create a new **wkdev** container for WebKit development
 

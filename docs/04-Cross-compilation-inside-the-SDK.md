@@ -26,6 +26,6 @@ Tools/Scripts/cross-toolchain-helper --cross-target rpi3-32bits-mesa --cross-too
 It is important to unset the `LD_LIBRARY_PATH` otherwise `cross-toolchain-helper` will partly fail,
 but `build-webkit` continues, leading to an inconsistent build environment, that will fail to produce binaries.
 
-sccache is also not supported in that mode, and will interefer with yocto - disable it.
+sccache is also not supported in that mode, and will interfere with yocto -- disable it.
 
 Follow the instructions in Tools/yocto/README.md to flash the image onto your target machine.

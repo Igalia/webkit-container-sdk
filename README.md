@@ -18,14 +18,14 @@ subdirectory for further information the SDK provides but the guide below will c
 Add the following to your shell configuration file (e.g. `~/.bashrc`, `~/.zprofile`, ...)
 to ensure that the `${WKDEV_SDK}` environment variable points to the correct location
 of your `webkit-container-sdk` Git checkout. It also extends the `${PATH}` to make the `wkdev-*` scripts
-provided by this repository accessible without having to specifcy full paths in the shell.
+provided by this repository accessible without having to specify full paths in the shell.
 
 ```sh
 source /absolute/path/to/your/Git/checkout/of/webkit-container-sdk/register-sdk-on-host.sh
 ```
 
-Launch a new shell, or `source` your shell configuration files to verify, `${WKDEV_SDK}`
-now expects as intented - pointing to your `webkit-container-sdk` checkout.
+Launch a new shell, or `source` your shell configuration files, to verify `${WKDEV_SDK}`
+now works as intended -- pointing to your `webkit-container-sdk` checkout.
 
 2. Create a new **wkdev** container for WebKit development
 
@@ -36,7 +36,7 @@ wkdev-create --create-home
 ```
 
 This will create a container named **wkdev** by default or a custom one with `--name`
-and it will create a new home directory for the sdk in `${HOME}/wkdev-home` by default
+and it will create a new home directory for the SDK in `${HOME}/wkdev-home` by default
 or a custom one with `--home`.
 
 Within the container, the `${HOME}` directory is not equal to the host `${HOME}` directory:

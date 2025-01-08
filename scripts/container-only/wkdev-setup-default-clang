@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Copyright 2024 Igalia S.L.
+# SPDX-License: MIT
+
+if [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ]; then
+    source "${WKDEV_SDK}/utilities/application.sh"
+else
+    echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."
+    exit 1
+fi
+
+min_clang_version=14
+max_clang_version=18
+
+init_application "${0}" "Installs and creates symlinks to set default clang executables" container-only
+
+argsparse_use_option "=version:" "The clang version between ${min_clang_version}-${max_clang_version}" "mandatory" "type:uint"
+
+
+argsparse_usage_description="$(cat <<EOF
+<< Purpose >>
+
+    Provides an easy way to install and switch between clang toolchains.
+
+<< Examples >>
+
+    $ ${application_name} --version=17
+EOF
+)"
+
+run() {
+
+    argsparse_parse_options "${@}"
+    local version="${program_options["version"]}"
+
+    _log_ ""
+
+    # Sanity check versions Ubuntu actually has.
+    if (( ${version} < ${min_clang_version} )) || (( ${version} > ${max_clang_version})); then
+        _log_ "${version} is not a valid value (between ${min_clang_version}-${max_clang_version})."
+        exit 1
+    fi
+
+    if [ ! -f "/usr/bin/clang-${version}" ]; then
+        _log_ "Installing clang toolchain version ${version}"
+        _log_ ""
+        if ! sudo apt-get install "clang-tools-${version}" "clangd-${version}" "clang-format-${version}" "clang-tidy-${version}" "lld-${version}" "lldb-${version}"; then
+            _log_ ""
+            _log_ "Failed to install clang toolchain"
+            exit 1
+        fi
+    fi
+
+    local output_path
+    if [ "$EUID" -eq 0 ]; then
+        output_path="/usr/local/bin"
+    else
+        output_path="${HOME}/.local/bin"
+    fi
+    _log_ "Creating symlinks in ${output_path}"
+    for binary in /usr/bin/*-"${version}"; do
+        local binary_name="$(basename ${binary})"
+        ln --symbolic --force "${binary}" "${output_path}/${binary_name::-3}"
+    done
+}
+
+run "${@}"

@@ -8,4 +8,4 @@ wkdev-setup-vscode
 ```
 
 ## Using vscode
-After installation, vscode can be started with `code` (not `vscode`).
+After installation, vscode can be started with `code`.

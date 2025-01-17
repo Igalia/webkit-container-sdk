@@ -65,7 +65,7 @@ build_image() {
     podman_argument+=("--tag" "$(get_tag_for_build)")
 
     if argsparse_is_option_set "arch"; then
-        container_arch=$(program_options["arch"])
+        container_arch="${program_options["arch"]}"
         echo "Overriding container architecture: ${container_arch}"
         podman_argument+=("--arch=${container_arch}")
     fi

@@ -81,8 +81,6 @@ ENV RUSTUP_HOME="/opt/rust" \
     CARGO_HOME="/opt/rust" \
     PATH="/opt/rust/bin:${PATH}"
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-
 RUN rustup default stable && \
     rustup component remove rust-docs && \
     cargo install --root /usr/local --version 0.8.1 --locked sccache && \

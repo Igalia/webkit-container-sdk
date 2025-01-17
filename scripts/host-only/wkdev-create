@@ -27,6 +27,7 @@ argsparse_use_option attach       "Attach to container as it starts up."
 argsparse_use_option no-pull      "Do not login or pull images."
 argsparse_use_option list-tags    "List available image tags."
 argsparse_use_option =tag:        "Create the container using a specific tag, see-also --list-tags." default:$(get_default_container_tag)
+argsparse_use_option =arch:       "Container architecture."
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -434,6 +435,12 @@ build_podman_create_arguments() {
         arguments+=("--pull=never")
     else
         arguments+=("--pull=newer")
+    fi
+
+    if argsparse_is_option_set "arch"; then
+        container_arch="${program_options["arch"]}"
+        echo "Overriding container architecture: ${container_arch}"
+        arguments+=("--arch=${container_arch}")
     fi
 
     set +o nounset

@@ -1,7 +1,7 @@
-From e2db93c386bb133ca7e4d3641007771de573695b Mon Sep 17 00:00:00 2001
+From 41fa9831893c9ee434840b4d1bf1150ab124f762 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Fran=C3=A7ois=20Laignel?= <francois@centricular.com>
 Date: Thu, 7 Mar 2024 17:36:33 +0100
-Subject: [PATCH 6/9] webrtc: add all SSRC attributes getting CAPS for a PT
+Subject: [PATCH 6/8] webrtc: add all SSRC attributes getting CAPS for a PT
 
 The transport stream only returned the CAPS for the first matching PT entry
 from the `ptmap`. Other SSRC with the same PT where not included. For a stream
@@ -24,7 +24,7 @@ Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/61
  3 files changed, 57 insertions(+), 6 deletions(-)
 
 diff --git a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
-index d8cf348f99..2b920313d6 100644
+index 6fb42da6f4..8ac9850a62 100644
 --- a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 +++ b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 @@ -5080,6 +5080,8 @@ _set_internal_rtpbin_element_props_from_stream (GstWebRTCBin * webrtc,
@@ -36,7 +36,7 @@ index d8cf348f99..2b920313d6 100644
    }
  
    GST_DEBUG_OBJECT (stream, "setting payload map on %" GST_PTR_FORMAT " : %"
-@@ -7562,8 +7564,7 @@ on_rtpbin_request_pt_map (GstElement * rtpbin, guint session_id, guint pt,
+@@ -7586,8 +7588,7 @@ on_rtpbin_request_pt_map (GstElement * rtpbin, guint session_id, guint pt,
    if (!stream)
      goto unknown_session;
  

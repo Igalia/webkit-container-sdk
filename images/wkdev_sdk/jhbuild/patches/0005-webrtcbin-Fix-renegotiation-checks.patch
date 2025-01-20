@@ -1,7 +1,7 @@
-From 22e49d68ab4095379df2f0e3fa09ee61f3fb5624 Mon Sep 17 00:00:00 2001
+From 8be67d014ff50275ad0dd0a70f81bb93b24033c6 Mon Sep 17 00:00:00 2001
 From: Jan Schmidt <jan@centricular.com>
 Date: Thu, 1 Aug 2024 13:42:52 +1000
-Subject: [PATCH 5/9] webrtcbin: Fix renegotiation checks
+Subject: [PATCH 5/8] webrtcbin: Fix renegotiation checks
 
 When checking for renegotiation against a local offer,
 reverse the remote direction in the corresponding answer
@@ -27,7 +27,7 @@ Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/73
  2 files changed, 151 insertions(+), 32 deletions(-)
 
 diff --git a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
-index 6a9484a2bc..d8cf348f99 100644
+index 6fa560b554..6fb42da6f4 100644
 --- a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 +++ b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 @@ -1772,6 +1772,22 @@ done:
@@ -109,7 +109,7 @@ index 6a9484a2bc..d8cf348f99 100644
                gst_webrtc_rtp_transceiver_direction_to_string (remote_dir));
            return TRUE;
          }
-@@ -6280,22 +6302,6 @@ get_last_generated_description (GstWebRTCBin * webrtc, SDPSource source,
+@@ -6304,22 +6326,6 @@ get_last_generated_description (GstWebRTCBin * webrtc, SDPSource source,
    return NULL;
  }
  

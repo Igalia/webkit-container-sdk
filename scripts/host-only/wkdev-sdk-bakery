@@ -22,6 +22,7 @@ argsparse_use_option =env:        "Environment variable as string array, e.g. -e
 argsparse_use_option =mode:       "Operation mode: 'build', 'deploy', or 'export'" mandatory
 argsparse_use_option idle-cores:  "Number of CPU cores to leave idle, when building the image" type:uint default:2
 argsparse_use_option =tag:        "Tag to use for created image." default:$(get_default_container_tag)
+argsparse_use_option =arch:       "Container architecture."
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -62,6 +63,12 @@ build_image() {
 
     local podman_argument=("--jobs" "$(get_number_of_cores_for_build)")
     podman_argument+=("--tag" "$(get_tag_for_build)")
+
+    if argsparse_is_option_set "arch"; then
+        container_arch="${program_options["arch"]}"
+        echo "Overriding container architecture: ${container_arch}"
+        podman_argument+=("--arch=${container_arch}")
+    fi
 
     for environment_variable in "${cumulated_values_env[@]}"
     do

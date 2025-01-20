@@ -1,7 +1,7 @@
-From cd27befcb7a75a1cca00027a195c1f40aa8f0c26 Mon Sep 17 00:00:00 2001
+From 5bd0033bc9683610a74f668e67672fc524628fb2 Mon Sep 17 00:00:00 2001
 From: Carlos Bentzen <cadubentzen@igalia.com>
 Date: Fri, 2 Aug 2024 11:21:13 +0200
-Subject: [PATCH 3/9] webrtcbin: connect output stream on recv transceivers
+Subject: [PATCH 3/8] webrtcbin: connect output stream on recv transceivers
 
 With MR 7156, transceivers and transports are created earlier,
 but for sendrecv media we could get `not-linked` errors due to
@@ -19,10 +19,10 @@ Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/72
  2 files changed, 68 insertions(+)
 
 diff --git a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
-index 5ad6550d88..ec8fc47490 100644
+index bc5ebb1909..02652c0362 100644
 --- a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 +++ b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
-@@ -6500,6 +6500,12 @@ _create_and_associate_transceivers_from_sdp (GstWebRTCBin * webrtc,
+@@ -6524,6 +6524,12 @@ _create_and_associate_transceivers_from_sdp (GstWebRTCBin * webrtc,
          webrtc_transceiver_set_transport (wtrans, stream);
        }
      }

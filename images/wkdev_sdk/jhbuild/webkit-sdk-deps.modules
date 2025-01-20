@@ -109,17 +109,15 @@
     <branch repo="gstreamer.freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer.git"
-            tag="1.24.9">
-      <patch file="0004-pad-Never-push-sticky-events-in-response-to-a-FLUSH_.patch"/>
+            tag="1.24.11">
       <patch file="0001-webrtcbin-create-and-associate-transceivers-earlier-.patch"/>
       <patch file="0002-webrtcbin-reverse-direction-from-remote-media.patch"/>
       <patch file="0003-webrtcbin-connect-output-stream-on-recv-transceivers.patch"/>
-      <patch file="0004-webrtc-Fixes-for-matching-pads-to-unassociated-trans.patch"/>
       <patch file="0005-webrtcbin-Fix-renegotiation-checks.patch"/>
       <patch file="0006-webrtc-add-all-SSRC-attributes-getting-CAPS-for-a-PT.patch"/>
       <patch file="0007-rtpfunnel-also-fallback-to-pad-default-handling-for-.patch"/>
       <patch file="0008-webrtcbin-enable-forward-unknown-ssrc-on-rtpfunnel.patch"/>
-      <patch file="0009-rtpfunnel-Ensure-segment-events-are-forwarded-after-.patch"/>
+      <patch file="0009-sdp-accept-empty-attribute-value-represented-as-a-NU.patch"/>
     </branch>
     <dependencies>
       <dep package="openh264"/>

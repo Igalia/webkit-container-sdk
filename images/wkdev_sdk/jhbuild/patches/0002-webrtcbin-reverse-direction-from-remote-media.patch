@@ -1,7 +1,7 @@
-From 8615a8ac712bc173c0c3585392683053b7b8ee94 Mon Sep 17 00:00:00 2001
+From 2e69c18ecb12a66ce92f7e3c591343916856c1b1 Mon Sep 17 00:00:00 2001
 From: Carlos Bentzen <cadubentzen@igalia.com>
 Date: Fri, 2 Aug 2024 11:19:56 +0200
-Subject: [PATCH 2/9] webrtcbin: reverse direction from remote media
+Subject: [PATCH 2/8] webrtcbin: reverse direction from remote media
 
 This had been overlooked from the spec. We need to reverse
 the remote media direction when setting the transceiver direction.
@@ -12,10 +12,10 @@ Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/72
  1 file changed, 26 insertions(+), 3 deletions(-)
 
 diff --git a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
-index b4196e3435..5ad6550d88 100644
+index 225d246576..bc5ebb1909 100644
 --- a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 +++ b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
-@@ -6280,6 +6280,22 @@ get_last_generated_description (GstWebRTCBin * webrtc, SDPSource source,
+@@ -6304,6 +6304,22 @@ get_last_generated_description (GstWebRTCBin * webrtc, SDPSource source,
    return NULL;
  }
  
@@ -38,7 +38,7 @@ index b4196e3435..5ad6550d88 100644
  /* https://w3c.github.io/webrtc-pc/#set-description (steps in 4.6.10.) */
  static gboolean
  _create_and_associate_transceivers_from_sdp (GstWebRTCBin * webrtc,
-@@ -6328,12 +6344,14 @@ _create_and_associate_transceivers_from_sdp (GstWebRTCBin * webrtc,
+@@ -6352,12 +6368,14 @@ _create_and_associate_transceivers_from_sdp (GstWebRTCBin * webrtc,
      const gchar *mid;
      guint transport_idx;
      TransportStream *stream;
@@ -53,7 +53,7 @@ index b4196e3435..5ad6550d88 100644
  
      /* XXX: not strictly required but a lot of functionality requires a mid */
      if (!mid) {
-@@ -6390,8 +6408,6 @@ _create_and_associate_transceivers_from_sdp (GstWebRTCBin * webrtc,
+@@ -6414,8 +6432,6 @@ _create_and_associate_transceivers_from_sdp (GstWebRTCBin * webrtc,
           * that were added to the PeerConnection by addTrack and are not associated with any "m=" section
           * and are not stopped, find the first (according to the canonical order described in Section 5.2.1)
           * such RtpTransceiver. */
@@ -62,7 +62,7 @@ index b4196e3435..5ad6550d88 100644
          if (direction == GST_WEBRTC_RTP_TRANSCEIVER_DIRECTION_SENDRECV
              || direction == GST_WEBRTC_RTP_TRANSCEIVER_DIRECTION_RECVONLY) {
            int j;
-@@ -6464,11 +6480,18 @@ _create_and_associate_transceivers_from_sdp (GstWebRTCBin * webrtc,
+@@ -6488,11 +6504,18 @@ _create_and_associate_transceivers_from_sdp (GstWebRTCBin * webrtc,
        trans->mid = g_strdup (mid);
        g_object_notify (G_OBJECT (trans), "mid");
  

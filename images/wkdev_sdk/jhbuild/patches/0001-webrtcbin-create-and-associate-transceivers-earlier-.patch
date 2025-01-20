@@ -1,7 +1,7 @@
-From 8edcb3957601ba1237d3f60bbfc0f115a614aa75 Mon Sep 17 00:00:00 2001
+From e194b6bb173a95dcfb84c328fff426e60e6ab8f9 Mon Sep 17 00:00:00 2001
 From: Carlos Bentzen <cadubentzen@igalia.com>
 Date: Wed, 10 Jul 2024 10:34:19 +0200
-Subject: [PATCH 1/9] webrtcbin: create and associate transceivers earlier in
+Subject: [PATCH 1/8] webrtcbin: create and associate transceivers earlier in
  negotation
 
 According to https://w3c.github.io/webrtc-pc/#set-the-session-description
@@ -24,14 +24,14 @@ associated after every session description is set.
 
 Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/7156>
 ---
- .../gst-plugins-bad/ext/webrtc/gstwebrtcbin.c | 495 ++++++++++--------
+ .../gst-plugins-bad/ext/webrtc/gstwebrtcbin.c | 477 +++++++++++-------
  .../gst-plugins-bad/ext/webrtc/webrtcsdp.c    |  11 +
  .../gst-plugins-bad/ext/webrtc/webrtcsdp.h    |   2 +
  .../tests/check/elements/webrtcbin.c          | 120 ++++-
- 4 files changed, 388 insertions(+), 240 deletions(-)
+ 4 files changed, 388 insertions(+), 222 deletions(-)
 
 diff --git a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
-index f170f512bf..b4196e3435 100644
+index dce4820a6d..225d246576 100644
 --- a/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 +++ b/subprojects/gst-plugins-bad/ext/webrtc/gstwebrtcbin.c
 @@ -748,6 +748,13 @@ transceiver_match_for_mid (GstWebRTCRTPTransceiver * trans, const gchar * mid)
@@ -169,8 +169,8 @@ index f170f512bf..b4196e3435 100644
 -          }
 -          rtp_trans = NULL;
 -        }
-       }
- 
+-      }
+-
 -      if (rtp_trans) {
 -        answer_dir = rtp_trans->direction;
 -        g_assert (answer_caps != NULL);
@@ -180,8 +180,8 @@ index f170f512bf..b4196e3435 100644
 -        answer_dir = GST_WEBRTC_RTP_TRANSCEIVER_DIRECTION_RECVONLY;
 -        GST_WARNING_OBJECT (webrtc, "did not find compatible transceiver for "
 -            "offer caps %" GST_PTR_FORMAT ", will only receive", offer_caps);
--      }
--
+       }
+ 
 -      if (!rtp_trans) {
 -        GstCaps *trans_caps;
 -        GstWebRTCKind kind = GST_WEBRTC_KIND_UNKNOWN;
@@ -253,32 +253,7 @@ index f170f512bf..b4196e3435 100644
      }
    }
  
-@@ -6079,24 +6006,6 @@ _update_data_channel_from_sdp_media (GstWebRTCBin * webrtc,
-   transport_receive_bin_set_receive_state (receive, RECEIVE_STATE_PASS);
- }
- 
--static gboolean
--_find_compatible_unassociated_transceiver (GstWebRTCRTPTransceiver * p1,
--    gconstpointer data)
--{
--  GstWebRTCKind kind = GPOINTER_TO_INT (data);
--
--  if (p1->mid)
--    return FALSE;
--  if (p1->mline != -1)
--    return FALSE;
--  if (p1->stopped)
--    return FALSE;
--  if (p1->kind != GST_WEBRTC_KIND_UNKNOWN && p1->kind != kind)
--    return FALSE;
--
--  return TRUE;
--}
--
- static void
- _connect_rtpfunnel (GstWebRTCBin * webrtc, guint session_id)
- {
-@@ -6179,7 +6088,6 @@ _update_transceivers_from_sdp (GstWebRTCBin * webrtc, SDPSource source,
+@@ -6185,7 +6112,6 @@ _update_transceivers_from_sdp (GstWebRTCBin * webrtc, SDPSource source,
    for (i = 0; i < gst_sdp_message_medias_len (sdp->sdp); i++) {
      const GstSDPMedia *media = gst_sdp_message_get_media (sdp->sdp, i);
      TransportStream *stream;
@@ -286,7 +261,7 @@ index f170f512bf..b4196e3435 100644
      guint transport_idx;
  
      /* skip rejected media */
-@@ -6191,8 +6099,6 @@ _update_transceivers_from_sdp (GstWebRTCBin * webrtc, SDPSource source,
+@@ -6197,8 +6123,6 @@ _update_transceivers_from_sdp (GstWebRTCBin * webrtc, SDPSource source,
      else
        transport_idx = i;
  
@@ -295,7 +270,7 @@ index f170f512bf..b4196e3435 100644
      stream = _get_or_create_transport_stream (webrtc, transport_idx,
          _message_media_is_datachannel (sdp->sdp, transport_idx));
      if (!bundled) {
-@@ -6203,60 +6109,28 @@ _update_transceivers_from_sdp (GstWebRTCBin * webrtc, SDPSource source,
+@@ -6209,60 +6133,28 @@ _update_transceivers_from_sdp (GstWebRTCBin * webrtc, SDPSource source,
        ensure_rtx_hdr_ext (stream);
      }
  
@@ -310,10 +285,7 @@ index f170f512bf..b4196e3435 100644
 -      if (g_strcmp0 (gst_sdp_media_get_media (media), "audio") == 0 ||
 -          g_strcmp0 (gst_sdp_media_get_media (media), "video") == 0) {
 -        GstWebRTCKind kind = GST_WEBRTC_KIND_UNKNOWN;
-+    if (g_strcmp0 (gst_sdp_media_get_media (media), "audio") == 0 ||
-+        g_strcmp0 (gst_sdp_media_get_media (media), "video") == 0) {
-+      GstWebRTCRTPTransceiver *trans;
- 
+-
 -        /* No existing transceiver, find an unused one */
 -        if (!trans) {
 -          if (g_strcmp0 (gst_sdp_media_get_media (media), "audio") == 0)
@@ -343,7 +315,10 @@ index f170f512bf..b4196e3435 100644
 -              gst_webrtc_bin_signals[ON_NEW_TRANSCEIVER_SIGNAL], 0, trans);
 -          PC_LOCK (webrtc);
 -        }
--
++    if (g_strcmp0 (gst_sdp_media_get_media (media), "audio") == 0 ||
++        g_strcmp0 (gst_sdp_media_get_media (media), "video") == 0) {
++      GstWebRTCRTPTransceiver *trans;
+ 
 -        _update_transceiver_from_sdp_media (webrtc, sdp->sdp, i, stream,
 -            trans, bundled, bundle_idx, error);
 -        if (error && *error)
@@ -376,7 +351,7 @@ index f170f512bf..b4196e3435 100644
      }
    }
  
-@@ -6406,6 +6280,210 @@ get_last_generated_description (GstWebRTCBin * webrtc, SDPSource source,
+@@ -6412,6 +6304,210 @@ get_last_generated_description (GstWebRTCBin * webrtc, SDPSource source,
    return NULL;
  }
  
@@ -587,7 +562,7 @@ index f170f512bf..b4196e3435 100644
  
  /* http://w3c.github.io/webrtc-pc/#set-description */
  static GstStructure *
-@@ -6568,21 +6646,8 @@ _set_description_task (GstWebRTCBin * webrtc, struct set_description *sd)
+@@ -6574,21 +6670,8 @@ _set_description_task (GstWebRTCBin * webrtc, struct set_description *sd)
      }
    }
  
@@ -611,7 +586,7 @@ index f170f512bf..b4196e3435 100644
  
    if (webrtc->signaling_state != new_signaling_state) {
      webrtc->signaling_state = new_signaling_state;
-@@ -6642,6 +6707,12 @@ _set_description_task (GstWebRTCBin * webrtc, struct set_description *sd)
+@@ -6648,6 +6731,12 @@ _set_description_task (GstWebRTCBin * webrtc, struct set_description *sd)
          continue;
        }
  

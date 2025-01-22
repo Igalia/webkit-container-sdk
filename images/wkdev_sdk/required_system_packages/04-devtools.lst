@@ -2,7 +2,7 @@
 build-essential cmake ninja-build
 
 # Build tools
-ccache rustup
+ccache
 
 # Debugging / profiling / tracing
 valgrind rr perf-tools-unstable systemd-coredump

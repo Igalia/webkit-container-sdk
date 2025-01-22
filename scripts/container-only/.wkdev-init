@@ -204,6 +204,20 @@ try_setup_permissions_rust_directory() {
     chown --recursive "${container_user_name}:${container_group_name}" "${rust_directory}" &>/dev/null
 }
 
+# Works around python issues when running scripts like this:
+# python3 Tools/Scripts/dump-class-layout -t WebKitBuild/JSCOnly/Debug/lib/libJavaScriptCore.so JavaScriptCore JSC::JSCell
+try_fix_lldb_py() {
+
+    local user_home
+
+    user_home=$(getent passwd "${container_user_name}" | cut -d: -f6)
+
+    sudo apt install lsb-release wget software-properties-common gnupg -y
+    wget -qO - https://apt.llvm.org/llvm.sh | sudo bash -s 19 -y
+    sudo ln -s /usr/lib/llvm-19/lib/liblldb.so.1 /usr/lib/llvm-19/lib/liblldb.so
+    echo "export PYTHONPATH=/usr/lib/llvm-19/lib/python3.12/site-packages/" >> ${user_home}/.bashrc
+}
+
 try_firstrun_script() {
 
     local user_home
@@ -239,6 +253,7 @@ TASKS=(
     "try_setup_dockerenv_file"
     "try_setup_permissions_jhbuild_directory"
     "try_setup_permissions_rust_directory"
+    "try_fix_lldb_py"
     "try_firstrun_script"
 )
 

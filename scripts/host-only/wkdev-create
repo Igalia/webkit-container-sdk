@@ -431,6 +431,9 @@ build_podman_create_arguments() {
     # Always set XDG_RUNTIME_DIR to the same value.
     arguments+=("--env" "XDG_RUNTIME_DIR=/run/user/${host_user_id}")
 
+    # This is needed for some scripts like wkdev-setup-vscode
+    arguments+=("--env" "WKDEV_SDK_HOST=${WKDEV_SDK}")
+
     if argsparse_is_option_set "no-pull"; then
         arguments+=("--pull=never")
     else

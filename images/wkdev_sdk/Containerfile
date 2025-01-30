@@ -83,7 +83,7 @@ ENV RUSTUP_HOME="/opt/rust" \
 
 RUN rustup default stable && \
     rustup component remove rust-docs && \
-    cargo install --root /usr/local --version 0.8.1 --locked sccache && \
+    cargo install --root /usr/local --version 0.9.1 --locked sccache && \
     cargo install --root /usr/local cargo-c
 
 # Copy jhbuild helper files and do the initial build & install

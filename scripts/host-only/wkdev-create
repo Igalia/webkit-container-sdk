@@ -99,7 +99,7 @@ process_command_line_arguments() {
             cp --recursive --verbose /etc/skel "${container_user_home}"
 
             # Set ownership / permissions
-            chown ${container_user_id}:${container_group_id} "${container_user_home}"
+            chown --recursive ${container_user_id}:${container_group_id} "${container_user_home}"
             chmod 750 "${container_user_home}"
 
             default_config_directory="$(get_container_home_defaults_directory_name)"

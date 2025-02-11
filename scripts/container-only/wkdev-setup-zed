@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# Copyright 2024 Igalia S.L.
+# SPDX-License: MIT
+
+if [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ]; then
+    source "${WKDEV_SDK}/utilities/application.sh"
+else
+    echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."
+    exit 1
+fi
+if [[ -z ${WKDEV_SDK_HOST} ]]; then
+    echo "Please set \${WKDEV_SDK_HOST} to point to the the wkdev-sdk checkout (from the host perspective). This is used when creating .desktop entries."
+    exit 1
+fi
+if [[ ! -d /host/${HOME} ]]; then
+    echo "Host and container home must have the same path: /host/${HOME}"
+    exit 1
+fi
+source "${WKDEV_SDK}/utilities/prerequisites.sh"
+
+init_application "${0}" "Configures Zed." container-only
+
+verify_executables_exist curl
+
+argsparse_allow_no_argument true
+argsparse_use_option "=yes" "Assume yes for all prompts."
+
+install_zed() {
+    CODE_EXEC=code
+
+    _log_ ""
+    _log_ "Installing Zed..."
+    _log_ ""
+
+    if which ${HOME}/.local/bin/zed > /dev/null; then
+        _log_ "Zed is already installed."
+        return
+    fi
+
+    if ! sudo apt install -y mesa-vulkan-drivers vulkan-tools; then
+        _log_ "Could not install mesa vulkan drivers, required for GPU acceleration|"
+	exit 1
+    fi
+
+    local download_url='https://zed.dev/install.sh'
+
+    if ! curl --silent --fail --location "${download_url}" -o /tmp/zed.sh; then
+        _log_ "Failed to download Zed."
+        exit 1
+    fi
+
+    chmod +x /tmp/zed.sh
+    if ! SHELL=/bin/bash /tmp/zed.sh -y; then
+        _log_ "Failed to install Zed."
+        rm /tmp/zed.sh
+        exit 1
+    fi
+
+    rm /tmp/zed.sh
+    _log_ ""
+    _log_ "Zed has been installed."
+}
+
+
+install_xdg() {
+    tee "/host/${HOME}/.local/share/applications/zed-wkdev.desktop" << HERE
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Zed
+GenericName=Text Editor
+Comment=A high-performance, multiplayer code editor.
+StartupNotify=true
+Exec="${WKDEV_SDK_HOST}/scripts/host-only/wkdev-enter" --exec --no-interactive -- "${HOME}/.local/bin/zed" %u
+Icon=zed-wkdev
+Categories=Utility;TextEditor;Development;IDE;
+Keywords=zed;
+MimeType=text/plain;application/x-zerosize;x-scheme-handler/zed;
+Actions=NewWorkspace;
+
+[Desktop Action NewWorkspace]
+Exec="${WKDEV_SDK_HOST}/scripts/host-only/wkdev-enter" --exec --no-interactive -- "${HOME}/.local/bin/zed" --new %U
+Name=Open a new workspace
+
+HERE
+    chmod +x "/host/${HOME}/.local/share/applications/zed-wkdev.desktop"
+    echo "Installed Zed host launcher"
+}
+
+install_icon() {
+    mkdir -p "/host/${HOME}/.local/share/icons/hicolor/256x256/apps/"
+    cp ~/.local/zed.app/share/icons/hicolor/1024x1024/apps/zed.png "/host/${HOME}/.local/share/icons/hicolor/256x256/apps/zed-wkdev.png"
+    echo "Installed Zed host icon."
+}
+
+# These are VERY helpful for WebKit development, but we won't override existing settings if the user already has them.
+default_settings() {
+    ZED_CONFIG_PATH="${HOME}/.config/zed/"
+    if [[ ! -e "${ZED_CONFIG_PATH}/settings.json" ]]; then
+        sudo chown "${USER}" "${HOME}/.config/"
+        mkdir -p "${ZED_CONFIG_PATH}"
+        tee "${ZED_CONFIG_PATH}/settings.json" << HERE
+{
+    "ui_font_size": 16,
+    "buffer_font_size": 16,
+    "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "One Dark"
+    },
+    "use_system_path_prompts": false, // Use in-container paths instead of host paths
+    "lsp": {
+      "clangd": {
+        "binary": {
+          "arguments": ["--header-insertion=never"]
+        }
+      }
+    },
+}
+
+HERE
+        echo "Installed default Zed settings to ${ZED_CONFIG_PATH} as user ${USER}."
+    else
+        echo "There was already a Zed settings.json (${ZED_CONFIG_PATH}), skipping."
+    fi
+}
+
+run() {
+
+    argsparse_parse_options "${@}"
+
+    install_zed
+    install_xdg
+    install_icon
+    default_settings
+}
+
+run "${@}"

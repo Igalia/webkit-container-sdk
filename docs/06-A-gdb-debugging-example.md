@@ -1,27 +1,22 @@
 ## An example of how to debug WebKit GTK with gdb from a WebKit container
 
-1. Add a `.gdbinit` file as described at https://docs.webkit.org/Build%20%26%20Debug/DebuggingOnTheCommandLine.html#setting-up-your-environment.
-2. Add logging for the pid to the code intended to debug. E.g. to `SomeFile.cpp`:
-```
-#include <iostream>
-[...]
-SomeClass::SomeMethod() {
-std::cout << "pid=" << getpid() << std::endl;
-[...]
-}
-```
-3. Build WebKit from a container: `./Tools/Scripts/build-webkit --debug --gtk`
-4. Run MiniBrowser, from above container, with some file to debug, e.g.:
+1. Build WebKit from a container: `./Tools/Scripts/build-webkit --debug --gtk`
+2. Run MiniBrowser, from above container, with some file to debug, e.g.:
 ```
 ./Tools/Scripts/run-minibrowser --debug --gtk LayoutTests/imported/w3c/web-platform-tests/css/css-fonts/lang-attribute-affects-rendering.html
 ```
-6. Enter the same container in a different tab and (mentioned at https://docs.webkit.org/Build%20%26%20Debug/DebuggingOnTheCommandLine.html#manually-debugging-webkit):
+3. Enter the same container in a different tab.
+4. Find the logged `PID` of `WebKitWebProcess`, e.g. as follows:
 ```
-export DYLD_FRAMEWORK_PATH=WebKitBuild/Debug
+mirko@wkdev:/host/home/mirko/work/code/WebKit$ ps -fA | grep -w "WebKitWebProcess\|PID"
+UID          PID    PPID  C STIME TTY          TIME CMD
+mirko      13460   13424  0 09:42 pts/0    00:00:00 /usr/bin/bwrap --args 34 -- /host/home/mirko/work/code/WebKit/WebKitBuild/GTK/Debug/bin/WebKitWebProcess 13 26 28
+mirko      13461   13460  0 09:42 pts/0    00:00:02 /host/home/mirko/work/code/WebKit/WebKitBuild/GTK/Debug/bin/WebKitWebProcess 13 26 28
+mirko      15736   13961  0 10:08 pts/1    00:00:00 grep --color=auto -w WebKitWebProcess\|PID
 ```
-6. Find the logged `pid`, e.g. `pid=18102`, and attach gdb to that process:
+5. Attach gdb to the process:
 ```
-gdb -p 18102
+gdb -p 13461
 ```
 and wait a little, this may download some files. That may end with a warning but that won't prevent debugging:
 ```
@@ -34,13 +29,13 @@ Download failed: Invalid argument.  Continuing without source file ./io/../sysde
 
 warning: 29	../sysdeps/unix/sysv/linux/poll.c: No such file or directory
 ```
-7. Set a breakpoint at some interesting function which is known to be called and continue, e.g.:
+6. Set a breakpoint at some interesting function which is known to be called and continue, e.g.:
 ```
 (gdb) b FontPlatformData::platformDataInit
 Breakpoint 1 at 0x7b012a45ec83: file /host/home/mirko/work/code/WebKit/Source/WebCore/platform/graphics/skia/FontPlatformDataSkia.cpp, line 65.
 (gdb) c
 ````
-8. In the MiniBrowser, reload the tab, e.g. via CTRL+F5 to not reuse cached content. The`pid` of the tab will stay the same.
+7. In the MiniBrowser, reload the tab, e.g. via CTRL+F5 to not reuse cached content. The`PID` of the tab will stay the same.
 9. Observe that `gdb` hit the breakpoint:
 ```
 Thread 1 "WebKitWebProces" hit Breakpoint 1, WebCore::FontPlatformData::platformDataInit (this=0x7fff3340fb10)

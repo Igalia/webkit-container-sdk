@@ -34,7 +34,7 @@ warning: 29	../sysdeps/unix/sysv/linux/poll.c: No such file or directory
 (gdb) b FontPlatformData::platformDataInit
 Breakpoint 1 at 0x7b012a45ec83: file /host/home/mirko/work/code/WebKit/Source/WebCore/platform/graphics/skia/FontPlatformDataSkia.cpp, line 65.
 (gdb) c
-````
+```
 7. In the MiniBrowser, reload the tab, e.g. via CTRL+F5 to not reuse cached content. The`PID` of the tab will stay the same.
 9. Observe that `gdb` hit the breakpoint:
 ```

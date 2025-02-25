@@ -101,7 +101,7 @@
     <branch repo="github.com"
             checkoutdir="openh264"
             module="cisco/openh264.git"
-            tag="v2.4.1" >
+            tag="v2.6.0" >
     </branch>
   </meson>
 

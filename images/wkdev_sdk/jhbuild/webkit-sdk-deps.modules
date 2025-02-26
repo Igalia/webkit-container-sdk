@@ -221,4 +221,12 @@
     </dependencies>
   </meson>
 
+  <!-- Everything in this section is optional to aid in debugging. -->
+  <cmake id="nghttp2" cmakeargs="-DENABLE_DEBUG=ON -DENABLE_LIB_ONLY=ON -DENABLE_DOC=OFF">
+    <branch repo="github.com"
+            module="nghttp2/nghttp2"
+            tag="v1.64.0"
+    />
+  </cmake>
+
 </moduleset>

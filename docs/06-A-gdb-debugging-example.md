@@ -45,3 +45,8 @@ Thread 1 "WebKitWebProces" hit Breakpoint 1, WebCore::FontPlatformData::platform
 
 ```
 10. Examine the call stack, e.g. to learn the control flow of the code.
+
+If one uses this procedure more frequently, step 4 and 5 can be replaced with an `alias` in `.bashrc`:
+```
+alias gdb-first-WebKitWebProcess='ps -fA | grep -v "bwrap\|grep" | grep -w "WebKitWebProcess\|PID" | grep -o "[0-9]*" | head --lines=1 | xargs --open-tty gdb -p'
+```

@@ -76,6 +76,9 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     rm -rf WebKit && \
     ${APT_AUTOREMOVE}
 
+# GStreamer 1.26.x requires at least Meson 1.4. Install the latest version.
+RUN pip install meson==1.7.0 --break-system-packages
+
 # Add Rust environment.
 ENV RUSTUP_HOME="/opt/rust" \
     CARGO_HOME="/opt/rust" \
@@ -89,7 +92,7 @@ RUN rustup default stable && \
 # Copy jhbuild helper files and do the initial build & install
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
-COPY /jhbuild/patches/ /jhbuild/patches/
+
 WORKDIR /jhbuild
 RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
     cd jhbuild && \

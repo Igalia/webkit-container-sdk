@@ -79,7 +79,7 @@ build_image() {
 
     run_podman_silent manifest rm "$(get_tag_for_build)"
     run_podman_silent_unless_verbose manifest create "$(get_tag_for_build)" || _abort_ "Container image manifest creation failed"
-    run_podman_silent_unless_verbose build --jobs ${podman_argument[@]} --platform "${platforms}" --manifest "$(get_tag_for_build)" . || _abort_ "Container image build failed"
+    run_podman_silent_unless_verbose build ${podman_argument[@]} --platform "${platforms}" --manifest "$(get_tag_for_build)" . || _abort_ "Container image build failed"
     timer_stop
     popd &>/dev/null
 }

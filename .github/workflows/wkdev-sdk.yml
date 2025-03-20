@@ -29,7 +29,7 @@ jobs:
       - name: Build image
         run: |
           source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=build --platforms=linux/arm64,linux/amd64 --verbose --tag=armtest
+          wkdev-sdk-bakery --mode=build --platforms=linux/arm64,linux/amd64 --verbose --tag=armtest2
           wkdev-sdk-bakery --mode=export --verbose
 
       - name: Archive image

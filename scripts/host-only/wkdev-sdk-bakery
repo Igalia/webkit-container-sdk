@@ -22,7 +22,8 @@ argsparse_use_option =env:        "Environment variable as string array, e.g. -e
 argsparse_use_option =mode:       "Operation mode: 'build', 'deploy', or 'export'" mandatory
 argsparse_use_option idle-cores:  "Number of CPU cores to leave idle, when building the image" type:uint default:2
 argsparse_use_option =tag:        "Tag to use for created image." default:$(get_default_container_tag)
-argsparse_use_option =arch:       "Container architecture."
+argsparse_use_option =arch:       "Container architecture. When building images, we also append this arch to the tag name."
+argsparse_use_option multiarch    "Assemble all available images of the form tag_ARCH into one multiarch image."
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -54,21 +55,25 @@ get_number_of_cores_for_build() { nproc --ignore=${idle_cores}; }
 
 build_image() {
 
+    tag="$(get_tag_for_build)"
+
+    if argsparse_is_option_set "arch"; then
+        container_arch="${program_options["arch"]}"
+        echo "Overriding container architecture: ${container_arch}"
+        podman_argument+=("--arch=${container_arch}")
+
+        tag="${tag}_${container_arch}"
+    fi
+
     _log_ ""
-    _log_ "-> Building container image '${container_image_name}' using tag '$(get_tag_for_build)'..."
+    _log_ "-> Building container image '${container_image_name}' using tag '${tag}'..."
     _log_ ""
 
     pushd "$(get_image_directory_by_name "${container_image_name}")" &>/dev/null
     timer_start
 
     local podman_argument=("--jobs" "$(get_number_of_cores_for_build)")
-    podman_argument+=("--tag" "$(get_tag_for_build)")
-
-    if argsparse_is_option_set "arch"; then
-        container_arch="${program_options["arch"]}"
-        echo "Overriding container architecture: ${container_arch}"
-        podman_argument+=("--arch=${container_arch}")
-    fi
+    podman_argument+=("--tag" "${tag}")
 
     for environment_variable in "${cumulated_values_env[@]}"
     do
@@ -88,6 +93,21 @@ deploy_image() {
 
     local image_directory="$(get_image_directory_by_name "${container_image_name}")"
     pushd "${image_directory}" &>/dev/null || _abort_ "Switching to directory '${image_directory}' failed"
+
+    if argsparse_is_option_set "multiarch"; then
+        image=$(get_qualified_name "${container_image_name}")
+        target_tag="${container_tag}"
+        image_qualified="$(get_tag_for_build)"
+        echo "Building multiarch image for ${image_qualified}"
+        input_tags="$(podman image list "${image}" --format "{{.Tag}}" | grep "${target_tag}_")"
+        run_podman_silent_unless_verbose manifest create "${image_qualified}" || _abort_ "Creating manifest failed"
+        for input_tag in "${input_tags[@]}"
+        do
+            echo "Adding ${image}:${input_tag} to ${image_qualified}"
+            run_podman_silent_unless_verbose manifest add "${image_qualified}" "${image}:${input_tag}" || _abort_ "Adding to manifest failed"
+        done
+    fi
+
     run_podman_silent_unless_verbose push "$(get_tag_for_build)" || _abort_ "Pushing to registry failed"
     popd &>/dev/null
 }
@@ -98,7 +118,15 @@ export_image() {
     _log_ "-> Exporting container image '${container_image_name}' to file ${container_image_name}.tar..."
     _log_ ""
 
-    run_podman_silent_unless_verbose save --format=oci-archive -o "${container_image_name}.tar" "$(get_tag_for_build)"
+    if argsparse_is_option_set "arch"; then
+        output_file="${container_image_name}-${program_options["arch"]}.tar"
+        tag="$(get_tag_for_build)_${program_options["arch"]}"
+    else
+        output_file="${container_image_name}.tar"
+        tag="$(get_tag_for_build)"
+    fi
+
+    run_podman_silent_unless_verbose save --format=oci-archive -o ${output_file} ${tag}
 }
 
 # Main functionality

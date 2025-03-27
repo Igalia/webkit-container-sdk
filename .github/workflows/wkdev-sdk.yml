@@ -10,14 +10,12 @@ defaults:
   run:
     shell: bash
 jobs:
-  build:
-    runs-on: self-hosted
+  build_amd64:
+    runs-on: [self-hosted==amd64]
     steps:
       - name: Set tag name
         run: |
-          if [ "${GITHUB_BASE_REF}" = 'main' ]; then
-            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
-          fi
+          echo "WKDEV_SDK_TAG=amd64" >> "${GITHUB_ENV}"
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
 
       - name: Install podman
@@ -31,12 +29,13 @@ jobs:
           source ./register-sdk-on-host.sh
           wkdev-sdk-bakery --mode=build --verbose
           wkdev-sdk-bakery --mode=export --verbose
+          mv wkdev-sdk.tar wkdev-sdk-amd64.tar
 
       - name: Archive image
         uses: actions/upload-artifact@v4
         with:
-          name: wkdev-sdk.tar
-          path: wkdev-sdk.tar
+          name: wkdev-sdk-amd64.tar
+          path: wkdev-sdk-amd64.tar
           retention-days: 7
 
       - name: Test image
@@ -53,15 +52,14 @@ jobs:
 
   deploy:
     runs-on: self-hosted
-    needs: build
+    needs: [build_amd64]
     if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
     steps:
       - name: Set tag name
         run: |
-          if [ "${GITHUB_BASE_REF}" = 'main' ]; then
-            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
-          fi
+          echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
+          echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
 
       - name: Install podman
         run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
@@ -69,14 +67,20 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Download image
+      - name: Download images
         uses: actions/download-artifact@v4
         with:
-          name: wkdev-sdk.tar
+          pattern: wkdev-sdk-*
+          merge-multiple: true
+      - run: ls -al
 
       - name: Deploy image
         run: |
-          podman load < wkdev-sdk.tar
+          podman load < ./wkdev-sdk-amd64.tar
+          podman image list
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
-          source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=deploy --verbose
+          podman manifest create $REPO:$WKDEV_SDK_TAG
+          for IMGTAG in amd64; do
+              podman manifest add $REPO:$WKDEV_SDK_TAG containers-storage:$REPO:$IMGTAG;
+          done
+          podman manifest push --all $REPO:$WKDEV_SDK_TAG

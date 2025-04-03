@@ -406,12 +406,12 @@ build_podman_create_arguments() {
     arguments+=("--mount" "type=bind,source=/etc/resolv.conf,destination=/etc/resolv.conf,ro")
     arguments+=("--mount" "type=bind,source=/etc/machine-id,destination=/etc/machine-id,ro,rslave")
 
-    # Mount /dev/pts in container (pseudo-terminal support).
-    arguments+=("--mount" "type=devpts,destination=/dev/pts")
+    # Mount /dev/pts in container (pseudo-terminal support) only if not running inside a LXC container.
+    [ "$(systemd-detect-virt)" != "lxc" ] && arguments+=("--mount" "type=devpts,destination=/dev/pts")
 
     # Mount /dev and /run/udev for devices like gamepads
     arguments+=("-v" "/dev/:/dev:rslave")
-    arguments+=("-v" "/run/udev:/run/udev")
+    [ -d "/run/udev" ] && arguments+=("-v" "/run/udev:/run/udev")
 
     # Mount a tmpfs.
     arguments+=("--tmpfs" "/tmp")

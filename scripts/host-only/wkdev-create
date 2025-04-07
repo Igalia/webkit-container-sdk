@@ -441,7 +441,18 @@ build_podman_create_arguments() {
         container_arch="${program_options["arch"]}"
         echo "Overriding container architecture: ${container_arch}"
         arguments+=("--arch=${container_arch}")
+
+        if ! podman image exists "$(get_sdk_qualified_name):${container_tag}"; then
+            echo "Image $(get_sdk_qualified_name):${container_tag} does not exist, trying arch-specific version."
+            container_tag="${container_tag}_${container_arch}"
+        fi
     fi
+
+    if ! podman image exists "$(get_sdk_qualified_name):${container_tag}"; then
+        echo "Image $(get_sdk_qualified_name):${container_tag} does not exist."
+        exit 1
+    fi
+    echo "Using image $(get_sdk_qualified_name):${container_tag}."
 
     set +o nounset
     try_process_user ${1}

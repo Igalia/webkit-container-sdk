@@ -80,6 +80,9 @@ To run tests / execute MiniBrowser, try;
 ./Tools/Scripts/run-minibrowser --wpe https://browserbench.org/MotionMark1.2/
 ```
 
+You should expect at least 2 GB of RAM usage per core during the build.
+If you have less RAM available, consider limiting the number of cores by setting the `NUMBER_OF_PROCESSORS` environment variable when executing `build-webkit`.
+
 6. READY!
 
 

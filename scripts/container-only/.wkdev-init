@@ -45,7 +45,15 @@ process_command_line_arguments() {
 try_copy_hosts_file() {
 
     task_step "Copying /etc/hosts file from host to container..."
-    cp /host/etc/hosts /etc/hosts || _abort_ "Cannot copy /etc/hosts file from host to container"
+    if [ -f /host/etc/hosts ]; then    
+        cp /host/etc/hosts /etc/hosts || _abort_ "Cannot copy /etc/hosts file from host to container"
+    else
+        echo "No hosts file found, creating one."
+        cat > /etc/hosts <<EOF
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+EOF
+    fi
 }
 
 try_update_apt_cache() {

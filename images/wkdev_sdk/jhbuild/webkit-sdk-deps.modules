@@ -109,7 +109,7 @@
     <branch repo="gstreamer.freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer.git"
-            tag="1.26.0"/>
+            tag="1.26.1"/>
     <dependencies>
       <dep package="openh264"/>
     </dependencies>
@@ -129,7 +129,7 @@
     </dependencies>
     <branch repo="gstreamer.freedesktop.org"
             module="gst-plugins-rs"
-            tag="0.13.2" />
+            tag="gstreamer-1.26.1" />
   </meson>
 
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">

@@ -91,7 +91,9 @@ ensure_container_is_running() {
         _log_ "";
         _log_ "-> Container '${container_name}' is not yet running. Starting it before attempting to enter...";
         host_setup_prerun_tasks
-        run_podman_silent start "${container_name}"
+        # There is no flag to prevent `podman start` from writing the id of the
+        # container to stdout, so we just connect stdout to /dev/null.
+        run_podman_silent_unless_verbose_or_abort start "${container_name}" >/dev/null
     }
 }
 

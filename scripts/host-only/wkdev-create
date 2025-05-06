@@ -420,13 +420,13 @@ build_podman_create_arguments() {
     arguments+=("--mount" "type=bind,source=${XDG_RUNTIME_DIR},destination=/host/run,bind-propagation=rslave")
 
     # Disable SELinux isolation.
-    arguments+=("--security-opt label=disable")
+    arguments+=("--security-opt" "label=disable")
 
     # Allow for unprivileged user namespaces (bwrap) to work.
-    arguments+=("--security-opt unmask=ALL")
+    arguments+=("--security-opt" "unmask=ALL")
 
     # Required for rr to work.
-    arguments+=("--security-opt seccomp=unconfined")
+    arguments+=("--security-opt" "seccomp=unconfined")
 
     # Always set XDG_RUNTIME_DIR to the same value.
     arguments+=("--env" "XDG_RUNTIME_DIR=/run/user/${host_user_id}")
@@ -705,21 +705,26 @@ run() {
     _log_ "-> Creating container '${container_name}'..."
     if argsparse_is_option_set "verbose"; then
         _log_ ""
-        _log_ "     $ podman ${podman_arguments[@]} create ${podman_create_arguments[@]}"
+        _log_ "     $ $(shjoin podman "${podman_arguments[@]}" create "${podman_create_arguments[@]}")"
     fi
 
-    container_id=$(run_podman ${podman_arguments[@]} create ${podman_create_arguments[@]})
+    container_id=$(run_podman "${podman_arguments[@]}" create "${podman_create_arguments[@]}")
     [ -z "${container_id}" ] && _abort_ "Container creation failed - please check the logs and report any issue"
 
     _log_ ""
     _log_ "-> Starting container '${container_name}'..."
-
+    local args=()
     if argsparse_is_option_set "attach"; then
-        run_podman_silent_unless_verbose start --attach "${container_id}"
+        args=(start --attach "${container_id}")
     else
         _log_ "   NOTE: Use \`podman logs -f ${container_name}\` to follow the initialization."
-        run_podman_silent start "${container_id}"
+        args=(start "${container_id}")
     fi
+    if argsparse_is_option_set "verbose"; then
+        _log_ ""
+        _log_ "     $ $(shjoin podman "${args[@]}")"
+    fi
+    run_podman_silent_unless_verbose_or_abort "${args[@]}"
 
     _log_ ""
     _log_ "-> Finished creation of container '${container_name}'!"

@@ -27,7 +27,7 @@ run_podman_in_background_and_log_to_file() {
     local command="${2}"
     shift 2
 
-    run_podman "${command}" ${@} &> "${log_file}" &
+    run_podman "${command}" "${@}" &> "${log_file}" &
 }
 
 # Queries the container status - stores result in global 'last_container_status' variable.

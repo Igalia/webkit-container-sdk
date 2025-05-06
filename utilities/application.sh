@@ -47,7 +47,7 @@ to launch a program in the container from the host with clean output)"
 _log_() {
 
     local log_message="${1-}"
-    if [ $log_to_stdout_enabled -eq 1 ]; then
+    if [ "${log_to_stdout_enabled}" -eq 1 ]; then
         echo "${log_message}"
     fi
     # Log to journald if available. This can help users troubleshoot issues when
@@ -65,8 +65,9 @@ _abort_() {
         exit_code=1
     fi
 
-    printf "\n[FATAL] ${error_message} - aborting with exit code ${exit_code}.\n" >&2
-    exit ${exit_code}
+    printf '\n[FATAL] %s - aborting with exit code %d.\n' \
+        "${error_message}" "${exit_code}" >&2
+    exit "${exit_code}"
 }
 
 # Runs a command.

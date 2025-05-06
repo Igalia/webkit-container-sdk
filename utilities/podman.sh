@@ -20,6 +20,7 @@ verify_podman_is_acceptable "${podman_executable}"
 run_podman() { run_command "${podman_executable}" "${@}"; }
 run_podman_silent() { run_command_silent "${podman_executable}" "${@}"; }
 run_podman_silent_unless_verbose() { run_command_silent_unless_verbose "${podman_executable}" "${@}"; }
+run_podman_silent_unless_verbose_or_abort() { run_command_silent_unless_verbose_or_abort "${podman_executable}" "${@}"; }
 
 run_podman_in_background_and_log_to_file() {
 

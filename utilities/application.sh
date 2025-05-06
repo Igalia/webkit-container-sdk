@@ -101,6 +101,60 @@ run_command_silent_unless_verbose() {
     fi
 }
 
+# Runs a command, exiting if the command return non-zero.
+# If the verbose option is enabled, stdout and stderr are connected to the screen.
+# If the verbose option is not enabled, stderr is captured and printed only
+# if the subprocess exits with failure.
+run_command_silent_unless_verbose_or_abort() {
+
+    local command="${1}"
+    shift
+
+    local cmd_args=("${command}" "${@}")
+
+    if argsparse_is_option_set "verbose"; then
+        "${cmd_args[@]}"
+        local code=$?
+    else
+        # We need to split the variable declaration from the variable
+        # assignation, as otherwise $? will not reflect the exit code of the
+        # subshell command: https://stackoverflow.com/a/2556122/1777162
+        local captured_stderr
+        captured_stderr="$("${cmd_args[@]}" 2>&1 >/dev/null)"
+        local code=$?
+    fi
+
+    if [ "${code}" -ne 0 ]; then
+        if ! argsparse_is_option_set "verbose"; then
+            echo "${captured_stderr}" >&2
+        fi
+        _abort_ "Command failed with code ${code}: $(shjoin "${cmd_args[@]}")"
+    fi
+}
+
+# Python's shlex.join(), but for Bash: receives any number of arguments
+# representing a shell command invocation and echoes in return one single string
+# that a user can paste in a terminal to run that command invocation.
+#
+# Bash provides a very similar mechanism with "${array[*]Q}", but it quotes
+# even when unnecessary, which is often undesirable for user output.
+shjoin() {
+
+    local is_first=true
+    for arg in "$@"; do
+        if [[ "$is_first" == true ]]; then
+            is_first=false
+        else
+            echo -n " "
+        fi
+        if [[ "'${arg}'" == "${arg@Q}" ]]; then
+            printf "%s" "${arg}"
+        else
+            printf "%s" "${arg@Q}"
+        fi
+    done
+}
+
 init_application() {
 
     # Bash script recommendations, see https://www.davidpashley.com/articles/writing-robust-shell-scripts/.

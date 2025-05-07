@@ -333,6 +333,11 @@ try_process_nvidia_gpu() {
 
     local is_nvidia_gpu_available=$(is_nvidia_gpu_installed && [ -f "$(get_nvidia_cdi_config_file)" ] && echo 1 || echo 0)
     local podman_argument=("--device" "nvidia.com/gpu=all")
+    if [[ "${is_nvidia_gpu_available}" -eq 1 ]]; then
+        if nvidia-ctk --version | head -n1 | grep -qE 'version 1\.1?[0-4]\.[[:digit:]]+$'; then
+            _abort_ "Broken version of nvidia-ctk detected. Please install nvidia-container-toolkit>=1.15. See: https://github.com/Igalia/webkit-container-sdk/issues/72"
+        fi
+    fi
     try_process ${1} "Access to NVIDIA GPU on host" ${is_nvidia_gpu_available} ${podman_argument[@]}
 }
 

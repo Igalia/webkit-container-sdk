@@ -100,7 +100,15 @@ update_containers_using_image() {
 
             local recreate_arguments=()
             recreate_arguments+=("--home" "$(get_podman_container_home_directory_on_host "${container_name}")")
-            recreate_arguments+=($(get_podman_container_init_arguments "${container_name}"))
+            local init_arguments=($(get_podman_container_init_arguments "${container_name}"))
+            for arg in "${init_arguments[@]}"; do
+                # wkdev-create --attach passes the --exit-when-done option to .wkdev-init so that
+                # podman start --attach doesn't hang forever.
+                # --exit-when-done is not an option of wkdev-create however, so we need to skip it.
+                if [[ "${arg}" != "--exit-when-done" ]]; then
+                    recreate_arguments+=("${arg}")
+                fi
+            done
             outdated_container_data["${container_name}"]=${recreate_arguments[@]}
         fi
 

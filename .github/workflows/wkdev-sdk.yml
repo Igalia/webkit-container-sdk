@@ -10,8 +10,8 @@ defaults:
   run:
     shell: bash
 jobs:
-  build_amd64:
-    runs-on: [self-hosted, x64]
+  build:
+    runs-on: self-hosted
     steps:
       - name: Set tag name
         run: |
@@ -29,22 +29,21 @@ jobs:
       - name: Build image
         run: |
           source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=build --verbose --arch amd64
-          podman image list
-          wkdev-sdk-bakery --mode=export --verbose --arch amd64
+          wkdev-sdk-bakery --mode=build --verbose
+          wkdev-sdk-bakery --mode=export --verbose
 
       - name: Archive image
         uses: actions/upload-artifact@v4
         with:
-          name: wkdev-sdk-amd64.tar
-          path: wkdev-sdk-amd64.tar
+          name: wkdev-sdk.tar
+          path: wkdev-sdk.tar
           retention-days: 7
 
       - name: Test image
         run: |
           CONTAINER="wkdev-$(date +%s)"
           source ./register-sdk-on-host.sh
-          wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch amd64
+          wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER}
           wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
@@ -54,7 +53,7 @@ jobs:
 
   deploy:
     runs-on: self-hosted
-    needs: [build_amd64]
+    needs: build
     if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
     steps:
       - name: Set tag name
@@ -63,7 +62,6 @@ jobs:
             echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
-          echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
 
       - name: Install podman
         run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
@@ -71,18 +69,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Download images
+      - name: Download image
         uses: actions/download-artifact@v4
         with:
-          pattern: wkdev-sdk-*
-          merge-multiple: true
-      - run: ls -al
+          name: wkdev-sdk.tar
 
       - name: Deploy image
         run: |
-          podman load < ./wkdev-sdk-amd64.tar
-          podman image list
+          podman load < wkdev-sdk.tar
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
           source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=deploy --verbose --multiarch="${GITHUB_RUN_ID}_amd64"
-          podman image list
+          wkdev-sdk-bakery --mode=deploy --verbose

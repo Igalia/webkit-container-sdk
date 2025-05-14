@@ -10,7 +10,7 @@ else
 fi
 
 min_clang_version=14
-max_clang_version=18
+max_clang_version=21
 
 init_application "${0}" "Installs and creates symlinks to set default clang executables" container-only
 

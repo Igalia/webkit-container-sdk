@@ -86,7 +86,9 @@ ensure_container_is_running() {
     container_status="$(get_podman_container_status "${container_name}")"
     argsparse_is_option_set "debug" && _log_ "## Status for '${container_name}' container: '${container_status}'"
 
-    [ "${container_status}" == "unknown" ] && _abort_ "Cannot find container '${container_name}'"
+    if [[ "${container_status}" == "unknown" ]] || [[ -z "${container_status}" ]]; then
+       _abort_ "Cannot find container '${container_name}'"
+    fi
     [ "${container_status}" == "running" ] || {
         _log_ "";
         _log_ "-> Container '${container_name}' is not yet running. Starting it before attempting to enter...";

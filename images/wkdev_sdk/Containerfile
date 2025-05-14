@@ -79,12 +79,19 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
 # GStreamer 1.26.x requires at least Meson 1.4. Install the latest version.
 RUN pip install meson==1.7.0 --break-system-packages
 
+# Ensure a strong TLS connection is always used when downloading sensitive files.
+ARG CURL_DOWNLOAD="curl --proto =https --tlsv1.2 --show-error --silent --fail"
+
+# Add LLVM repo for newer tooling, nothing is installed from it by default.
+COPY /rootfs/etc/apt/sources.list.d/llvm.list /etc/apt/sources.list.d/llvm.list
+RUN ${CURL_DOWNLOAD} https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+
 # Add Rust environment.
 ENV RUSTUP_HOME="/opt/rust" \
     CARGO_HOME="/opt/rust" \
     PATH="/opt/rust/bin:${PATH}"
 
-RUN curl --proto '=https' --tlsv1.2 --show-error --silent --fail https://sh.rustup.rs | sh -s -- -y && \
+RUN ${CURL_DOWNLOAD} https://sh.rustup.rs | sh -s -- -y && \
     rustup default 1.84.1 && \
     rustup component remove rust-docs && \
     cargo install --root /usr/local --version 0.9.1 --locked sccache && \

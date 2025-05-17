@@ -8,6 +8,14 @@ else
     echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."
     exit 1
 fi
+if [[ -z ${WKDEV_SDK_HOST} ]]; then
+    echo "Please set \${WKDEV_SDK_HOST} to point to the the wkdev-sdk checkout (from the host perspective). This is used when creating .desktop entries."
+    exit 1
+fi
+if [[ ! -d /host/${HOME} ]]; then
+    echo "Host and container home must have the same path: /host/${HOME}"
+    exit 1
+fi
 source "${WKDEV_SDK}/utilities/prerequisites.sh"
 
 init_application "${0}" "Configures Visual Studio Code." container-only
@@ -17,8 +25,10 @@ verify_executables_exist curl
 argsparse_allow_no_argument true
 argsparse_use_option "=yes" "Assume yes for all prompts."
 argsparse_use_option "no-extensions" "Don't install extensions."
+argsparse_use_option "no-proprietary" "Use VSCodium instead of VSCode."
 
 install_vscode() {
+    CODE_EXEC=code
 
     _log_ ""
     _log_ "Installing Visual Studio Code..."
@@ -40,7 +50,7 @@ install_vscode() {
         exit 1
     fi
 
-    if ! sudo apt install /tmp/code.deb; then
+    if ! sudo apt install -y /tmp/code.deb; then
         _log_ "Failed to install Visual Studio Code."
         rm /tmp/code.deb
         exit 1
@@ -51,7 +61,42 @@ install_vscode() {
     _log_ "Visual Studio Code has been installed."
 }
 
+install_vscodium() {
+    CODE_EXEC=codium
+
+    _log_ ""
+    _log_ "Installing Visual Studio Code (oss)..."
+    _log_ ""
+
+    if which codium > /dev/null; then
+        _log_ "Visual Studio Code (oss) is already installed."
+        return
+    fi
+
+    wget -qO - https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/raw/master/pub.gpg \
+        | gpg --dearmor \
+        | sudo dd of=/usr/share/keyrings/vscodium-archive-keyring.gpg
+
+    echo 'deb [ signed-by=/usr/share/keyrings/vscodium-archive-keyring.gpg ] https://download.vscodium.com/debs vscodium main' \
+        | sudo tee /etc/apt/sources.list.d/vscodium.list
+
+    if ! sudo apt update; then
+        _log_ "Failed to install Visual Studio Code (oss) repo."
+        exit 1
+    fi
+
+    if ! sudo apt install -y codium; then
+        _log_ "Failed to install Visual Studio Code (oss)."
+        exit 1
+    fi
+
+    _log_ ""
+    _log_ "Visual Studio Code (oss) has been installed."
+}
+
 install_extension() {
+
+    sudo chown "${USER}" "${HOME}/.config"
 
     local extension_name="${1}"
     local description="${2}"
@@ -59,7 +104,7 @@ install_extension() {
     local response
     local installed_extensions
 
-    readarray installed_extensions < <(code --list-extensions)
+    readarray installed_extensions < <($CODE_EXEC --list-extensions)
 
     if [[ "${installed_extensions[*]}" =~ "${extension_name}" ]]; then
         _log_ "VSCode extension already installed: ${extension_name}"
@@ -75,7 +120,7 @@ install_extension() {
         _log_ "Installing VSCode extension: ${extension_name} (${description})..."
     fi
 
-    if ! code --install-extension "${extension_name}" &>/dev/null; then
+    if ! ${CODE_EXEC} --install-extension "${extension_name}" &>/dev/null; then
         _log_ "Failed to install VSCode extension: ${extension_name}"
         exit 1
     fi
@@ -96,15 +141,118 @@ install_extensions() {
     install_extension ms-python.python "Python support" true
 }
 
+# These are VERY helpful for WebKit development, but we won't override existing settings if the user already has them.
+default_settings() {
+    if argsparse_is_option_set "no-proprietary"; then
+        VSCODE_CONFIG_PATH=${HOME}/.config/VSCodium/User/
+    else
+        VSCODE_CONFIG_PATH=${HOME}/.config/Code/User/
+    fi
+    if [[ ! -e "${VSCODE_CONFIG_PATH}/settings.json" ]]; then
+        mkdir -p "${VSCODE_CONFIG_PATH}"
+        tee "${VSCODE_CONFIG_PATH}/settings.json" << HERE
+{
+    "clangd.arguments": [
+        "-header-insertion=never"
+    ],
+    "editor.renderWhitespace": "trailing",
+    "workbench.colorCustomizations": {
+        "editorWhitespace.foreground": "#FF0000",
+        "editorWhitespace.background": "#FF0000"
+    },
+}
+HERE
+        echo "Installed default VSCode settings to ${VSCODE_CONFIG_PATH}."
+    else
+        echo "There was already a VSCode settings.json (${VSCODE_CONFIG_PATH}), skipping."
+    fi
+}
+
+install_xdg() {
+    tee "/host/${HOME}/.local/share/applications/code-wkdev.desktop" << HERE
+[Desktop Entry]
+Name=VSCode WKDev
+Comment=Code Editing. Redefined.
+GenericName=Text Editor
+Exec="${WKDEV_SDK_HOST}/scripts/host-only/wkdev-enter" --exec --no-interactive -- $CODE_EXEC %F
+Icon=vscode-wkdev
+Type=Application
+StartupNotify=false
+StartupWMClass=VSCode
+Categories=TextEditor;Development;IDE;
+MimeType=text/plain;inode/directory;application/x-codium-workspace;
+Keywords=vscode;code;vscode;
+Actions=new-empty-window;
+
+[Desktop Action new-empty-window]
+Name=New Empty Window
+Exec="${WKDEV_SDK_HOST}/scripts/host-only/wkdev-enter" --exec --no-interactive -- $CODE_EXEC --new-window %F
+Icon=vscode-wkdev
+HERE
+    chmod +x "/host/${HOME}/.local/share/applications/code-wkdev.desktop"
+    echo "Installed VSCode host launcher"
+}
+
+install_xdg_oss() {
+    tee "/host/${HOME}/.local/share/applications/codium-wkdev.desktop" << HERE
+[Desktop Entry]
+Name=VSCodium WKDev
+Comment=Code Editing. Redefined.
+GenericName=Text Editor
+Exec="${WKDEV_SDK_HOST}/scripts/host-only/wkdev-enter" --exec --no-interactive -- $CODE_EXEC %F
+Icon=vscodium-wkdev
+Type=Application
+StartupNotify=false
+StartupWMClass=VSCodium
+Categories=TextEditor;Development;IDE;
+MimeType=text/plain;inode/directory;application/x-codium-workspace;
+Keywords=vscodium;codium;vscode;
+Actions=new-empty-window;
+
+[Desktop Action new-empty-window]
+Name=New Empty Window
+Exec="${WKDEV_SDK_HOST}/scripts/host-only/wkdev-enter" --exec --no-interactive -- $CODE_EXEC --new-window %F
+Icon=vscodium-wkdev
+HERE
+    chmod +x "/host/${HOME}/.local/share/applications/codium-wkdev.desktop"
+    echo "Installed VSCodium host launcher"
+}
+
+install_icon() {
+    mkdir -p "/host/${HOME}/.local/share/icons/hicolor/256x256/apps/"
+    cp /usr/share/pixmaps/vscode.png "/host/${HOME}/.local/share/icons/hicolor/256x256/apps/vscode-wkdev.png"
+    echo "Installed VSCode host icon."
+}
+
+install_icon_oss() {
+    mkdir -p "/host/${HOME}/.local/share/icons/hicolor/256x256/apps/"
+    cp /usr/share/pixmaps/vscodium.png "/host/${HOME}/.local/share/icons/hicolor/256x256/apps/vscodium-wkdev.png"
+    echo "Installed VSCodium host icon."
+}
+
 run() {
 
     argsparse_parse_options "${@}"
 
-    install_vscode
+    if argsparse_is_option_set "no-proprietary"; then
+        install_vscodium
+    else
+        install_vscode
+    fi
 
     if ! argsparse_is_option_set "no-extensions"; then
         install_extensions
     fi
+
+    if argsparse_is_option_set "no-proprietary"; then
+        install_xdg_oss
+        install_icon_oss
+    else
+        install_xdg
+        install_icon
+    fi
+
+    default_settings
 }
 
 run "${@}"

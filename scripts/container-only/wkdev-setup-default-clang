@@ -44,7 +44,7 @@ run() {
     if [ ! -f "/usr/bin/clang-${version}" ]; then
         _log_ "Installing clang toolchain version ${version}"
         _log_ ""
-        if ! sudo apt-get install "clang-tools-${version}" "clangd-${version}" "clang-format-${version}" "clang-tidy-${version}" "lld-${version}" "lldb-${version}"; then
+        if ! sudo apt-get install "clang-tools-${version}" "clangd-${version}" "clang-format-${version}" "clang-tidy-${version}" "lld-${version}" "lldb-${version} llvm-${version}"; then
             _log_ ""
             _log_ "Failed to install clang toolchain"
             exit 1

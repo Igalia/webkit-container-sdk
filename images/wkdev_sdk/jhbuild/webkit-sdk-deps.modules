@@ -105,7 +105,7 @@
     </branch>
   </meson>
 
-  <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=enabled -Dintrospection=enabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dgst-examples=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Dwebrtc=enabled">
+  <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=enabled -Dintrospection=enabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dgst-examples=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Dwebrtc=enabled -Dgst-plugins-ugly:gpl=enabled -Dgst-plugins-bad:gpl=enabled -Dgpl=enabled">
     <branch repo="gstreamer.freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer.git"

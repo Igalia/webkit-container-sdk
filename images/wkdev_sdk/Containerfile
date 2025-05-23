@@ -77,7 +77,7 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     ${APT_AUTOREMOVE}
 
 # GStreamer 1.26.x requires at least Meson 1.4. Install the latest version.
-RUN pip install meson==1.7.0 --break-system-packages
+RUN pip install meson==1.8.0 --break-system-packages
 
 # Ensure a strong TLS connection is always used when downloading sensitive files.
 ARG CURL_DOWNLOAD="curl --proto =https --tlsv1.2 --show-error --silent --fail"

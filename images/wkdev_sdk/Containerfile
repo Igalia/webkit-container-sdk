@@ -152,7 +152,9 @@ RUN gst-inspect-1.0 audiornnoise && \
     gst-inspect-1.0 cea608tott && \
     gst-inspect-1.0 dav1ddec && \
     gst-inspect-1.0 isofmp4mux && \
-    gst-inspect-1.0 rsrtp
+    gst-inspect-1.0 rsrtp && \
+    gst-inspect-1.0 x264enc && \
+    gst-inspect-1.0 x265enc
 
 # Remove systemd services that would startup by default, when spawning
 # systemd as PID 1 within the container (usually, we don't spawn systemd

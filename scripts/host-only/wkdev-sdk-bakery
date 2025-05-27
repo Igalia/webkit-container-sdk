@@ -100,7 +100,9 @@ deploy_image() {
         image_qualified="$(get_tag_for_build)"
         echo "Building multiarch image for ${image_qualified}"
         input_tags="$(podman image list "${image}" --format "{{.Tag}}" | grep "${target_tag}_")"
-        run_podman_silent_unless_verbose rmi --ignore "${image_qualified}" || _abort_ "Deleting existing manifest failed"
+        run_podman_silent_unless_verbose rmi --ignore "${image_qualified}" || _abort_ "Deleting existing manifest (image) failed"
+        run_podman_silent_unless_verbose manifest rm --ignore "${image_qualified}" || _abort_ "Deleting existing manifest failed"
+        echo "Creating manifest for ${image_qualified}"
         run_podman_silent_unless_verbose manifest create "${image_qualified}" || _abort_ "Creating manifest failed"
         for input_tag in "${input_tags[@]}"
         do

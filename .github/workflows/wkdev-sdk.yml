@@ -53,7 +53,7 @@ jobs:
           rm -rf ${HOME}/${CONTAINER}-home
 
   build_arm64:
-    runs-on: [self-hosted, arm64]
+    runs-on: arm-bothost-2
     steps:
       - name: Set tag name
         run: |
@@ -95,7 +95,7 @@ jobs:
           rm -rf ${HOME}/${CONTAINER}-home
 
   deploy:
-    runs-on: self-hosted
+    runs-on: arm-bothost-2
     needs: [build_amd64, build_arm64]
     if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
     steps:

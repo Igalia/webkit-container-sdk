@@ -95,7 +95,7 @@ jobs:
           rm -rf ${HOME}/${CONTAINER}-home
 
   deploy:
-    runs-on: arm-bothost-2
+    runs-on: [self-hosted, x64]
     needs: [build_amd64, build_arm64]
     if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
     steps:

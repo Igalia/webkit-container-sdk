@@ -52,9 +52,51 @@ jobs:
           podman rm ${CONTAINER} || true
           rm -rf ${HOME}/${CONTAINER}-home
 
+  build_arm64:
+    runs-on: arm-bothost-2
+    steps:
+      - name: Set tag name
+        run: |
+          if [ "${GITHUB_BASE_REF}" = 'main' ]; then
+            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
+          fi
+          echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
+
+      - name: Install podman
+        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          source ./register-sdk-on-host.sh
+          wkdev-sdk-bakery --mode=build --verbose --arch arm64
+          podman image list
+          wkdev-sdk-bakery --mode=export --verbose --arch arm64
+
+      - name: Archive image
+        uses: actions/upload-artifact@v4
+        with:
+          name: wkdev-sdk-arm64.tar
+          path: wkdev-sdk-arm64.tar
+          retention-days: 7
+
+      - name: Test image
+        run: |
+          CONTAINER="wkdev-$(date +%s)"
+          source ./register-sdk-on-host.sh
+          wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch arm64 --shell /bin/bash
+          wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
+          wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
+          wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
+          podman stop ${CONTAINER} || true
+          podman rm ${CONTAINER} || true
+          rm -rf ${HOME}/${CONTAINER}-home
+
   deploy:
-    runs-on: self-hosted
-    needs: [build_amd64]
+    runs-on: arm-bothost-2
+    needs: [build_amd64, build_arm64]
     if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
     steps:
       - name: Set tag name
@@ -81,6 +123,7 @@ jobs:
       - name: Deploy image
         run: |
           podman load < ./wkdev-sdk-amd64.tar
+          podman load < ./wkdev-sdk-arm64.tar
           podman image list
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
           source ./register-sdk-on-host.sh

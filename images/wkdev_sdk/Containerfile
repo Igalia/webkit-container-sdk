@@ -62,7 +62,7 @@ COPY /required_system_packages/*.lst .
 RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources && \
     ${APT_UPDATE} && \
     for list in *.lst; do \
-        ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}"); \
+        ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}" | tr '\n' ' '); \
     done; \
     ${APT_BUILDDEP} gst-libav1.0 gst-plugins-bad1.0 gst-plugins-base1.0 \
 	                gst-plugins-good1.0 gst-plugins-ugly1.0 && \

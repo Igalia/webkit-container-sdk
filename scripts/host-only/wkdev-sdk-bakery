@@ -57,14 +57,6 @@ build_image() {
 
     tag="$(get_tag_for_build)"
 
-    if argsparse_is_option_set "arch"; then
-        container_arch="${program_options["arch"]}"
-        echo "Overriding container architecture: ${container_arch}"
-        podman_argument+=("--arch=${container_arch}")
-
-        tag="${tag}_${container_arch}"
-    fi
-
     _log_ ""
     _log_ "-> Building container image '${container_image_name}' using tag '${tag}'..."
     _log_ ""
@@ -73,6 +65,14 @@ build_image() {
     timer_start
 
     local podman_argument=("--jobs" "$(get_number_of_cores_for_build)")
+
+    if argsparse_is_option_set "arch"; then
+        container_arch="${program_options["arch"]}"
+        echo "Overriding container architecture: ${container_arch}"
+        podman_argument+=("--arch=${container_arch}")
+
+        tag="${tag}_${container_arch}"
+    fi
     podman_argument+=("--tag" "${tag}")
 
     for environment_variable in "${cumulated_values_env[@]}"

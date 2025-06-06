@@ -96,6 +96,7 @@ run_command_silent_unless_verbose() {
     shift
 
     if argsparse_is_option_set "verbose"; then
+        echo "${command}" "${@}"
         "${command}" "${@}"
     else
         "${command}" "${@}" &>/dev/null

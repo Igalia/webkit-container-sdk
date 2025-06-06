@@ -109,7 +109,11 @@
     <branch repo="gstreamer.freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer.git"
-            tag="1.26.1"/>
+            tag="1.26.2">
+      <patch file="0001-encodebasebin-Encoding-profile-ownership-fixes.patch"/>
+      <patch file="0002-encodebasebin-Make-profile-ownership-explicit-in-Str.patch"/>
+      <patch file="0003-encodebasebin-GstPad-and-GstStructure-leak-fixes.patch"/>
+    </branch>
     <dependencies>
       <dep package="openh264"/>
     </dependencies>
@@ -129,7 +133,7 @@
     </dependencies>
     <branch repo="gstreamer.freedesktop.org"
             module="gst-plugins-rs"
-            tag="gstreamer-1.26.1" />
+            tag="gstreamer-1.26.2" />
   </meson>
 
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">

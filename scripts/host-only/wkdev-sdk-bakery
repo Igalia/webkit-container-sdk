@@ -103,7 +103,7 @@ deploy_image() {
         input_tags=${input_tags//'\n'/ }
         echo "Creating manifest for ${image_qualified}"
         run_podman_silent_unless_verbose manifest create "${image_qualified}" || _abort_ "Creating manifest failed"
-        for input_tag in "${input_tags[@]}"
+        for input_tag in $input_tags
         do
             echo "Adding ${image}:${input_tag} to ${image_qualified}"
             run_podman_silent_unless_verbose manifest add "${image_qualified}" "containers-storage:${image}:${input_tag}" || _abort_ "Adding to manifest failed"

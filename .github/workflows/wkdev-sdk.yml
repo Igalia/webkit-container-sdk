@@ -120,8 +120,8 @@ jobs:
       - name: Archive image
         uses: actions/upload-artifact@v4
         with:
-          name: wkdev-sdk-armv7.tar
-          path: wkdev-sdk-armv7.tar
+          name: wkdev-sdk-armhf.tar
+          path: wkdev-sdk-armhf.tar
           retention-days: 7
 
       - name: Test image
@@ -171,7 +171,7 @@ jobs:
           podman rmi ghcr.io/${GITHUB_REPOSITORY_OWNER}/wkdev-sdk:latest_armhf | true
           podman load < ./wkdev-sdk-amd64.tar
           podman load < ./wkdev-sdk-arm64.tar
-          podman load < ./wkdev-sdk-armv7.tar
+          podman load < ./wkdev-sdk-armhf.tar
           podman image list
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
           source ./register-sdk-on-host.sh

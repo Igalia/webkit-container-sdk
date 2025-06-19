@@ -1,0 +1,36 @@
+From 1d20fd15b05b9d5f710def98d8b94650ab8f02e2 Mon Sep 17 00:00:00 2001
+From: Philippe Normand <philn@igalia.com>
+Date: Wed, 4 Jun 2025 12:41:35 +0200
+Subject: [PATCH 2/3] encodebasebin: Make profile ownership explicit in
+ StreamGroup
+
+Part-of: <https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/9167>
+---
+ subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c b/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
+index db80cd7469..f7d45a6a18 100644
+--- a/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
++++ b/subprojects/gst-plugins-base/gst/encoding/gstencodebasebin.c
+@@ -1539,7 +1539,7 @@ _create_stream_group (GstEncodeBaseBin * ebin, GstEncodingProfile * sprof,
+ 
+   sgroup = g_new0 (StreamGroup, 1);
+   sgroup->ebin = ebin;
+-  sgroup->profile = sprof;
++  sgroup->profile = gst_object_ref (sprof);
+ 
+   /* NOTE for people reading this code:
+    *
+@@ -2564,6 +2564,8 @@ stream_group_free (GstEncodeBaseBin * ebin, StreamGroup * sgroup)
+   if (sgroup->outfilter)
+     gst_bin_remove ((GstBin *) ebin, sgroup->outfilter);
+ 
++  gst_clear_object (&sgroup->profile);
++
+   g_free (sgroup);
+ }
+ 
+-- 
+2.49.0
+

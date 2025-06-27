@@ -108,9 +108,11 @@ deploy_image() {
             echo "Adding ${image}:${input_tag} to ${image_qualified}"
             run_podman_silent_unless_verbose manifest add "${image_qualified}" "containers-storage:${image}:${input_tag}" || _abort_ "Adding to manifest failed"
         done
+        run_podman_silent_unless_verbose manifest push --all "$(get_tag_for_build)" "docker://$(get_tag_for_build)" || _abort_ "Pushing to registry failed"
+    else
+        run_podman_silent_unless_verbose push "$(get_tag_for_build)" || _abort_ "Pushing to registry failed"
     fi
 
-    run_podman_silent_unless_verbose push "$(get_tag_for_build)" || _abort_ "Pushing to registry failed"
     popd &>/dev/null
 }
 

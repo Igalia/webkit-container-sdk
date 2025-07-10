@@ -17,8 +17,6 @@ jobs:
         run: |
           if [ "${GITHUB_BASE_REF}" = 'main' ]; then
             echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
-          else
-            echo "WKDEV_SDK_TAG=${GITHUB_BASE_REF}" >> "${GITHUB_ENV}"
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
           echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
@@ -53,7 +51,7 @@ jobs:
         run: |
           CONTAINER="wkdev-$(date +%s)"
           source ./register-sdk-on-host.sh
-          wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch amd64 --tag ${WKDEV_SDK_TAG}_amd64
+          wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch amd64
           wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
@@ -67,8 +65,6 @@ jobs:
         run: |
           if [ "${GITHUB_BASE_REF}" = 'main' ]; then
             echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
-          else
-            echo "WKDEV_SDK_TAG=${GITHUB_BASE_REF}" >> "${GITHUB_ENV}"
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
           echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
@@ -103,7 +99,7 @@ jobs:
         run: |
           CONTAINER="wkdev-$(date +%s)"
           source ./register-sdk-on-host.sh
-          wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch arm64 --tag ${WKDEV_SDK_TAG}_arm64
+          wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch arm64 --shell /bin/bash
           wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
@@ -117,8 +113,6 @@ jobs:
         run: |
           if [ "${GITHUB_BASE_REF}" = 'main' ]; then
             echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
-          else
-            echo "WKDEV_SDK_TAG=${GITHUB_BASE_REF}" >> "${GITHUB_ENV}"
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
           echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
@@ -153,7 +147,7 @@ jobs:
         run: |
           CONTAINER="wkdev-$(date +%s)"
           source ./register-sdk-on-host.sh
-          wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch arm --tag ${WKDEV_SDK_TAG}_arm
+          wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch arm --shell /bin/bash
           wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
@@ -169,8 +163,6 @@ jobs:
         run: |
           if [ "${GITHUB_BASE_REF}" = 'main' ]; then
             echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
-          else
-            echo "WKDEV_SDK_TAG=${GITHUB_BASE_REF}" >> "${GITHUB_ENV}"
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
           echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
@@ -190,11 +182,11 @@ jobs:
 
       - name: Clean all previous images
         run: |
-          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}
-          podman manifest rm ${REPO}:${WKDEV_SDK_TAG} || true
-          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}_arm64
-          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}_amd64
-          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}_arm
+          podman rmi --ignore --force ${REPO}:latest
+          podman manifest rm ${REPO}:latest || true
+          podman rmi --ignore --force ${REPO}:latest_arm64
+          podman rmi --ignore --force ${REPO}:latest_amd64
+          podman rmi --ignore --force ${REPO}:latest_arm
 
       - name: Deploy image
         run: |
@@ -204,5 +196,5 @@ jobs:
           podman image list
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
           source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=deploy --verbose --multiarch --tag ${WKDEV_SDK_TAG}
+          wkdev-sdk-bakery --mode=deploy --verbose --multiarch
           podman image list

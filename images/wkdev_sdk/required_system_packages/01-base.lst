@@ -16,3 +16,6 @@ apt-file aptly atop at-spi2-core emacs git htop iotop iputils-ping kmod less lib
 # Multimedia
 libx264-dev
 libx265-dev
+
+# Vulkan
+mesa-vulkan-drivers vulkan-tools

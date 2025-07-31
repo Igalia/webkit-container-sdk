@@ -477,7 +477,11 @@ build_podman_create_arguments() {
     try_process_icons ${1}
     try_process_fonts ${1}
     try_process_dri ${1}
-    try_process_nvidia_gpu ${1}
+    # We need to use software rendering anyway in this case, but on (e.g. armv7)
+    # the nvidia packages are not available.
+    if ! argsparse_is_option_set "arch"; then
+        try_process_nvidia_gpu ${1}
+    fi
     try_process_x11 ${1}
     try_process_pulseaudio ${1}
     try_process_podman ${1}

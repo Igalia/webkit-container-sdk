@@ -70,12 +70,12 @@
   <meson id="gtk4" mesonargs="-Dbuild-demos=false -Dbuild-examples=false -Dbuild-tests=false -Dbuild-testsuite=false">
     <branch repo="github.com"
             checkoutdir="gtk4"
-            module="GNOME/gtk.git" tag="4.16.2"/>
+            module="GNOME/gtk.git" tag="4.19.4"/>
   </meson>
 
   <meson id="libadwaita" mesonargs="-Dexamples=false -Dgtk_doc=true -Dtests=false -Dvapi=false">
     <branch repo="github.com"
-            module="GNOME/libadwaita.git" tag="1.6.0"/>
+            module="GNOME/libadwaita.git" tag="1.7.6"/>
     <dependencies>
       <dep package="gtk4"/>
       <dep package="sassc"/>
@@ -190,7 +190,7 @@
   <!-- Everything in this section is just for sysprof. -->
   <meson id="libpanel" mesonargs="-Dvapi=false">
     <branch repo="github.com"
-            module="GNOME/libpanel.git" tag="1.8.0"/>
+            module="GNOME/libpanel.git" tag="1.10.0"/>
     <dependencies>
       <dep package="libadwaita"/>
     </dependencies>
@@ -198,12 +198,12 @@
 
   <meson id="libdex" mesonargs="-Dvapi=false">
     <branch repo="github.com"
-            module="GNOME/libdex.git" tag="0.8.0"/>
+            module="GNOME/libdex.git" tag="0.11.1"/>
   </meson>
 
   <meson id="sysprof" mesonargs="-Dexamples=false -Dpolkit-agent=disabled -Dsysprofd=host -Dtests=false">
     <branch repo="github.com"
-            module="GNOME/sysprof.git" tag="47.0">
+            module="GNOME/sysprof.git" tag="48.0">
     </branch>
     <dependencies>
       <dep package="libadwaita"/>

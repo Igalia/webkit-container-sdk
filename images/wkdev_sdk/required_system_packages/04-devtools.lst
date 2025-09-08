@@ -25,3 +25,6 @@ libappstream-dev
 
 # post-install for Epiphany
 desktop-file-utils
+
+# For OpenXR tests
+monado-service

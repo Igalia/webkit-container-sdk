@@ -21,6 +21,7 @@ podman
 
 # For libadwaita
 libyaml-dev
+libappstream-dev
 
 # post-install for Epiphany
 desktop-file-utils

@@ -97,6 +97,13 @@ RUN ${CURL_DOWNLOAD} https://sh.rustup.rs | sh -s -- -y && \
     cargo install --root /usr/local --version 0.9.1 --locked sccache && \
     cargo install --root /usr/local --version 0.10.9 --locked cargo-c
 
+RUN git clone https://github.com/ystreet/librice.git && \
+    cd librice && \
+    cargo cinstall -p rice-proto --release --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/share/pkgconfig --library-type=cdylib && \
+    cargo cinstall -p rice-io --release --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/share/pkgconfig --library-type=cdylib && \
+    cd .. && \
+    rm -fr librice
+
 # Copy jhbuild helper files and do the initial build & install
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
@@ -155,6 +162,10 @@ RUN gst-inspect-1.0 audiornnoise && \
     gst-inspect-1.0 rsrtp && \
     gst-inspect-1.0 x264enc && \
     gst-inspect-1.0 x265enc
+
+# Check locally installed libraries.
+RUN pkg-config --modversion rice-io && \
+    pkg-config --modversion rice-proto
 
 # Remove systemd services that would startup by default, when spawning
 # systemd as PID 1 within the container (usually, we don't spawn systemd

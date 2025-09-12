@@ -27,4 +27,5 @@ libappstream-dev
 desktop-file-utils
 
 # For OpenXR tests
+libopenxr1-monado
 monado-service

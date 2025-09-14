@@ -107,6 +107,7 @@ RUN git clone --branch v0.1.0 --single-branch https://github.com/ystreet/librice
 # Copy jhbuild helper files and do the initial build & install
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
+COPY /jhbuild/patches/ /jhbuild/patches/
 
 WORKDIR /jhbuild
 RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \

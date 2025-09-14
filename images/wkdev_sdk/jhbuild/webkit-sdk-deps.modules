@@ -109,8 +109,8 @@
   <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=enabled -Dintrospection=enabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dgst-examples=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Dwebrtc=enabled -Dgst-plugins-ugly:gpl=enabled -Dgst-plugins-bad:gpl=enabled -Dgpl=enabled">
     <branch repo="freedesktop.org"
             checkoutdir="gstreamer"
-	    module="gstreamer/gstreamer.git"
-            tag="1.26.4"/>
+            module="gstreamer/gstreamer.git"
+            tag="1.26.6"/>
     <dependencies>
       <dep package="openh264"/>
     </dependencies>
@@ -129,8 +129,10 @@
       <dep package="gstreamer"/>
     </dependencies>
     <branch repo="freedesktop.org"
-	    module="gstreamer/gst-plugins-rs"
-            tag="gstreamer-1.26.4" />
+            module="gstreamer/gst-plugins-rs"
+            tag="gstreamer-1.26.6">
+      <patch file="0001-Revert-meson-Isolate-built-plugins-from-cargo-target.patch"/>
+    </branch>
   </meson>
 
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">

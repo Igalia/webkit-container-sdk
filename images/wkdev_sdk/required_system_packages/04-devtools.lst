@@ -26,6 +26,9 @@ libappstream-dev
 # post-install for Epiphany
 desktop-file-utils
 
+# JSON commandline processing
+jq
+
 # For OpenXR tests
 libopenxr1-monado
 monado-service

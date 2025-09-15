@@ -26,5 +26,8 @@ libappstream-dev
 # post-install for Epiphany
 desktop-file-utils
 
+# JSON commandline processing
+jq
+
 # For OpenXR tests
 libeigen3-dev glslang-tools libudev-dev libv4l-dev libvulkan-dev

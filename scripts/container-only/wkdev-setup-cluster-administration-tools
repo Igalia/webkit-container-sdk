@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+# Copyright 2025 Igalia S.L.
+# SPDX-License: MIT
+
+if [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ]; then
+    source "${WKDEV_SDK}/utilities/application.sh"
+else
+    echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."
+    exit 1
+fi
+source "${WKDEV_SDK}/utilities/prerequisites.sh"
+
+init_application "${0}" "Install webkit-cluster-infrastructure related administration tools." container-only
+
+verify_executables_exist curl
+
+argsparse_allow_no_argument true
+
+install_opentofu() {
+
+    _log_ ""
+    _log_ "Installing OpenTofu..."
+    _log_ ""
+
+    if which tofu > /dev/null; then
+        _log_ "OpenTofu already installed."
+        return
+    fi
+
+    local download_url='https://get.opentofu.org/install-opentofu.sh'
+
+    if ! curl --silent --fail --location "${download_url}" -o /tmp/install-opentofu.sh; then
+        _log_ "Failed to download OpenTofu installation script."
+        exit 1
+    fi
+
+    if ! chmod +x /tmp/install-opentofu.sh; then
+        _log_ "Failed to make OpenTofu installation script executable."
+        rm /tmp/install-opentofu.sh
+        exit 1
+    fi
+
+    if ! /tmp/install-opentofu.sh --install-method deb; then
+        _log_ "Failed to install OpenTofu."
+        rm /tmp/install-opentofu.sh
+        exit 1
+    fi
+
+    rm /tmp/install-opentofu.sh
+    _log_ ""
+    _log_ "OpenTofu has been installed."
+}
+
+install_helm() {
+
+    _log_ ""
+    _log_ "Installing Helm..."
+    _log_ ""
+
+    if which helm > /dev/null; then
+        _log_ "Helm already installed."
+        return
+    fi
+
+    local download_url='https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3'
+
+    if ! curl --silent --fail --location "${download_url}" -o /tmp/install-helm.sh; then
+        _log_ "Failed to download Helm installation script."
+        exit 1
+    fi
+
+    if ! chmod +x /tmp/install-helm.sh; then
+        _log_ "Failed to make Helm installation script executable."
+        rm /tmp/install-helm.sh
+        exit 1
+    fi
+
+    if ! /tmp/install-helm.sh; then
+        _log_ "Failed to install Helm."
+        rm /tmp/install-helm.sh
+        exit 1
+    fi
+
+    rm /tmp/install-helm.sh
+    _log_ ""
+    _log_ "Helm has been installed."
+}
+
+install_packer() {
+
+    _log_ ""
+    _log_ "Installing Packer..."
+    _log_ ""
+
+    if which packer > /dev/null; then
+        _log_ "Packer already installed."
+        return
+    fi
+
+    local base_url='https://apt.releases.hashicorp.com'
+
+    if ! curl --silent --fail --location "${base_url}"/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/hashicorp-archive-keyring.gpg > /dev/null; then
+        _log_ "Failed to add gpg key for Packer."
+        exit 1
+    fi
+
+    if ! echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.gpg] "${base_url}" $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list; then
+        _log_ "Failed to add apt repository for Packer."
+        exit 1
+    fi
+
+    if ! sudo apt update; then
+        _log_ "Failed to update package list using apt."
+        exit 1
+    fi
+
+    if ! sudo apt install packer; then
+        _log_ "Failed to install Packer."
+        exit 1
+    fi
+
+    _log_ ""
+    _log_ "Packer has been installed."
+}
+
+install_kubectl() {
+
+    _log_ ""
+    _log_ "Installing kubectl..."
+    _log_ ""
+
+    if which kubectl > /dev/null; then
+        _log_ "kubectl already installed."
+        return
+    fi
+
+    local base_url='https://pkgs.k8s.io/core:/stable:/v1.31/deb'
+
+    if ! curl --silent --fail --location "${base_url}"/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg > /dev/null; then
+        _log_ "Failed to add gpg key for kubectl."
+        exit 1
+    fi
+
+    if ! echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] "${base_url}"/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list; then
+        _log_ "Failed to add apt repository for kubectl."
+        exit 1
+    fi
+
+    if ! sudo apt update; then
+        _log_ "Failed to update package list using apt."
+        exit 1
+    fi
+
+    if ! sudo apt install kubectl; then
+        _log_ "Failed to install kubectl."
+        exit 1
+    fi
+
+    _log_ ""
+    _log_ "kubectl has been installed."
+}
+
+install_hcloud_cli() {
+
+    _log_ ""
+    _log_ "Installing hcloud-cli..."
+    _log_ ""
+
+    if which hcloud-cli > /dev/null; then
+        _log_ "hcloud-cli already installed."
+        return
+    fi
+
+    if ! sudo apt update; then
+        _log_ "Failed to update package list using apt."
+        exit 1
+    fi
+
+    if ! sudo apt install hcloud-cli; then
+        _log_ "Failed to install hcloud-cli."
+        exit 1
+    fi
+
+    _log_ ""
+    _log_ "hcloud-cli has been installed."
+}
+
+run() {
+
+    argsparse_parse_options "${@}"
+
+    install_opentofu
+    install_helm
+    install_packer
+    install_kubectl
+    install_hcloud_cli
+}
+
+run "${@}"

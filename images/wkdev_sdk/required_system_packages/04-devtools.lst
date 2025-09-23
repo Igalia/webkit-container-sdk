@@ -27,5 +27,4 @@ libappstream-dev
 desktop-file-utils
 
 # For OpenXR tests
-libopenxr1-monado
-monado-service
+libeigen3-dev glslang-tools libudev-dev libv4l-dev libvulkan-dev

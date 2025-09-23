@@ -15,6 +15,7 @@
       <dep package="libbacktrace"/>
       <dep package="sysprof"/>
       <dep package="libspiel"/>
+      <dep package="monado"/>
     </dependencies>
   </metamodule>
 
@@ -24,8 +25,8 @@
       href="https://wpewebkit.org/releases/"/>
   <repository type="tarball" name="xmlsoft.org"
       href="http://xmlsoft.org"/>
-  <repository type="git" name="gstreamer.freedesktop.org"
-      href="https://gitlab.freedesktop.org/gstreamer"/>
+  <repository type="git" name="freedesktop.org"
+      href="https://gitlab.freedesktop.org/"/>
   <repository type="tarball" name="github-tarball"
       href="https://github.com/"/>
   <repository type="git" name="github.com"
@@ -106,9 +107,9 @@
   </meson>
 
   <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=enabled -Dintrospection=enabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dgst-examples=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Dwebrtc=enabled -Dgst-plugins-ugly:gpl=enabled -Dgst-plugins-bad:gpl=enabled -Dgpl=enabled">
-    <branch repo="gstreamer.freedesktop.org"
+    <branch repo="freedesktop.org"
             checkoutdir="gstreamer"
-            module="gstreamer.git"
+	    module="gstreamer/gstreamer.git"
             tag="1.26.4"/>
     <dependencies>
       <dep package="openh264"/>
@@ -127,8 +128,8 @@
       <dep package="dav1d"/>
       <dep package="gstreamer"/>
     </dependencies>
-    <branch repo="gstreamer.freedesktop.org"
-            module="gst-plugins-rs"
+    <branch repo="freedesktop.org"
+	    module="gstreamer/gst-plugins-rs"
             tag="gstreamer-1.26.4" />
   </meson>
 
@@ -152,6 +153,12 @@
             checkoutdir="libsoup"
             module="GNOME/libsoup.git" tag="3.6.0"/>
   </meson>
+
+  <cmake id="monado">
+    <branch repo="freedesktop.org"
+	    checkoutdir="monado"
+	    module="monado/monado.git" tag="v25.0.0"/>
+  </cmake>
 
   <!-- Everything in this section is just for Epiphany. -->
   <systemmodule id="sassc">

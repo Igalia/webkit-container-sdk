@@ -97,7 +97,7 @@ RUN ${CURL_DOWNLOAD} https://sh.rustup.rs | sh -s -- -y && \
     cargo install --root /usr/local --version 0.9.1 --locked sccache && \
     cargo install --root /usr/local --version 0.10.9 --locked cargo-c
 
-RUN git clone https://github.com/ystreet/librice.git && \
+RUN git clone --branch v0.1.0 --single-branch https://github.com/ystreet/librice.git && \
     cd librice && \
     cargo cinstall -p rice-proto --release --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/share/pkgconfig --library-type=cdylib && \
     cargo cinstall -p rice-io --release --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/share/pkgconfig --library-type=cdylib && \

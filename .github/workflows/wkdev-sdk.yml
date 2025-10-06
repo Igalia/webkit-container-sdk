@@ -59,7 +59,7 @@ jobs:
           rm -rf ${HOME}/${CONTAINER}-home
 
   build_arm64:
-    runs-on: arm-bothost-2
+    runs-on: [self-hosted, x64]
     steps:
       - name: Set tag name
         run: |
@@ -107,7 +107,7 @@ jobs:
           rm -rf ${HOME}/${CONTAINER}-home
 
   build_armv7:
-    runs-on: arm-bothost-4
+    runs-on: [self-hosted, x64]
     steps:
       - name: Set tag name
         run: |

@@ -12,6 +12,9 @@ defaults:
 jobs:
   build_amd64:
     runs-on: [self-hosted, x64]
+    if: |
+      github.event_name != 'create' ||
+      startsWith(github.ref_name, 'tag/')
     steps:
       - name: Set tag name
         run: |
@@ -60,6 +63,9 @@ jobs:
 
   build_arm64:
     runs-on: arm-bothost-2
+    if: |
+      github.event_name != 'create' ||
+      startsWith(github.ref_name, 'tag/')
     steps:
       - name: Set tag name
         run: |
@@ -108,6 +114,9 @@ jobs:
 
   build_armv7:
     runs-on: arm-bothost-4
+    if: |
+      github.event_name != 'create' ||
+      startsWith(github.ref_name, 'tag/')
     steps:
       - name: Set tag name
         run: |
@@ -157,7 +166,9 @@ jobs:
   deploy:
     runs-on: [self-hosted, x64]
     needs: [build_amd64, build_armv7, build_arm64]
-    if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
+    if: |
+      (github.event_name != 'create' || startsWith(github.ref_name, 'tag/')) &&
+      (github.ref_name == 'main' || startsWith(github.ref_name, 'tag/'))
     steps:
       - name: Set tag name
         run: |

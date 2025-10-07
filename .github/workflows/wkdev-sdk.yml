@@ -27,6 +27,15 @@ jobs:
       - name: Install podman
         run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
 
+      - name: Prune old containers/images
+        run: |
+          echo "Disk space before prune:"
+          df -h
+          echo "Pruning containers and images older than 2 weeks..."
+          podman system prune --all --force --volumes --filter until=336h || true
+          echo "Disk space after prune:"
+          df -h
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -77,6 +86,15 @@ jobs:
 
       - name: Install podman
         run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
+
+      - name: Prune old containers/images
+        run: |
+          echo "Disk space before prune:"
+          df -h
+          echo "Pruning containers and images older than 2 weeks..."
+          podman system prune --all --force --volumes --filter until=336h || true
+          echo "Disk space after prune:"
+          df -h
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -129,6 +147,15 @@ jobs:
       - name: Install podman
         run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
 
+      - name: Prune old containers/images
+        run: |
+          echo "Disk space before prune:"
+          df -h
+          echo "Pruning containers and images older than 2 weeks..."
+          podman system prune --all --force --volumes --filter until=336h || true
+          echo "Disk space after prune:"
+          df -h
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -180,6 +207,15 @@ jobs:
 
       - name: Install podman
         run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
+
+      - name: Prune old containers/images
+        run: |
+          echo "Disk space before prune:"
+          df -h
+          echo "Pruning containers and images older than 2 weeks..."
+          podman system prune --all --force --volumes --filter until=336h || true
+          echo "Disk space after prune:"
+          df -h
 
       - name: Checkout repo
         uses: actions/checkout@v4

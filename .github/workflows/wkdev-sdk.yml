@@ -71,7 +71,7 @@ jobs:
           rm -rf ${HOME}/${CONTAINER}-home
 
   build_arm64:
-    runs-on: arm-bothost-2
+    runs-on: [self-hosted, arch-arm64]
     if: |
       github.event_name != 'create' ||
       startsWith(github.ref_name, 'tag/')
@@ -131,7 +131,7 @@ jobs:
           rm -rf ${HOME}/${CONTAINER}-home
 
   build_armv7:
-    runs-on: arm-bothost-4
+    runs-on: [self-hosted, arch-armv7]
     if: |
       github.event_name != 'create' ||
       startsWith(github.ref_name, 'tag/')

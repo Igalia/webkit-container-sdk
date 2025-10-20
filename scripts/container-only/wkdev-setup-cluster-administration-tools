@@ -160,14 +160,14 @@ install_kubectl() {
     _log_ "kubectl has been installed."
 }
 
-install_hcloud_cli() {
+install_hcloud() {
 
     _log_ ""
-    _log_ "Installing hcloud-cli..."
+    _log_ "Installing hcloud..."
     _log_ ""
 
-    if which hcloud-cli > /dev/null; then
-        _log_ "hcloud-cli already installed."
+    if which hcloud > /dev/null; then
+        _log_ "hcloud already installed."
         return
     fi
 
@@ -177,12 +177,12 @@ install_hcloud_cli() {
     fi
 
     if ! sudo apt install hcloud-cli; then
-        _log_ "Failed to install hcloud-cli."
+        _log_ "Failed to install hcloud."
         exit 1
     fi
 
     _log_ ""
-    _log_ "hcloud-cli has been installed."
+    _log_ "hcloud has been installed."
 }
 
 run() {
@@ -193,7 +193,7 @@ run() {
     install_helm
     install_packer
     install_kubectl
-    install_hcloud_cli
+    install_hcloud
 }
 
 run "${@}"

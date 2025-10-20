@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# Copyright 2025 Igalia S.L.
+# SPDX-License: MIT
+
+if [ -f "${WKDEV_SDK}/.wkdev-sdk-root" ]; then
+    source "${WKDEV_SDK}/utilities/application.sh"
+else
+    echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."
+    exit 1
+fi
+source "${WKDEV_SDK}/utilities/prerequisites.sh"
+
+init_application "${0}" "Configures ccache with remote storage backend." container-only
+
+verify_executables_exist knock
+
+argsparse_allow_no_argument true
+argsparse_use_option =server: "Use a specific ccache server." default:wk-ccache-bazel.igalia.com
+argsparse_use_option =port: "Use a specific ccache port." default:25689
+
+process_command_line_arguments() {
+
+    argsparse_parse_options "${@}"
+}
+
+setup_build_webkit_pre_script_env_var() {
+
+    local ccache_knock_script="${1}"
+
+    # Detect the user's shell
+    local user_shell=$(basename "${SHELL}")
+
+    local shell_config_file=""
+    local export_line="export BUILD_WEBKIT_PRE_SCRIPT=\"${ccache_knock_script}\""
+
+    # Determine which shell configuration file to modify
+    case "${user_shell}" in
+        bash)
+            shell_config_file="${HOME}/.bashrc"
+            ;;
+        zsh)
+            shell_config_file="${HOME}/.zprofile"
+            ;;
+        fish)
+            shell_config_file="${HOME}/.config/fish/config.fish"
+            export_line="set -x BUILD_WEBKIT_PRE_SCRIPT \"${ccache_knock_script}\""
+            ;;
+        *)
+            _log_ "Warning: Unknown shell '${user_shell}', skipping BUILD_WEBKIT_PRE_SCRIPT setup."
+            return 1
+            ;;
+    esac
+
+    # Create the shell config file if it doesn't exist
+    if [ ! -f "${shell_config_file}" ]; then
+        mkdir -p "$(dirname "${shell_config_file}")"
+        touch "${shell_config_file}"
+    fi
+
+    # Check if BUILD_WEBKIT_PRE_SCRIPT is already set in the file
+    if grep -q "BUILD_WEBKIT_PRE_SCRIPT" "${shell_config_file}" &>/dev/null; then
+        _log_ "BUILD_WEBKIT_PRE_SCRIPT already exists in ${shell_config_file}, leaving unchanged."
+        return 0
+    fi
+
+    # Add the export line to the shell config file
+    _log_ "Adding BUILD_WEBKIT_PRE_SCRIPT to ${shell_config_file}..."
+    cat <<EOF >>"${shell_config_file}"
+
+# ccache remote storage - knock script to open port
+${export_line}
+EOF
+
+    _log_ "Successfully configured BUILD_WEBKIT_PRE_SCRIPT in ${shell_config_file}"
+    _log_ "NOTE: Be sure to re-login once or re-source ${shell_config_file}!"
+}
+
+run() {
+
+    process_command_line_arguments "${@}"
+    local server=${program_options["server"]}
+    local port=${program_options["port"]}
+
+    local ccache_config="${XDG_CONFIG_HOME:-${HOME}/.config}/ccache/ccache.conf"
+    local ccache_knock_script="${XDG_CONFIG_HOME:-${HOME}/.config}/ccache/ccache-knock.sh"
+    mkdir -p "$(dirname "${ccache_config}")"
+
+    if grep -q "remote_storage" "${ccache_config}" &>/dev/null; then
+        _log_ "Already configured ccache remote storage. (${ccache_config})"
+        exit 1
+    fi
+
+    _log_ "Adding remote_storage section to ${ccache_config}..."
+    cat <<EOF >>"${ccache_config}"
+remote_storage = http://${server}:${port}|layout=bazel
+reshare = true
+EOF
+
+    _log_ "Writing port knocking script to ${ccache_knock_script} (executed every time the container is entered)..."
+ 
+    cat <<EOF >>"${ccache_knock_script}"
+#!/usr/bin/env bash
+if ! curl -s "http://${server}:${port}/status" | grep -q MaxSize; then
+    knock -d 500 "${server}" 1111 2222 3333 4444 5555
+fi
+EOF
+
+    chmod +x "${ccache_knock_script}"
+
+    _log_ ""
+    _log_ "Setting up BUILD_WEBKIT_PRE_SCRIPT environment variable..."
+    setup_build_webkit_pre_script_env_var "${ccache_knock_script}"
+
+    _log_ ""
+    _log_ "ccache config file content:"
+    cat "${ccache_config}"
+
+    _log_ ""
+    _log_ "knock script file content:"
+    cat "${ccache_knock_script}"
+
+    _log_ ""
+    _log_ "Testing access to remote ccache server (you should see non-empty JSON output below):"
+    "${ccache_knock_script}"
+    curl "http://${server}:${port}/status"
+}
+
+run "${@}"

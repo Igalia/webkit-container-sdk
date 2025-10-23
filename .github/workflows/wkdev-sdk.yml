@@ -62,13 +62,24 @@ jobs:
       - name: Test image
         run: |
           CONTAINER="wkdev-$(date +%s)"
+          echo "CONTAINER=${CONTAINER}" >> "${GITHUB_ENV}"
           source ./register-sdk-on-host.sh
           wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch amd64
           wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
-          podman rm --force ${CONTAINER}
-          rm -rf ${HOME}/${CONTAINER}-home
+
+      - name: Cleanup test artifacts
+        if: always()
+        run: |
+          # Remove the specific container created by this test run
+          if [ -n "${CONTAINER:-}" ]; then
+            podman rm --force ${CONTAINER} 2>/dev/null || true
+            rm -rf ${HOME}/${CONTAINER}-home || true
+          fi
+          # Clean up any leftover containers and home directories from previous failed runs
+          podman ps -a --filter "name=^wkdev-" --format "{{.Names}}" | xargs -r podman rm --force 2>/dev/null || true
+          find ${HOME} -maxdepth 1 -type d -name "wkdev-*-home" -exec rm -rf {} + 2>/dev/null || true
 
   build_arm64:
     runs-on: [self-hosted, arch-arm64]
@@ -122,13 +133,24 @@ jobs:
       - name: Test image
         run: |
           CONTAINER="wkdev-$(date +%s)"
+          echo "CONTAINER=${CONTAINER}" >> "${GITHUB_ENV}"
           source ./register-sdk-on-host.sh
           wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch arm64 --shell /bin/bash
           wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
-          podman rm --force ${CONTAINER}
-          rm -rf ${HOME}/${CONTAINER}-home
+
+      - name: Cleanup test artifacts
+        if: always()
+        run: |
+          # Remove the specific container created by this test run
+          if [ -n "${CONTAINER:-}" ]; then
+            podman rm --force ${CONTAINER} 2>/dev/null || true
+            rm -rf ${HOME}/${CONTAINER}-home || true
+          fi
+          # Clean up any leftover containers and home directories from previous failed runs
+          podman ps -a --filter "name=^wkdev-" --format "{{.Names}}" | xargs -r podman rm --force 2>/dev/null || true
+          find ${HOME} -maxdepth 1 -type d -name "wkdev-*-home" -exec rm -rf {} + 2>/dev/null || true
 
   build_armv7:
     runs-on: [self-hosted, arch-armv7]
@@ -182,13 +204,24 @@ jobs:
       - name: Test image
         run: |
           CONTAINER="wkdev-$(date +%s)"
+          echo "CONTAINER=${CONTAINER}" >> "${GITHUB_ENV}"
           source ./register-sdk-on-host.sh
           wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch arm --shell /bin/bash
           wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
-          podman rm --force ${CONTAINER}
-          rm -rf ${HOME}/${CONTAINER}-home
+
+      - name: Cleanup test artifacts
+        if: always()
+        run: |
+          # Remove the specific container created by this test run
+          if [ -n "${CONTAINER:-}" ]; then
+            podman rm --force ${CONTAINER} 2>/dev/null || true
+            rm -rf ${HOME}/${CONTAINER}-home || true
+          fi
+          # Clean up any leftover containers and home directories from previous failed runs
+          podman ps -a --filter "name=^wkdev-" --format "{{.Names}}" | xargs -r podman rm --force 2>/dev/null || true
+          find ${HOME} -maxdepth 1 -type d -name "wkdev-*-home" -exec rm -rf {} + 2>/dev/null || true
 
   deploy:
     runs-on: [self-hosted, x64]

@@ -1,0 +1,13 @@
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR arm)
+
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_CXX_COMPILER clang++)
+set(CMAKE_C_COMPILER_TARGET arm-linux-gnueabihf)
+set(CMAKE_CXX_COMPILER_TARGET arm-linux-gnueabihf)
+set(CMAKE_LINKER_TYPE LLD)
+
+set(CMAKE_FIND_ROOT_PATH /usr/arm-linux-gnueabihf;/usr/lib/arm-linux-gnueabihf;)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)

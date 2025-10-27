@@ -59,9 +59,21 @@ RUN dpkg-reconfigure locales
 # Install all dependencies for WebKit/GStreamer/etc in one pass.
 WORKDIR /var/tmp/wkdev-packages
 COPY /required_system_packages/*.lst .
+
+# We unconditionally install the GCC-based cross toolchain for armhf.
+COPY /cross .
+
 RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources && \
+    if [ "$(uname -m)" = "x86_64" ]; then \
+        sed -r 's@(archive|security).ubuntu.com/ubuntu@ports.ubuntu.com/ubuntu-ports@g' </etc/apt/sources.list.d/ubuntu.sources >/etc/apt/sources.list.d/ubuntu-armhf.sources; \
+        sed -i -r 's/^(Components:.*)/\1\nArchitectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources; \
+        sed -i -r 's/^(Components:.*)/\1\nArchitectures: armhf/' /etc/apt/sources.list.d/ubuntu-armhf.sources; \
+    fi && \
+    dpkg --add-architecture armhf && \
     ${APT_UPDATE} && \
-    for list in *.lst; do \
+    export LST_FILES=*.lst && \
+    if [ "$(uname -m)" = "x86_64" -o "$(uname -m)" = "aarch64" ]; then export LST_FILES="$LST_FILES $(echo armhf/*.lst)"; fi; \
+    for list in $LST_FILES; do \
         ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}" | tr '\n' ' '); \
     done; \
     ${APT_BUILDDEP} gst-libav1.0 gst-plugins-bad1.0 gst-plugins-base1.0 \
@@ -168,6 +180,9 @@ RUN gst-inspect-1.0 audiornnoise && \
 # Check locally installed libraries.
 RUN pkg-config --modversion rice-io && \
     pkg-config --modversion rice-proto
+
+# Place the toolchainfiles in a discoverable location.
+RUN mkdir -p /usr/share/wkdev-sdk/cross/armhf && cp -r /var/tmp/wkdev-packages/armhf/*.cmake /usr/share/wkdev-sdk/cross/armhf/
 
 # Remove systemd services that would startup by default, when spawning
 # systemd as PID 1 within the container (usually, we don't spawn systemd

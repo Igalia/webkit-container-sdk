@@ -53,6 +53,7 @@ jobs:
           wkdev-sdk-bakery --mode=export --verbose --arch amd64
 
       - name: Archive image
+        if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
         uses: actions/upload-artifact@v4
         with:
           name: wkdev-sdk-amd64.tar
@@ -124,6 +125,7 @@ jobs:
           wkdev-sdk-bakery --mode=export --verbose --arch arm64
 
       - name: Archive image
+        if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
         uses: actions/upload-artifact@v4
         with:
           name: wkdev-sdk-arm64.tar
@@ -195,6 +197,7 @@ jobs:
           wkdev-sdk-bakery --mode=export --verbose --arch arm
 
       - name: Archive image
+        if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
         uses: actions/upload-artifact@v4
         with:
           name: wkdev-sdk-arm.tar

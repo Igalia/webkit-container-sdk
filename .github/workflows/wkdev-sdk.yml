@@ -52,14 +52,6 @@ jobs:
           podman image list
           wkdev-sdk-bakery --mode=export --verbose --arch amd64
 
-      - name: Archive image
-        if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: wkdev-sdk-amd64.tar
-          path: wkdev-sdk-amd64.tar
-          retention-days: 7
-
       - name: Test image
         run: |
           CONTAINER="wkdev-$(date +%s)"
@@ -69,6 +61,14 @@ jobs:
           wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
+
+      - name: Archive image
+        if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: wkdev-sdk-amd64.tar
+          path: wkdev-sdk-amd64.tar
+          retention-days: 7
 
       - name: Cleanup test artifacts
         if: always()
@@ -124,14 +124,6 @@ jobs:
           podman image list
           wkdev-sdk-bakery --mode=export --verbose --arch arm64
 
-      - name: Archive image
-        if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: wkdev-sdk-arm64.tar
-          path: wkdev-sdk-arm64.tar
-          retention-days: 7
-
       - name: Test image
         run: |
           CONTAINER="wkdev-$(date +%s)"
@@ -141,6 +133,14 @@ jobs:
           wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
+
+      - name: Archive image
+        if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: wkdev-sdk-arm64.tar
+          path: wkdev-sdk-arm64.tar
+          retention-days: 7
 
       - name: Cleanup test artifacts
         if: always()
@@ -196,14 +196,6 @@ jobs:
           podman image list
           wkdev-sdk-bakery --mode=export --verbose --arch arm
 
-      - name: Archive image
-        if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: wkdev-sdk-arm.tar
-          path: wkdev-sdk-arm.tar
-          retention-days: 7
-
       - name: Test image
         run: |
           CONTAINER="wkdev-$(date +%s)"
@@ -213,6 +205,14 @@ jobs:
           wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
+
+      - name: Archive image
+        if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: wkdev-sdk-arm.tar
+          path: wkdev-sdk-arm.tar
+          retention-days: 7
 
       - name: Cleanup test artifacts
         if: always()

@@ -13,10 +13,20 @@ if [ -f "$HOME/.profile" ]; then
     . "$HOME/.profile"
 fi
 
-# If this login shell is interactive, we should source .bashrc as well.
-# Note that ~/.profile (if it exists) may or may not have also sourced
-# .bashrc. Ideally .bashrc scripts should be idempotent so as to this to not
-# cause any problems.
-if [ "${PS1-}" ] && [ -f "$HOME/.bashrc" ]; then
-    . "$HOME/.bashrc"
+# If this login shell is interactive, we should source .bashrc and
+# .bash_login as well, in order to setup the right environment and
+# make sure a welcome message is shown when entering the container.
+if [ "${PS1-}" ]; then
+    # Note that ~/.profile (if it exists) may or may not have also
+    # sourced .bashrc. Ideally .bashrc scripts should be idempotent so
+    # as to this to not cause any problems.
+    if [ -f "$HOME/.bashrc" ]; then
+        . "$HOME/.bashrc"
+    fi
+
+    # Bash won't load .bash_login if .bash_profile has already been
+    # found, so we have to make sure we load it from here too.
+    if [ -f "$HOME/.bash_login" ]; then
+        . "$HOME/.bash_login"
+    fi
 fi

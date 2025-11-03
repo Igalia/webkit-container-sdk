@@ -63,6 +63,12 @@ COPY /required_system_packages/*.lst .
 # We unconditionally install the GCC-based cross toolchain for armhf.
 COPY /cross .
 
+# NB: The armhf binary packages can only be found in ports.ubuntu.com. On
+# aarch64, things are already set up properly (aarch64 also uses
+# ports.ubuntu.com and specifies the architecture). However, on x86_64 the
+# default sources point to {archive,securyt}.ubuntu.com. There, we need to
+# generate the corresponding ubuntu-armhf.sources as well as rewrite
+# ubuntu.sources to only use the default sources for amd64.
 RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources && \
     if [ "$(uname -m)" = "x86_64" ]; then \
         sed -r 's@(archive|security).ubuntu.com/ubuntu@ports.ubuntu.com/ubuntu-ports@g' </etc/apt/sources.list.d/ubuntu.sources >/etc/apt/sources.list.d/ubuntu-armhf.sources; \
@@ -182,7 +188,8 @@ RUN pkg-config --modversion rice-io && \
     pkg-config --modversion rice-proto
 
 # Place the toolchainfiles in a discoverable location.
-RUN mkdir -p /usr/share/wkdev-sdk/cross/armhf && cp -r /var/tmp/wkdev-packages/armhf/*.cmake /usr/share/wkdev-sdk/cross/armhf/
+RUN mkdir -p /usr/share/wkdev-sdk/cross/armhf && \
+    cp -r /var/tmp/wkdev-packages/armhf/*.cmake /usr/share/wkdev-sdk/cross/armhf/
 
 # Remove systemd services that would startup by default, when spawning
 # systemd as PID 1 within the container (usually, we don't spawn systemd

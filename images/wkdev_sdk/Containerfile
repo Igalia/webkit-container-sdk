@@ -168,6 +168,10 @@ RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \
       ln -s ${directory} ${directory}/${QT_VERSION}  >/dev/null 2>&1 || true; \
     done
 
+# Specify the default OpenXR runtime
+RUN mkdir -p /etc/xdg/openxr/1 && \
+    ln -s /jhbuild/install/share/openxr/1/openxr_monado.json /etc/xdg/openxr/1/active_runtime.json
+
 # Check GStreamer plugins are installed.
 RUN gst-inspect-1.0 audiornnoise && \
     gst-inspect-1.0 cea608tott && \

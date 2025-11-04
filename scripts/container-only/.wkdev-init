@@ -199,8 +199,11 @@ try_setup_permissions_jhbuild_directory() {
 
     task_step "Setup jhbuild '${jhbuild_directory}' directory permissions..."
 
-    chown --recursive "${container_user_name}:${container_group_name}" "${jhbuild_directory}" &>/dev/null
-
+    if sudo -u "${container_user_name}" test -w "${jhbuild_directory}"; then
+        task_step "Already writable, skipping."
+    else
+        chown --recursive "${container_user_name}:${container_group_name}" "${jhbuild_directory}" &>/dev/null
+    fi
 }
 
 try_setup_permissions_rust_directory() {
@@ -209,7 +212,11 @@ try_setup_permissions_rust_directory() {
 
     task_step "Setup rust '${rust_directory}' directory permissions..."
 
-    chown --recursive "${container_user_name}:${container_group_name}" "${rust_directory}" &>/dev/null
+    if sudo -u "${container_user_name}" test -w "${rust_directory}"; then
+        task_step "Already writable, skipping."
+    else
+        chown --recursive "${container_user_name}:${container_group_name}" "${rust_directory}" &>/dev/null
+    fi
 }
 
 try_firstrun_script() {

@@ -25,7 +25,7 @@ jobs:
           echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
 
       - name: Install podman
-        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
+        run: sudo apt-get -o DPkg::lock::Timeout=600 update && sudo apt-get -y install podman fuse-overlayfs
 
       - name: Prune old containers/images
         run: |
@@ -97,7 +97,7 @@ jobs:
           echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
 
       - name: Install podman
-        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
+        run: sudo apt-get -o DPkg::lock::Timeout=600 update && sudo apt-get -y install podman fuse-overlayfs
 
       - name: Prune old containers/images
         run: |
@@ -169,7 +169,7 @@ jobs:
           echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
 
       - name: Install podman
-        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
+        run: sudo apt-get -o DPkg::lock::Timeout=600 update && sudo apt-get -y install podman fuse-overlayfs
 
       - name: Prune old containers/images
         run: |
@@ -242,7 +242,7 @@ jobs:
           echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
 
       - name: Install podman
-        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
+        run: sudo apt-get -o DPkg::lock::Timeout=600 update && sudo apt-get -y install podman fuse-overlayfs
 
       - name: Prune old containers/images
         run: |

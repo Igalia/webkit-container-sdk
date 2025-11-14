@@ -117,7 +117,7 @@ RUN ${CURL_DOWNLOAD} https://sh.rustup.rs | sh -s -- -y && \
 
 RUN git clone https://github.com/ystreet/librice.git && \
     cd librice && \
-    git checkout 43980fa0041877bd8c9dbb7cc0b1e03613b98a80 && \
+    git checkout 937942f453eef45f910ec88f6a3c58024be03d0a && \
     cargo cinstall -p rice-proto --release --prefix=/usr --libdir=lib/$(gcc -dumpmachine) --library-type=cdylib && \
     cargo cinstall -p rice-io --release --prefix=/usr --libdir=lib/$(gcc -dumpmachine) --library-type=cdylib && \
     cd .. && \

@@ -12,13 +12,19 @@ defaults:
 jobs:
   build_amd64:
     runs-on: [self-hosted, x64]
+    permissions:
+      packages: write
     if: |
       github.event_name != 'create' ||
       startsWith(github.ref_name, 'tag/')
     steps:
       - name: Set tag name
         run: |
-          if [ "${GITHUB_BASE_REF}" = 'main' ]; then
+          if [ "${GITHUB_REF_NAME}" = 'main' ]; then
+            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
+          elif [[ "${GITHUB_REF_NAME}" =~ ^tag/(.+)$ ]]; then
+            echo "WKDEV_SDK_TAG=${BASH_REMATCH[1]}" >> "${GITHUB_ENV}"
+          else
             echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
@@ -41,16 +47,14 @@ jobs:
 
       - name: Clean unrelated images
         run: |
-          podman rmi --ignore --force ${REPO}:latest
-          podman manifest rm ${REPO}:latest || true
-          podman rmi --ignore --force ${REPO}:latest_amd64
+          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}
+          podman manifest rm ${REPO}:${WKDEV_SDK_TAG} || true
+          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}_amd64
 
       - name: Build image
         run: |
-          source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=build --verbose --arch amd64
+          podman build --jobs $(nproc) -t ${REPO}:${WKDEV_SDK_TAG}_amd64 --arch=amd64 images/wkdev_sdk
           podman image list
-          wkdev-sdk-bakery --mode=export --verbose --arch amd64
 
       - name: Test image
         run: |
@@ -62,13 +66,11 @@ jobs:
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
 
-      - name: Archive image
+      - name: Push image
         if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: wkdev-sdk-amd64.tar
-          path: wkdev-sdk-amd64.tar
-          retention-days: 7
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
+          podman push ${REPO}:${WKDEV_SDK_TAG}_amd64
 
       - name: Cleanup test artifacts
         if: always()
@@ -84,13 +86,19 @@ jobs:
 
   build_arm64:
     runs-on: [self-hosted, arch-arm64]
+    permissions:
+      packages: write
     if: |
       github.event_name != 'create' ||
       startsWith(github.ref_name, 'tag/')
     steps:
       - name: Set tag name
         run: |
-          if [ "${GITHUB_BASE_REF}" = 'main' ]; then
+          if [ "${GITHUB_REF_NAME}" = 'main' ]; then
+            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
+          elif [[ "${GITHUB_REF_NAME}" =~ ^tag/(.+)$ ]]; then
+            echo "WKDEV_SDK_TAG=${BASH_REMATCH[1]}" >> "${GITHUB_ENV}"
+          else
             echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
@@ -113,16 +121,14 @@ jobs:
 
       - name: Clean unrelated images
         run: |
-          podman rmi --ignore --force ${REPO}:latest
-          podman manifest rm ${REPO}:latest || true
-          podman rmi --ignore --force ${REPO}:latest_amd64
+          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}
+          podman manifest rm ${REPO}:${WKDEV_SDK_TAG} || true
+          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}_arm64
 
       - name: Build image
         run: |
-          source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=build --verbose --arch arm64
+          podman build --jobs $(nproc) -t ${REPO}:${WKDEV_SDK_TAG}_arm64 --arch=arm64 images/wkdev_sdk
           podman image list
-          wkdev-sdk-bakery --mode=export --verbose --arch arm64
 
       - name: Test image
         run: |
@@ -134,13 +140,11 @@ jobs:
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
 
-      - name: Archive image
+      - name: Push image
         if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: wkdev-sdk-arm64.tar
-          path: wkdev-sdk-arm64.tar
-          retention-days: 7
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
+          podman push ${REPO}:${WKDEV_SDK_TAG}_arm64
 
       - name: Cleanup test artifacts
         if: always()
@@ -156,13 +160,19 @@ jobs:
 
   build_armv7:
     runs-on: [self-hosted, arch-armv7]
+    permissions:
+      packages: write
     if: |
       github.event_name != 'create' ||
       startsWith(github.ref_name, 'tag/')
     steps:
       - name: Set tag name
         run: |
-          if [ "${GITHUB_BASE_REF}" = 'main' ]; then
+          if [ "${GITHUB_REF_NAME}" = 'main' ]; then
+            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
+          elif [[ "${GITHUB_REF_NAME}" =~ ^tag/(.+)$ ]]; then
+            echo "WKDEV_SDK_TAG=${BASH_REMATCH[1]}" >> "${GITHUB_ENV}"
+          else
             echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
@@ -185,16 +195,14 @@ jobs:
 
       - name: Clean unrelated images
         run: |
-          podman rmi --ignore --force ${REPO}:latest
-          podman manifest rm ${REPO}:latest || true
-          podman rmi --ignore --force ${REPO}:latest_amd64
+          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}
+          podman manifest rm ${REPO}:${WKDEV_SDK_TAG} || true
+          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}_arm
 
       - name: Build image
         run: |
-          source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=build --verbose --arch arm
+          podman build --jobs $(nproc) -t ${REPO}:${WKDEV_SDK_TAG}_arm --arch=arm images/wkdev_sdk
           podman image list
-          wkdev-sdk-bakery --mode=export --verbose --arch arm
 
       - name: Test image
         run: |
@@ -206,13 +214,11 @@ jobs:
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
 
-      - name: Archive image
+      - name: Push image
         if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: wkdev-sdk-arm.tar
-          path: wkdev-sdk-arm.tar
-          retention-days: 7
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
+          podman push ${REPO}:${WKDEV_SDK_TAG}_arm
 
       - name: Cleanup test artifacts
         if: always()
@@ -228,6 +234,8 @@ jobs:
 
   deploy:
     runs-on: [self-hosted, x64]
+    permissions:
+      packages: write
     needs: [build_amd64, build_armv7, build_arm64]
     if: |
       (github.event_name != 'create' || startsWith(github.ref_name, 'tag/')) &&
@@ -235,14 +243,18 @@ jobs:
     steps:
       - name: Set tag name
         run: |
-          if [ "${GITHUB_BASE_REF}" = 'main' ]; then
+          if [ "${GITHUB_REF_NAME}" = 'main' ]; then
+            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
+          elif [[ "${GITHUB_REF_NAME}" =~ ^tag/(.+)$ ]]; then
+            echo "WKDEV_SDK_TAG=${BASH_REMATCH[1]}" >> "${GITHUB_ENV}"
+          else
             echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
           fi
           echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
           echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
 
-      - name: Install podman
-        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
+      - name: Install podman and skopeo
+        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs skopeo
 
       - name: Prune old containers/images
         run: |
@@ -256,28 +268,64 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Download images
-        uses: actions/download-artifact@v4
+      - name: Set registry auth file
+        run: echo "REGISTRY_AUTH_FILE=path" >> $GITHUB_ENV
+
+      - name: Login to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | skopeo login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
+
+      - name: Validate all architecture images exist in registry
+        id: validate
+        run: |
+          VALIDATION_FAILED=0
+          for arch in amd64 arm64 arm; do
+            if ! skopeo inspect docker://${REPO}:${WKDEV_SDK_TAG}_${arch} > /dev/null 2>&1; then
+              echo "Error: Image ${REPO}:${WKDEV_SDK_TAG}_${arch} does not exist in registry"
+              VALIDATION_FAILED=1
+            else
+              echo "Validated: ${REPO}:${WKDEV_SDK_TAG}_${arch} exists in registry"
+            fi
+          done
+          if [ $VALIDATION_FAILED -eq 1 ]; then
+            echo "validation_failed=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "validation_failed=false" >> $GITHUB_OUTPUT
+
+      - name: Clean up arch-specific images on validation failure (amd64)
+        if: failure() && steps.validate.outputs.validation_failed == 'true'
+        continue-on-error: true
+        uses: bots-house/ghcr-delete-image-action@v1.1.0
         with:
-          pattern: wkdev-sdk-*
-          merge-multiple: true
-      - run: ls -al
+          owner: ${{ github.repository_owner }}
+          name: wkdev-sdk
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.WKDEV_SDK_TAG }}_amd64
 
-      - name: Clean all previous images
-        run: |
-          podman rmi --ignore --force ${REPO}:latest
-          podman manifest rm ${REPO}:latest || true
-          podman rmi --ignore --force ${REPO}:latest_arm64
-          podman rmi --ignore --force ${REPO}:latest_amd64
-          podman rmi --ignore --force ${REPO}:latest_arm
+      - name: Clean up arch-specific images on validation failure (arm64)
+        if: failure() && steps.validate.outputs.validation_failed == 'true'
+        continue-on-error: true
+        uses: bots-house/ghcr-delete-image-action@v1.1.0
+        with:
+          owner: ${{ github.repository_owner }}
+          name: wkdev-sdk
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.WKDEV_SDK_TAG }}_arm64
 
-      - name: Deploy image
+      - name: Clean up arch-specific images on validation failure (arm)
+        if: failure() && steps.validate.outputs.validation_failed == 'true'
+        continue-on-error: true
+        uses: bots-house/ghcr-delete-image-action@v1.1.0
+        with:
+          owner: ${{ github.repository_owner }}
+          name: wkdev-sdk
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.WKDEV_SDK_TAG }}_arm
+
+      - name: Create and push multi-arch manifest
         run: |
-          podman load < ./wkdev-sdk-amd64.tar
-          podman load < ./wkdev-sdk-arm64.tar
-          podman load < ./wkdev-sdk-arm.tar
-          podman image list
-          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
-          source ./register-sdk-on-host.sh
-          wkdev-sdk-bakery --mode=deploy --verbose --multiarch
-          podman image list
+          podman manifest create ${REPO}:${WKDEV_SDK_TAG}
+          podman manifest add ${REPO}:${WKDEV_SDK_TAG} docker://${REPO}:${WKDEV_SDK_TAG}_amd64
+          podman manifest add ${REPO}:${WKDEV_SDK_TAG} docker://${REPO}:${WKDEV_SDK_TAG}_arm64
+          podman manifest add ${REPO}:${WKDEV_SDK_TAG} docker://${REPO}:${WKDEV_SDK_TAG}_arm
+          podman manifest push --all ${REPO}:${WKDEV_SDK_TAG} docker://${REPO}:${WKDEV_SDK_TAG}

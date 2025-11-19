@@ -322,10 +322,43 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.WKDEV_SDK_TAG }}_arm
 
-      - name: Create and push multi-arch manifest
+      - name: Pull arch-specific images to local storage
+        run: |
+          podman pull ${REPO}:${WKDEV_SDK_TAG}_amd64
+          podman pull ${REPO}:${WKDEV_SDK_TAG}_arm64
+          podman pull ${REPO}:${WKDEV_SDK_TAG}_arm
+
+      - name: Delete arch-specific tag (amd64)
+        uses: bots-house/ghcr-delete-image-action@v1.1.0
+        with:
+          owner: ${{ github.repository_owner }}
+          name: wkdev-sdk
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.WKDEV_SDK_TAG }}_amd64
+
+      - name: Delete arch-specific tag (arm64)
+        uses: bots-house/ghcr-delete-image-action@v1.1.0
+        with:
+          owner: ${{ github.repository_owner }}
+          name: wkdev-sdk
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.WKDEV_SDK_TAG }}_arm64
+
+      - name: Delete arch-specific tag (arm)
+        uses: bots-house/ghcr-delete-image-action@v1.1.0
+        with:
+          owner: ${{ github.repository_owner }}
+          name: wkdev-sdk
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.WKDEV_SDK_TAG }}_arm
+
+      - name: Create multi-arch manifest from local storage
         run: |
           podman manifest create ${REPO}:${WKDEV_SDK_TAG}
-          podman manifest add ${REPO}:${WKDEV_SDK_TAG} docker://${REPO}:${WKDEV_SDK_TAG}_amd64
-          podman manifest add ${REPO}:${WKDEV_SDK_TAG} docker://${REPO}:${WKDEV_SDK_TAG}_arm64
-          podman manifest add ${REPO}:${WKDEV_SDK_TAG} docker://${REPO}:${WKDEV_SDK_TAG}_arm
+          podman manifest add ${REPO}:${WKDEV_SDK_TAG} containers-storage:${REPO}:${WKDEV_SDK_TAG}_amd64
+          podman manifest add ${REPO}:${WKDEV_SDK_TAG} containers-storage:${REPO}:${WKDEV_SDK_TAG}_arm64
+          podman manifest add ${REPO}:${WKDEV_SDK_TAG} containers-storage:${REPO}:${WKDEV_SDK_TAG}_arm
+
+      - name: Push self-contained multi-arch manifest with all layers
+        run: |
           podman manifest push --all ${REPO}:${WKDEV_SDK_TAG} docker://${REPO}:${WKDEV_SDK_TAG}

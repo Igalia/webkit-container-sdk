@@ -168,6 +168,17 @@ RUN bash -c 'for binary in /usr/bin/*-18; do \
         ln -s "${binary}" "/usr/local/bin/${binary_name::-3}"; \
     done'
 
+# Install Swift nightly
+ENV SWIFTLY_HOME_DIR="/opt/swift" \
+    SWIFTLY_BIN_DIR="/opt/swift/bin" \
+    SWIFTLY_TOOLCHAINS_DIR="/opt/swift/toolchains" \
+    PATH="/opt/swift/bin:${PATH}"
+
+RUN ${CURL_DOWNLOAD} --remote-name https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz && \
+    tar zxf swiftly-$(uname -m).tar.gz && \
+    ./swiftly init --no-modify-profile --quiet-shell-followup && \
+    rm -f swiftly-$(uname -m).tar.gz
+
 # Fix Qt6 system packages - missing symlinks in the Ubuntu-provided packages.
 RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \
     for directory in /usr/include/x86_64-linux-gnu/qt6/*; do \

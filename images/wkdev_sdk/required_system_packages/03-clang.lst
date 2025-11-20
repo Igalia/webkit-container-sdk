@@ -1,2 +1,5 @@
 # Clang toolchain (current version: 18)
 clang-18 clangd-18 clang-format-18 clang-tidy-18 lld-18 lldb-18 libstdc++-14-dev
+
+# Swift toolchain
+gnupg2 libcurl4-openssl-dev libz3-dev

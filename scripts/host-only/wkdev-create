@@ -262,6 +262,12 @@ try_process_journal() {
 try_process_keyring() {
 
     local keyring_directory="${XDG_RUNTIME_DIR}/keyring"
+
+    # Respect $SSH_AUTH_SOCK (but strip the "unix:path=" prefix)
+    if [ -v SSH_AUTH_SOCK ]; then
+        keyring_directory=$(dirname "${SSH_AUTH_SOCK##unix:path=}")
+    fi
+
     local keyring_directory_exists=$([ -d "${keyring_directory}" ] && echo 1 || echo 0)
     local podman_argument=("--mount" "type=bind,source=${keyring_directory},destination=${keyring_directory},rslave")
     podman_argument+=("--env" "SSH_AUTH_SOCK=${keyring_directory}/ssh")
@@ -271,6 +277,12 @@ try_process_keyring() {
 try_process_system_bus() {
 
     local dbus_system_socket="/run/dbus/system_bus_socket"
+
+    # Respect $DBUS_SYSTEM_BUS_ADDRESS (but strip the "unix:path=" prefix)
+    if [ -v DBUS_SYSTEM_BUS_ADDRESS ]; then
+        dbus_system_socket="${DBUS_SYSTEM_BUS_ADDRESS##unix:path=}"
+    fi
+
     local dbus_system_socket_exists=$([ -S "${dbus_system_socket}" ] && echo 1 || echo 0)
     local podman_argument=("--mount" "type=bind,source=${dbus_system_socket},destination=${dbus_system_socket},rslave")
     try_process ${1} "Share system bus with container" ${dbus_system_socket_exists} ${podman_argument[@]}
@@ -279,6 +291,12 @@ try_process_system_bus() {
 try_process_session_bus() {
 
     local dbus_user_socket="${XDG_RUNTIME_DIR}/bus"
+
+    # Respect $DBUS_SESSION_BUS_ADDRESS (but strip the "unix:path=" prefix)
+    if [ -v DBUS_SESSION_BUS_ADDRESS ]; then
+        dbus_user_socket="${DBUS_SESSION_BUS_ADDRESS##unix:path=}"
+    fi
+
     local dbus_user_socket_exists=$([ -S "${dbus_user_socket}" ] && echo 1 || echo 0)
     local podman_argument=("--mount" "type=bind,source=${dbus_user_socket},destination=${dbus_user_socket},rslave")
     podman_argument+=("--env" "DBUS_SESSION_BUS_ADDRESS=unix:path=${dbus_user_socket}")
@@ -296,6 +314,12 @@ try_process_dconf() {
 try_process_accessibility() {
 
     local at_spi_directory="${XDG_RUNTIME_DIR}/at-spi"
+
+    # Respect $AT_SPI_BUS_ADDRESS (but strip the "unix:path=" prefix)
+    if [ -v AT_SPI_BUS_ADDRESS ]; then
+        at_spi_directory="${AT_SPI_BUS_ADDRESS##unix:path=}"
+    fi
+
     local at_spi_directory_exists=$([ -d "${at_spi_directory}" ] && echo 1 || echo 0)
     local podman_argument=("--mount" "type=bind,source=${at_spi_directory},destination=${at_spi_directory},rslave")
     try_process ${1} "Share accessibility bus with container" ${at_spi_directory_exists} ${podman_argument[@]}
@@ -351,6 +375,12 @@ try_process_x11() {
 try_process_pulseaudio() {
 
     local pulseaudio_directory="${XDG_RUNTIME_DIR}/pulse"
+
+    # Respect $PULSE_SERVER (but strip the "unix:path=" prefix)
+    if [ -v PULSE_SERVER ]; then
+        pulseaudio_directory="${PULSE_SERVER##unix:path=}"
+    fi
+
     local pulseaudio_directory_exists=$([ -d "${pulseaudio_directory}" ] && echo 1 || echo 0)
     local podman_argument=("--mount" "type=bind,source=${pulseaudio_directory},destination=${pulseaudio_directory},rslave")
     try_process ${1} "Access to PulseAudio on host" ${pulseaudio_directory_exists} ${podman_argument[@]}

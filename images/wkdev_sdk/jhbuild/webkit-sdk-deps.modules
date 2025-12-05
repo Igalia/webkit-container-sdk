@@ -15,6 +15,7 @@
       <dep package="libbacktrace"/>
       <dep package="sysprof"/>
       <dep package="libspiel"/>
+      <dep package="openxr"/>
       <dep package="monado"/>
     </dependencies>
   </metamodule>
@@ -153,6 +154,15 @@
             checkoutdir="libsoup"
             module="GNOME/libsoup.git" tag="3.6.0"/>
   </meson>
+
+  <cmake id="openxr">
+    <branch repo="github-tarball"
+	    checkoutdir="openxr"
+	    module="KhronosGroup/OpenXR-SDK/archive/refs/tags/release-${version}.tar.gz"
+	    rename-tarball="OpenXR-SDK-release-${version}.tar.gz"
+	    version="1.1.54"
+	    hash="sha256:2055688081066e37238be996534f349420ac52ed34f8514836704232121ee7f3"/>
+  </cmake>
 
   <cmake id="monado">
     <branch repo="freedesktop.org"

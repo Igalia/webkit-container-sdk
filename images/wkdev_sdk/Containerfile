@@ -23,6 +23,9 @@ ARG APT_AUTOREMOVE="apt-get --assume-yes autoremove"
 # Disable prompt during package configuration
 ENV DEBIAN_FRONTEND noninteractive
 
+# Used by the WebKit tooling to detect if is running inside the SDK
+ENV WEBKIT_CONTAINER_SDK "1"
+
 # Enable debugging in WebKit's sandbox.
 ENV WEBKIT_ENABLE_DEBUG_PERMISSIONS_IN_SANDBOX "1"
 

@@ -219,6 +219,17 @@ try_setup_permissions_rust_directory() {
     fi
 }
 
+try_setup_root_sdk_directory() {
+
+    local root_sdk_directory="/sdk"
+
+    task_step "Setup '${root_sdk_directory}' directory permissions..."
+
+    mkdir -p "${root_sdk_directory}"
+    chown "${container_user_name}:${container_group_name}" "${root_sdk_directory}"
+}
+
+
 try_firstrun_script() {
 
     local user_home
@@ -254,6 +265,7 @@ TASKS=(
     "try_setup_dockerenv_file"
     "try_setup_permissions_jhbuild_directory"
     "try_setup_permissions_rust_directory"
+    "try_setup_root_sdk_directory"
     "try_firstrun_script"
 )
 

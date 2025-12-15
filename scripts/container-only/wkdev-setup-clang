@@ -73,11 +73,7 @@ run() {
         output_path="${HOME}/.local/bin"
     fi
     _log_ "Creating symlinks in ${output_path}"
-    mkdir -p "${output_path}"
-    for binary in /usr/bin/*-"${version}"; do
-        local binary_name="$(basename ${binary})"
-        ln --symbolic --force "${binary}" "${output_path}/${binary_name::-3}"
-    done
+    "${WKDEV_SDK}/scripts/helpers/create-clang-symlinks" "${version}" "${output_path}"
 }
 
 run "${@}"

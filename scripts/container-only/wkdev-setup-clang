@@ -10,12 +10,13 @@ else
 fi
 
 min_clang_version=14
-max_clang_version=21
+max_clang_version=22
 
 init_application "${0}" "Installs and creates symlinks to set default clang executables" container-only
 
-argsparse_use_option "=version:" "The clang version between ${min_clang_version}-${max_clang_version}" "mandatory" "type:uint"
-
+argsparse_use_option "=version:" "The clang version between ${min_clang_version}-${max_clang_version}" "type:uint"
+argsparse_use_option "install-only" "Only install clang packages, do not create symlinks to set as default"
+argsparse_use_option "latest" "Automatically install the latest available clang version"
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -25,19 +26,28 @@ argsparse_usage_description="$(cat <<EOF
 << Examples >>
 
     $ ${application_name} --version=17
+    $ ${application_name} --latest
 EOF
 )"
 
 run() {
 
     argsparse_parse_options "${@}"
-    local version="${program_options["version"]}"
 
     _log_ ""
 
-    # Sanity check versions Ubuntu actually has.
-    if (( ${version} < ${min_clang_version} )) || (( ${version} > ${max_clang_version})); then
-        _log_ "${version} is not a valid value (between ${min_clang_version}-${max_clang_version})."
+    local version
+    if argsparse_is_option_set "latest"; then
+        version="${max_clang_version}"
+    elif argsparse_is_option_set "version"; then
+        version="${program_options["version"]}"
+        # Sanity check versions Ubuntu actually has.
+        if (( ${version} < ${min_clang_version} )) || (( ${version} > ${max_clang_version})); then
+            _log_ "${version} is not a valid value (between ${min_clang_version}-${max_clang_version})."
+            exit 1
+        fi
+    else
+        _log_ "Either --version or --latest must be specified."
         exit 1
     fi
 
@@ -51,6 +61,11 @@ run() {
         fi
     fi
 
+    if argsparse_is_option_set "install-only"; then
+        _log_ "Skipping symlink creation (--install-only specified)"
+        exit 0
+    fi
+
     local output_path
     if [ "$EUID" -eq 0 ]; then
         output_path="/usr/local/bin"
@@ -58,6 +73,7 @@ run() {
         output_path="${HOME}/.local/bin"
     fi
     _log_ "Creating symlinks in ${output_path}"
+    mkdir -p "${output_path}"
     for binary in /usr/bin/*-"${version}"; do
         local binary_name="$(basename ${binary})"
         ln --symbolic --force "${binary}" "${output_path}/${binary_name::-3}"

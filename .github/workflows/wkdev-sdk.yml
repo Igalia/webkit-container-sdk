@@ -53,7 +53,7 @@ jobs:
 
       - name: Build image
         run: |
-          podman build --jobs $(nproc) -t ${REPO}:${WKDEV_SDK_TAG}_amd64 --arch=amd64 images/wkdev_sdk
+          podman build --jobs $(nproc) --build-context scripts=./scripts -t ${REPO}:${WKDEV_SDK_TAG}_amd64 --arch=amd64 images/wkdev_sdk
           podman image list
 
       - name: Test image
@@ -127,7 +127,7 @@ jobs:
 
       - name: Build image
         run: |
-          podman build --jobs $(nproc) -t ${REPO}:${WKDEV_SDK_TAG}_arm64 --arch=arm64 images/wkdev_sdk
+          podman build --jobs $(nproc) --build-context scripts=./scripts -t ${REPO}:${WKDEV_SDK_TAG}_arm64 --arch=arm64 images/wkdev_sdk
           podman image list
 
       - name: Test image
@@ -201,7 +201,7 @@ jobs:
 
       - name: Build image
         run: |
-          podman build --jobs $(nproc) -t ${REPO}:${WKDEV_SDK_TAG}_arm --arch=arm images/wkdev_sdk
+          podman build --jobs $(nproc) --build-context scripts=./scripts -t ${REPO}:${WKDEV_SDK_TAG}_arm --arch=arm images/wkdev_sdk
           podman image list
 
       - name: Test image

@@ -64,7 +64,7 @@ build_image() {
     pushd "$(get_image_directory_by_name "${container_image_name}")" &>/dev/null
     timer_start
 
-    local podman_argument=("--jobs" "$(get_number_of_cores_for_build)")
+    local podman_argument=("--jobs" "$(get_number_of_cores_for_build)" "--build-context" "scripts=${WKDEV_SDK}/scripts")
 
     if argsparse_is_option_set "arch"; then
         container_arch="${program_options["arch"]}"

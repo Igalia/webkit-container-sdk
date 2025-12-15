@@ -164,11 +164,8 @@ COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host
 COPY /rootfs/etc/ccache.conf /etc/ccache.conf
 
 # Convenience symlinks for clang tools, the VSCode extension doesn't find these by default.
-# FIXME: Reduce code duplication with `wkdev-set-default-clang`.
-RUN bash -c 'for binary in /usr/bin/*-18; do \
-        binary_name="$(basename $binary)"; \
-        ln -s "${binary}" "/usr/local/bin/${binary_name::-3}"; \
-    done'
+COPY --from=scripts /helpers/create-clang-symlinks /tmp/create-clang-symlinks
+RUN /tmp/create-clang-symlinks 18 && rm /tmp/create-clang-symlinks
 
 # Fix Qt6 system packages - missing symlinks in the Ubuntu-provided packages.
 RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \

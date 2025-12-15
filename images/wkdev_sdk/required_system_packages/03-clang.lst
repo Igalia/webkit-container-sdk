@@ -1,2 +1,5 @@
 # Clang toolchain (current version: 18)
 clang-18 clangd-18 clang-format-18 clang-tidy-18 lld-18 lldb-18 libstdc++-14-dev
+
+# Add most recent clang version (current version 21) -- it's not set as default (see Containerfile)
+clang-21 clangd-21 clang-format-21 clang-tidy-21 lld-21 lldb-21

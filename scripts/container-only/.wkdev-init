@@ -225,8 +225,11 @@ try_setup_root_sdk_directory() {
 
     task_step "Setup '${root_sdk_directory}' directory permissions..."
 
-    mkdir -p "${root_sdk_directory}"
-    chown "${container_user_name}:${container_group_name}" "${root_sdk_directory}"
+    if sudo -u "${container_user_name}" test -w "${root_sdk_directory}"; then
+        task_step "Already writable, skipping."
+    else
+        chown "${container_user_name}:${container_group_name}" "${root_sdk_directory}"
+    fi
 }
 
 

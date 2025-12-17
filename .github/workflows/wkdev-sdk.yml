@@ -158,85 +158,11 @@ jobs:
           podman ps -a --filter "name=^wkdev-" --format "{{.Names}}" | xargs -r podman rm --force 2>/dev/null || true
           find ${HOME} -maxdepth 1 -type d -name "wkdev-*-home" -exec rm -rf {} + 2>/dev/null || true
 
-  build_armv7:
-    runs-on: [self-hosted, arch-armv7]
-    permissions:
-      packages: write
-    if: |
-      github.event_name != 'create' ||
-      startsWith(github.ref_name, 'tag/')
-    steps:
-      - name: Set tag name
-        run: |
-          if [ "${GITHUB_REF_NAME}" = 'main' ]; then
-            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
-          elif [[ "${GITHUB_REF_NAME}" =~ ^tag/(.+)$ ]]; then
-            echo "WKDEV_SDK_TAG=${BASH_REMATCH[1]}" >> "${GITHUB_ENV}"
-          else
-            echo "WKDEV_SDK_TAG=latest" >> "${GITHUB_ENV}"
-          fi
-          echo "WKDEV_SDK_CONTAINER_REGISTRY_USER_NAME=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> "${GITHUB_ENV}"
-          echo "REPO=ghcr.io/$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')/wkdev-sdk" >> "${GITHUB_ENV}"
-
-      - name: Install podman
-        run: sudo apt-get update && sudo apt-get -y install podman fuse-overlayfs
-
-      - name: Prune old containers/images
-        run: |
-          echo "Disk space before prune:"
-          df -h
-          echo "Pruning containers and images older than 2 weeks..."
-          podman system prune --all --force --volumes --filter until=336h || true
-          echo "Disk space after prune:"
-          df -h
-
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Clean unrelated images
-        run: |
-          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}
-          podman manifest rm ${REPO}:${WKDEV_SDK_TAG} || true
-          podman rmi --ignore --force ${REPO}:${WKDEV_SDK_TAG}_arm
-
-      - name: Build image
-        run: |
-          podman build --jobs $(nproc) --build-context scripts=./scripts -t ${REPO}:${WKDEV_SDK_TAG}_arm --arch=arm images/wkdev_sdk
-          podman image list
-
-      - name: Test image
-        run: |
-          CONTAINER="wkdev-$(date +%s)"
-          echo "CONTAINER=${CONTAINER}" >> "${GITHUB_ENV}"
-          source ./register-sdk-on-host.sh
-          wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch arm --shell /bin/bash
-          wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
-          wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
-          wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
-
-      - name: Push image
-        if: github.ref_name == 'main' || startsWith(github.ref_name, 'tag/')
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io --username=${GITHUB_REPOSITORY_OWNER} --password-stdin
-          podman push ${REPO}:${WKDEV_SDK_TAG}_arm
-
-      - name: Cleanup test artifacts
-        if: always()
-        run: |
-          # Remove the specific container created by this test run
-          if [ -n "${CONTAINER:-}" ]; then
-            podman rm --force ${CONTAINER} 2>/dev/null || true
-            rm -rf ${HOME}/${CONTAINER}-home || true
-          fi
-          # Clean up any leftover containers and home directories from previous failed runs
-          podman ps -a --filter "name=^wkdev-" --format "{{.Names}}" | xargs -r podman rm --force 2>/dev/null || true
-          find ${HOME} -maxdepth 1 -type d -name "wkdev-*-home" -exec rm -rf {} + 2>/dev/null || true
-
   deploy:
     runs-on: [self-hosted, x64]
     permissions:
       packages: write
-    needs: [build_amd64, build_armv7, build_arm64]
+    needs: [build_amd64, build_arm64]
     if: |
       (github.event_name != 'create' || startsWith(github.ref_name, 'tag/')) &&
       (github.ref_name == 'main' || startsWith(github.ref_name, 'tag/'))
@@ -312,21 +238,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.WKDEV_SDK_TAG }}_arm64
 
-      - name: Clean up arch-specific images on validation failure (arm)
-        if: failure() && steps.validate.outputs.validation_failed == 'true'
-        continue-on-error: true
-        uses: bots-house/ghcr-delete-image-action@v1.1.0
-        with:
-          owner: ${{ github.repository_owner }}
-          name: wkdev-sdk
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.WKDEV_SDK_TAG }}_arm
-
       - name: Pull arch-specific images to local storage
         run: |
           podman pull ${REPO}:${WKDEV_SDK_TAG}_amd64
           podman pull ${REPO}:${WKDEV_SDK_TAG}_arm64
-          podman pull ${REPO}:${WKDEV_SDK_TAG}_arm
 
       - name: Delete arch-specific tag (amd64)
         uses: bots-house/ghcr-delete-image-action@v1.1.0
@@ -344,20 +259,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.WKDEV_SDK_TAG }}_arm64
 
-      - name: Delete arch-specific tag (arm)
-        uses: bots-house/ghcr-delete-image-action@v1.1.0
-        with:
-          owner: ${{ github.repository_owner }}
-          name: wkdev-sdk
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.WKDEV_SDK_TAG }}_arm
-
       - name: Create multi-arch manifest from local storage
         run: |
           podman manifest create ${REPO}:${WKDEV_SDK_TAG}
           podman manifest add ${REPO}:${WKDEV_SDK_TAG} containers-storage:${REPO}:${WKDEV_SDK_TAG}_amd64
           podman manifest add ${REPO}:${WKDEV_SDK_TAG} containers-storage:${REPO}:${WKDEV_SDK_TAG}_arm64
-          podman manifest add ${REPO}:${WKDEV_SDK_TAG} containers-storage:${REPO}:${WKDEV_SDK_TAG}_arm
 
       - name: Push self-contained multi-arch manifest with all layers
         run: |

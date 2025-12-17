@@ -45,9 +45,9 @@ RUN userdel ubuntu
 RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/no-sandbox
 
 # Update package list, upgrade to latest version, install necessary packages for
-# early bootstrapping: .deb package configuration + locale generation.
+# early bootstrapping: .deb package configuration + locale generation + curl for downloading GPG keys.
 RUN ${APT_UPDATE} && \
-    ${APT_INSTALL} apt-utils dialog libterm-readline-gnu-perl locales unminimize && \
+    ${APT_INSTALL} apt-utils ca-certificates curl dialog libterm-readline-gnu-perl locales unminimize && \
     ${APT_UPGRADE} && ${APT_AUTOREMOVE}
 
 # Disable exclusion of locales / translations / documentation (default in Ubuntu images)
@@ -58,6 +58,13 @@ RUN locale-gen ${CONTAINER_LOCALE}
 ENV LC_ALL ${CONTAINER_LOCALE}
 ENV LANG ${CONTAINER_LOCALE}
 RUN dpkg-reconfigure locales
+
+# Ensure a strong TLS connection is always used when downloading sensitive files.
+ARG CURL_DOWNLOAD="curl --proto =https --tlsv1.2 --show-error --silent --fail"
+
+# Add LLVM repo for clang packages (clang-21 requires apt.llvm.org).
+COPY /rootfs/etc/apt/sources.list.d/llvm.list /etc/apt/sources.list.d/llvm.list
+RUN ${CURL_DOWNLOAD} https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc
 
 # Install all dependencies for WebKit/GStreamer/etc in one pass.
 WORKDIR /var/tmp/wkdev-packages
@@ -83,7 +90,9 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     export LST_FILES=*.lst && \
     if [ "$(uname -m)" = "x86_64" -o "$(uname -m)" = "aarch64" ]; then export LST_FILES="$LST_FILES $(echo armhf/*.lst)"; fi; \
     for list in $LST_FILES; do \
-        ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}" | tr '\n' ' '); \
+        echo ""; \
+        echo "#### Installing required packages from ${list}..."; \
+        ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}" | tr '\n' ' ') || exit 1; \
     done; \
     ${APT_BUILDDEP} gst-libav1.0 gst-plugins-bad1.0 gst-plugins-base1.0 \
 	                gst-plugins-good1.0 gst-plugins-ugly1.0 && \
@@ -99,13 +108,6 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
 
 # GStreamer 1.26.x requires at least Meson 1.4. Install the latest version.
 RUN pip install meson==1.8.2 --break-system-packages
-
-# Ensure a strong TLS connection is always used when downloading sensitive files.
-ARG CURL_DOWNLOAD="curl --proto =https --tlsv1.2 --show-error --silent --fail"
-
-# Add LLVM repo for newer tooling, nothing is installed from it by default.
-COPY /rootfs/etc/apt/sources.list.d/llvm.list /etc/apt/sources.list.d/llvm.list
-RUN ${CURL_DOWNLOAD} https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc
 
 # Add Rust environment.
 ENV RUSTUP_HOME="/opt/rust" \

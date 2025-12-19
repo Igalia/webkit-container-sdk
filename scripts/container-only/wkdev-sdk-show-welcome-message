@@ -72,9 +72,15 @@ run() {
     _log_ ""
     _log_ " - Instructions on how to build / debug / profile WebKit can be found in the SDK documentation, either"
     _log_ "   locally in $(ansi::underline)\${WKDEV_SDK}/docs$(ansi::noUnderline) or online $(ansi::underline)https://github.com/Igalia/wkdev-sdk/tree/main/docs$(ansi::noUnderline)".
+    _log_ ""
+    _log_ " - WebKit builds and tests will happen on a common directory at $(ansi::bold)/sdk/webkit$(ansi::normal) when using the SDK."
+    _log_ "   This allows relocating the build directory and executing tests anywhere without rebuilding,"
+    _log_ "   and also sharing ccache/sccache artifacts across directories and between bots and developers."
+    _log_ "   To connect with the remote ccache service used by the bots, run $(ansi::bold)\`wkdev-setup-remote-ccache\`$(ansi::normal)."
+    _log_ "   To opt out of common-directory builds at /sdk/webkit, export the following environment variable"
+    _log_ "   in the container's \${HOME}/.bashrc or equivalent: WEBKIT_CONTAINER_SDK_INSIDE_MOUNT_NAMESPACE=1"
 
     popd &>/dev/null
 }
 
 run "${@}"
-

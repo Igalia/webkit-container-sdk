@@ -160,6 +160,31 @@ install_kubectl() {
     _log_ "kubectl has been installed."
 }
 
+install_kubecolor() {
+
+    _log_ ""
+    _log_ "Installing kubecolor..."
+    _log_ ""
+
+    if which kubecolor > /dev/null; then
+        _log_ "kubecolor already installed."
+        return
+    fi
+
+    if ! sudo apt update; then
+        _log_ "Failed to update package list using apt."
+        exit 1
+    fi
+
+    if ! sudo apt install kubecolor; then
+        _log_ "Failed to install kubecolor."
+        exit 1
+    fi
+
+    _log_ ""
+    _log_ "kubecolor has been installed (add \"alias kubectl=kubecolor\" to your shell profile/configuration)."
+}
+
 install_hcloud() {
 
     _log_ ""
@@ -193,6 +218,7 @@ run() {
     install_helm
     install_packer
     install_kubectl
+    install_kubecolor
     install_hcloud
 }
 

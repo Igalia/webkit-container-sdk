@@ -167,7 +167,7 @@
   <cmake id="monado">
     <branch repo="freedesktop.org"
 	    checkoutdir="monado"
-	    module="monado/monado.git" tag="v25.0.0"/>
+	    module="monado/monado.git" tag="v25.1.0"/>
   </cmake>
 
   <!-- Everything in this section is just for Epiphany. -->

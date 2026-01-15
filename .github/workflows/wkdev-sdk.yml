@@ -1,5 +1,6 @@
 name: wkdev-sdk
 on:
+  workflow_dispatch:
   push:
     branches: [ main, tag/** ]
     paths-ignore: [ docs/*, README.md]

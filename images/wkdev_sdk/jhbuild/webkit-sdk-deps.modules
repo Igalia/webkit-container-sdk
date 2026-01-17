@@ -107,11 +107,11 @@
     </branch>
   </meson>
 
-  <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=disabled -Dintrospection=disabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dgst-examples=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Dwebrtc=enabled -Dgst-plugins-ugly:gpl=enabled -Dgst-plugins-bad:gpl=enabled -Dgpl=enabled -Dgst-plugins-bad:webrtcdsp=disabled -Dges=disabled -Drtsp_server=disabled -Dqt5=disabled -Dqt6=disabled">
+  <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=disabled -Dintrospection=disabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dgst-examples=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Dwebrtc=enabled -Dgst-plugins-ugly:gpl=enabled -Dgst-plugins-bad:gpl=enabled -Dgpl=enabled -Dges=disabled -Drtsp_server=disabled -Dqt5=disabled -Dqt6=disabled">
     <branch repo="freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer/gstreamer.git"
-            tag="1.26.9"/>
+            tag="1.26.10"/>
     <dependencies>
       <dep package="openh264"/>
     </dependencies>
@@ -131,7 +131,7 @@
     </dependencies>
     <branch repo="freedesktop.org"
             module="gstreamer/gst-plugins-rs"
-            tag="gstreamer-1.26.9"/>
+            tag="gstreamer-1.26.10"/>
   </meson>
 
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">

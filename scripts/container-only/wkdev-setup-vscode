@@ -8,6 +8,18 @@ else
     echo "Please set \${WKDEV_SDK} to point to the root of the wkdev-sdk checkout."
     exit 1
 fi
+if [[ -z ${WKDEV_SDK_HOST} ]]; then
+    echo "Please set \${WKDEV_SDK_HOST} to point to the wkdev-sdk checkout (from the host perspective). This is used when creating .desktop entries."
+    exit 1
+fi
+if [[ -z ${WKDEV_CONTAINER_NAME_HOST} ]]; then
+    echo "Please set \${WKDEV_CONTAINER_NAME_HOST} to the name of the wkdev container. This is used when creating .desktop entries."
+    exit 1
+fi
+if [[ ! -d /host/${HOME} ]]; then
+    echo "Host and container home must have the same path: /host/${HOME}"
+    exit 1
+fi
 source "${WKDEV_SDK}/utilities/prerequisites.sh"
 
 init_application "${0}" "Configures Visual Studio Code." container-only
@@ -17,38 +29,66 @@ verify_executables_exist curl
 argsparse_allow_no_argument true
 argsparse_use_option "=yes" "Assume yes for all prompts."
 argsparse_use_option "no-extensions" "Don't install extensions."
+argsparse_use_option "no-proprietary" "Use VSCodium instead of VSCode."
 
-install_vscode() {
-
+install_vscode_or_codium() {
     _log_ ""
-    _log_ "Installing Visual Studio Code..."
+    _log_ "Installing Visual Studio Code (${code_name_short})..."
     _log_ ""
 
-    if which code > /dev/null; then
-        _log_ "Visual Studio Code is already installed."
+    if which $code_exec > /dev/null; then
+        _log_ "Visual Studio Code (${code_name_short}) is already installed."
         return
     fi
 
-    local download_url='https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64'
+    echo "Downloading (${code_name_short}) from ${download_url}."
 
-    if [ "$(uname -m)" = 'aarch64' ]; then
-        download_url='https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-arm64'
-    fi
-
-    if ! curl --silent --fail --location "${download_url}" -o /tmp/code.deb; then
-        _log_ "Failed to download Visual Studio Code."
+    if ! curl --silent --fail --location "${download_url}" -o /tmp/${code_name_short}.tar.gz; then
+        _log_ "Failed to download Visual Studio Code (${code_name_short})."
         exit 1
     fi
 
-    if ! sudo apt install /tmp/code.deb; then
-        _log_ "Failed to install Visual Studio Code."
-        rm /tmp/code.deb
+    if ! sudo mkdir -p /opt/${code_name_short}; then
+        _log_ "Failed to make /opt/${code_name_short}."
+        rm /tmp/${code_name_short}.tar.gz
         exit 1
     fi
 
-    rm /tmp/code.deb
+    if ! sudo tar -xvf /tmp/${code_name_short}.tar.gz -C /opt/${code_name_short}; then
+        _log_ "Failed to install Visual Studio Code (${code_name_short})."
+        rm /tmp/${code_name_short}.tar.gz
+        exit 1
+    fi
+
+    rm /tmp/${code_name_short}.tar.gz
     _log_ ""
-    _log_ "Visual Studio Code has been installed."
+    _log_ "Visual Studio Code (${code_name_short}) has been installed."
+}
+
+install_vscode() {
+    arch=$(dpkg --print-architecture)
+    code_exec=/opt/code/VSCode-linux-${arch}/bin/code
+    code_icon=/opt/code/VSCode-linux-${arch}/resources/app/resources/linux/code.png
+    code_name_short=code
+    download_url="https://code.visualstudio.com/sha/download?build=stable&os=linux-${arch}"
+
+    install_vscode_or_codium
+}
+
+install_vscodium() {
+    code_exec=/opt/codium/bin/codium
+    arch=$(dpkg --print-architecture)
+    code_icon=/opt/codium/resources/app/resources/linux/code.png
+    code_name_short=codium
+
+    # Get the redirect to find the current version
+    download_page=$(curl --url https://github.com/VSCodium/vscodium/releases/latest --output /dev/null --silent --location --head --write-out '%{url_effective}')
+    url_parts=(${download_page//\// })
+    version="${url_parts[-1]}"
+
+    download_url="https://github.com/VSCodium/vscodium/releases/download/${version}/VSCodium-linux-${arch}-${version}.tar.gz"
+
+    install_vscode_or_codium
 }
 
 install_extension() {
@@ -59,7 +99,7 @@ install_extension() {
     local response
     local installed_extensions
 
-    readarray installed_extensions < <(code --list-extensions)
+    readarray installed_extensions < <($code_exec --list-extensions)
 
     if [[ "${installed_extensions[*]}" =~ "${extension_name}" ]]; then
         _log_ "VSCode extension already installed: ${extension_name}"
@@ -75,7 +115,7 @@ install_extension() {
         _log_ "Installing VSCode extension: ${extension_name} (${description})..."
     fi
 
-    if ! code --install-extension "${extension_name}" &>/dev/null; then
+    if ! ${code_exec} --install-extension "${extension_name}" &>/dev/null; then
         _log_ "Failed to install VSCode extension: ${extension_name}"
         exit 1
     fi
@@ -96,15 +136,78 @@ install_extensions() {
     install_extension ms-python.python "Python support" true
 }
 
+# These are VERY helpful for WebKit development, but we won't override existing settings if the user already has them.
+default_settings() {
+    if argsparse_is_option_set "no-proprietary"; then
+        VSCODE_CONFIG_PATH=${HOME}/.config/VSCodium/User/
+    else
+        VSCODE_CONFIG_PATH=${HOME}/.config/Code/User/
+    fi
+    if [[ ! -e "${VSCODE_CONFIG_PATH}/settings.json" ]]; then
+        mkdir -p "${VSCODE_CONFIG_PATH}"
+        tee "${VSCODE_CONFIG_PATH}/settings.json" << HERE
+{
+    "clangd.arguments": [
+        "-header-insertion=never"
+    ],
+    "editor.renderWhitespace": "trailing",
+}
+HERE
+        echo "Installed default VSCode settings to ${VSCODE_CONFIG_PATH}."
+    else
+        echo "There was already a VSCode settings.json (${VSCODE_CONFIG_PATH}), skipping."
+    fi
+}
+
+install_xdg() {
+    tee "/host/${HOME}/.local/share/applications/${code_name_short}-${WKDEV_CONTAINER_NAME_HOST}.desktop" << HERE
+[Desktop Entry]
+Name=(${WKDEV_CONTAINER_NAME_HOST})${code_name_short}
+Comment=Code Editing. Redefined.
+GenericName=Text Editor
+Exec="${WKDEV_SDK_HOST}/scripts/host-only/wkdev-enter" --name "${WKDEV_CONTAINER_NAME_HOST}" --exec --no-interactive -- ${code_exec} %F
+Icon=${code_name_short}-wkdev
+Type=Application
+StartupNotify=false
+StartupWMClass=VSCode
+Categories=TextEditor;Development;IDE;
+MimeType=text/plain;inode/directory;application/x-codium-workspace;
+Keywords=vscode;code;vscode;
+Actions=new-empty-window;
+
+[Desktop Action new-empty-window]
+Name=New Empty Window
+Exec="${WKDEV_SDK_HOST}/scripts/host-only/wkdev-enter" --name "${WKDEV_CONTAINER_NAME_HOST}" --exec --no-interactive -- ${code_exec} --new-window %F
+Icon=${code_name_short}-wkdev
+HERE
+    chmod +x "/host/${HOME}/.local/share/applications/${code_name_short}-${WKDEV_CONTAINER_NAME_HOST}.desktop"
+    echo "Installed VSCode (${code_name_short}) host launcher"
+}
+
+install_icon() {
+    mkdir -p "/host/${HOME}/.local/share/icons/hicolor/256x256/apps/"
+    cp ${code_icon} "/host/${HOME}/.local/share/icons/hicolor/256x256/apps/${code_name_short}-wkdev.png"
+    echo "Installed VSCode host icon."
+}
+
 run() {
 
     argsparse_parse_options "${@}"
 
-    install_vscode
+    if argsparse_is_option_set "no-proprietary"; then
+        install_vscodium
+    else
+        install_vscode
+    fi
 
     if ! argsparse_is_option_set "no-extensions"; then
         install_extensions
     fi
+
+    install_xdg
+    install_icon
+
+    default_settings
 }
 
 run "${@}"

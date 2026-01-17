@@ -152,7 +152,7 @@
   <meson id="libsoup" mesonargs="-Dtests=false">
     <branch repo="github.com"
             checkoutdir="libsoup"
-            module="GNOME/libsoup.git" tag="3.6.0"/>
+            module="GNOME/libsoup.git" tag="3.6.5"/>
   </meson>
 
   <cmake id="openxr">

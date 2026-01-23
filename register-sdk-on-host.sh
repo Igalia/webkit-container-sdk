@@ -9,3 +9,5 @@ wkdev_sdk_directory="$(readlink -f $(dirname ${my_relpath}))"
 
 export WKDEV_SDK="${wkdev_sdk_directory}"
 export PATH="${WKDEV_SDK}/scripts:${WKDEV_SDK}/scripts/host-only:$(python3 -m site --user-base)/bin:${PATH}"
+
+#.

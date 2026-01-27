@@ -111,7 +111,7 @@
     <branch repo="freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer/gstreamer.git"
-            tag="1.26.10"/>
+            tag="1.28.1"/>
     <dependencies>
       <dep package="openh264"/>
     </dependencies>
@@ -124,14 +124,14 @@
             version="1.4.2" />
   </meson>
 
-  <meson id="gst-plugins-rs" mesonargs="-Ddoc=disabled -Dexamples=disabled -Dtests=disabled --auto-features=disabled -Daudiofx=enabled -Dclosedcaption=enabled -Ddav1d=enabled -Drtp=enabled -Dfmp4=enabled">
+  <meson id="gst-plugins-rs" mesonargs="-Ddoc=disabled -Dexamples=disabled -Dtests=disabled --auto-features=disabled -Daudiofx=enabled -Dclosedcaption=enabled -Ddav1d=enabled -Drtp=enabled -Disobmff=enabled">
     <dependencies>
       <dep package="dav1d"/>
       <dep package="gstreamer"/>
     </dependencies>
     <branch repo="freedesktop.org"
             module="gstreamer/gst-plugins-rs"
-            tag="gstreamer-1.26.10"/>
+            tag="gstreamer-1.28.1"/>
   </meson>
 
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">

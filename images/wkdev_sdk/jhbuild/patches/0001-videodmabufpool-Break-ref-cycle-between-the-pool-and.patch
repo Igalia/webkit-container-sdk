@@ -1,0 +1,37 @@
+From 6358202272fdfb2c9bf531e0e3004178bb244589 Mon Sep 17 00:00:00 2001
+From: Philippe Normand <philn@igalia.com>
+Date: Sat, 11 Apr 2026 15:39:47 +0100
+Subject: [PATCH] videodmabufpool: Break ref cycle between the pool and its
+ thread
+
+The GThread stored in the pool was taking a strong ref of the pool itself, thus
+preventing full disposal later on and introducing several memory leaks.
+---
+ .../gst-plugins-base/gst-libs/gst/video/gstvideodmabufpool.c  | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/subprojects/gst-plugins-base/gst-libs/gst/video/gstvideodmabufpool.c b/subprojects/gst-plugins-base/gst-libs/gst/video/gstvideodmabufpool.c
+index 687884e682..15a1c6b440 100644
+--- a/subprojects/gst-plugins-base/gst-libs/gst/video/gstvideodmabufpool.c
++++ b/subprojects/gst-plugins-base/gst-libs/gst/video/gstvideodmabufpool.c
+@@ -209,8 +209,6 @@ dmabuf_source_thread (gpointer data)
+   g_main_loop_unref (loop);
+   g_main_context_unref (context);
+ 
+-  gst_object_unref (self);
+-
+   return NULL;
+ }
+ 
+@@ -228,7 +226,7 @@ gst_video_dmabuf_pool_start (GstBufferPool * pool)
+ 
+   self->thread =
+       g_thread_new ("video-dmabuf-pool-source-loop", dmabuf_source_thread,
+-      g_object_ref (self));
++      self);
+ 
+   GST_OBJECT_UNLOCK (self);
+   return
+-- 
+2.53.0
+

@@ -59,8 +59,13 @@ find_wkdev_command() {
 
 # Main.
 if [[ ${#} -eq 0 ]]; then
-    usage
-    exit
+    usage 1>&2
+    exit 1
+fi
+
+if [[ $1 = help || $1 = -h || $1 = --help ]] ; then
+	usage
+	exit
 fi
 
 COMMAND="${1}"

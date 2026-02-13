@@ -39,24 +39,6 @@ wkdev_container_commands() {
     done
 }
 
-find_wkdev_command() {
-    local command="${1}"
-
-    for item in "${application_directory}"/wkdev-* \
-                "${application_directory}"/host-only/wkdev-* \
-                "${application_directory}"/container-only/wkdev-*
-    do
-        [[ -x $item ]] || continue
-
-        if [[ ${item##*/wkdev-} = $command ]] ; then
-            echo "$item"
-            return
-        fi
-    done
-
-    return 1
-}
-
 # Main.
 if [[ ${#} -eq 0 ]]; then
     usage 1>&2
@@ -68,14 +50,13 @@ if [[ $1 = help || $1 = -h || $1 = --help ]] ; then
 	exit
 fi
 
-COMMAND="${1}"
-shift
+for path in "${application_directory}"/{,host-only/,container-only/}"wkdev-$1" ; do
+	if [[ -x $path ]] ; then
+		shift
+		exec "$path" "$@"
+	fi
+done
 
-# Find command in list of all available wkdev- commands.
-COMMAND=$(find_wkdev_command "${COMMAND}")
-
-# Execute command.
-if [[ -x "${COMMAND}" ]]; then
-    ${COMMAND} ${@}
-fi
-
+echo "${0##*/}: No such subcommand: $1." 1>&2
+echo "Hint: Use '${0##*/} help' for a list." 1>&2
+exit 1

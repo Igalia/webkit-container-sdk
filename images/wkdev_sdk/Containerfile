@@ -115,14 +115,16 @@ ENV RUSTUP_HOME="/opt/rust" \
     PATH="/opt/rust/bin:${PATH}"
 
 RUN ${CURL_DOWNLOAD} https://sh.rustup.rs | sh -s -- -y && \
-    rustup default 1.84.1 && \
+    rustup default 1.92.0 && \
     rustup component remove rust-docs && \
     cargo install --root /usr/local --version 0.9.1 --locked sccache && \
-    cargo install --root /usr/local --version 0.10.9 --locked cargo-c
+    cargo install --root /usr/local --version 0.10.19+cargo-0.92.0 --locked cargo-c
 
+COPY /patches /patches
 RUN git clone https://github.com/ystreet/librice.git && \
     cd librice && \
-    git checkout b7435690c0b233427479ab38ece1390e13074e22 && \
+    git checkout f20adebe581d2d27536285fe8e2882f6ffe3bb84 && \
+    cat /patches/0001-rice-c-Add-RICE_PROTO_MICRO-macro.patch | patch -p1 && \
     cargo cinstall -p rice-proto --release --prefix=/usr --libdir=lib/$(gcc -dumpmachine) --library-type=cdylib && \
     cargo cinstall -p rice-io --release --prefix=/usr --libdir=lib/$(gcc -dumpmachine) --library-type=cdylib && \
     cd .. && \

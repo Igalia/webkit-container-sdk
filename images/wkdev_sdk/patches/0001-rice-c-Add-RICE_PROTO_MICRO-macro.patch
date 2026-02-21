@@ -1,0 +1,24 @@
+From 7703e357dffa0824a54d7d0269f017f3e42a4788 Mon Sep 17 00:00:00 2001
+From: Philippe Normand <philn@igalia.com>
+Date: Fri, 23 Jan 2026 10:42:18 +0000
+Subject: [PATCH] rice-c: Add RICE_PROTO_MICRO macro
+
+---
+ rice-c/src/bindings.rs | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/rice-c/src/bindings.rs b/rice-c/src/bindings.rs
+index 99934e0..4668067 100644
+--- a/rice-c/src/bindings.rs
++++ b/rice-c/src/bindings.rs
+@@ -3,6 +3,7 @@
+ pub const RICE_PROTO_MAJOR: u32 = 0;
+ pub const RICE_PROTO_MINOR: u32 = 2;
+ pub const RICE_PROTO_PATCH: u32 = 1;
++pub const RICE_PROTO_MICRO: u32 = 1;
+ #[doc = " Component is in initial state and no connectivity checks are in progress."]
+ pub const RICE_COMPONENT_CONNECTION_STATE_NEW: RiceComponentConnectionState = 0;
+ #[doc = " Connectivity checks are in progress for this candidate"]
+-- 
+2.52.0
+

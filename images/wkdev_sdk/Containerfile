@@ -115,9 +115,9 @@ ENV RUSTUP_HOME="/opt/rust" \
     PATH="/opt/rust/bin:${PATH}"
 
 RUN ${CURL_DOWNLOAD} https://sh.rustup.rs | sh -s -- -y && \
-    rustup default 1.84.1 && \
+    rustup default 1.85.1 && \
     rustup component remove rust-docs && \
-    cargo install --root /usr/local --version 0.9.1 --locked sccache && \
+    cargo install --root /usr/local --version 0.14.0 --locked sccache && \
     cargo install --root /usr/local --version 0.10.9 --locked cargo-c
 
 RUN git clone https://github.com/ystreet/librice.git && \

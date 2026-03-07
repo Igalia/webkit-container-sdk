@@ -121,3 +121,5 @@ if [[ "$(hostname -s)" == "wkdev-foo" ]]; then
     jhbuild --no-interact build glib
 fi
 ```
+
+# ignore me: test PR to check CI

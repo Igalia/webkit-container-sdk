@@ -6,6 +6,8 @@
   <metamodule id="webkit-sdk-deps">
     <dependencies>
       <dep package="dicts"/>
+      <dep package="libicu"/>
+      <dep package="harfbuzz"/>
       <dep package="libwpe"/>
       <dep package="libsoup"/>
       <dep package="wpebackend-fdo"/>
@@ -57,6 +59,31 @@
             hash="sha256:960bdd11c3f2cf5bd91569603ed6d2aa42fd4000ed7cac930a804eac367888d7"/>
   </cmake>
 
+  <!-- Ship the last version of ICU because it helps to pass more Test262 JSC tests. -->
+  <autotools id="libicu" autogen-sh="./source/configure" autogenargs="--disable-samples --disable-tests">
+     <branch module="unicode-org/icu/releases/download/release-78.2/icu4c-78.2-sources.tgz"
+             version="78.2"
+             checkoutdir="icu-${version}"
+             repo="github-tarball"
+             hash="sha256:3e99687b5c435d4b209630e2d2ebb79906c984685e78635078b672e03c89df35">
+       <patch file="icudata-stdlibs.patch" strip="1"/>
+     </branch>
+  </autotools>
+
+  <!-- Building harfbuzz is needed because the system version is linked against an older libicu, which is ABI-incompatible with the version shipped here. -->
+  <meson id="harfbuzz" mesonargs="-Dintrospection=enabled -Dgobject=enabled -Dtests=disabled -Ddocs=disabled">
+    <dependencies>
+      <dep package="glib"/>
+      <dep package="libicu"/>
+    </dependencies>
+    <branch module="harfbuzz/harfbuzz"
+            repo="github.com"
+            tag="13.1.1"
+            version="13.1.1"
+            checkoutdir="harfbuzz-${version}">
+    </branch>
+  </meson>
+
   <meson id="wpebackend-fdo">
     <dependencies>
       <dep package="libwpe"/>
@@ -73,6 +100,9 @@
     <branch repo="github.com"
             checkoutdir="gtk4"
             module="GNOME/gtk.git" tag="4.16.2"/>
+   <dependencies>
+      <dep package="glib"/>
+   </dependencies>
   </meson>
 
   <meson id="libadwaita" mesonargs="-Dexamples=false -Dgtk_doc=true -Dtests=false -Dvapi=false">
@@ -113,6 +143,7 @@
             module="gstreamer/gstreamer.git"
             tag="1.26.10"/>
     <dependencies>
+      <dep package="glib"/>
       <dep package="openh264"/>
     </dependencies>
   </meson>
@@ -153,6 +184,10 @@
     <branch repo="github.com"
             checkoutdir="libsoup"
             module="GNOME/libsoup.git" tag="3.6.6"/>
+    <dependencies>
+      <dep package="glib"/>
+      <dep package="glib-networking"/>
+    </dependencies>
   </meson>
 
   <cmake id="openxr">
@@ -197,6 +232,8 @@
     <branch repo="github.com"
             module="GNOME/epiphany.git" tag="47.0"/>
     <dependencies>
+      <dep package="glib"/>
+      <dep package="gtk4"/>
       <dep package="gcr"/>
       <dep package="libarchive"/>
       <dep package="libportal-gtk4"/>
@@ -233,8 +270,7 @@
   <cmake id="nghttp2" cmakeargs="-DENABLE_DEBUG=ON -DENABLE_LIB_ONLY=ON -DENABLE_DOC=OFF">
     <branch repo="github.com"
             module="nghttp2/nghttp2"
-            tag="v1.64.0"
-    />
+            tag="v1.64.0"/>
   </cmake>
 
 </moduleset>

@@ -114,7 +114,7 @@
     </dependencies>
   </meson>
 
-  <autotools id="libbacktrace">
+  <autotools id="libbacktrace" autogenargs="--with-system-libunwind --enable-shared --disable-static">
     <branch repo="github.com"
             module="ianlancetaylor/libbacktrace.git"
             checkoutdir="libbacktrace"/>

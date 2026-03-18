@@ -142,23 +142,17 @@ RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
     jhbuild --exit-on-error --no-interact build && \
     rm -r /var/tmp/jhbuild
 
-# Register basic JHBuild environment
-# TODO: Instead of hardcoding here the values it would be better to
-# explore the possibility of generating it dynamically with "jhbuild shell"
-# when the user enters into the container (or similar), but that may cause
-# issues with the env not exported when someone enter into the
-# container via direct command exec rather than by login
-ENV LIB "/jhbuild/install/lib"
-ENV INCLUDE "/jhbuild/install/include"
-ENV LD_LIBRARY_PATH "/jhbuild/install/lib"
-ENV GST_PLUGIN_PATH_1_0 "/jhbuild/install/lib/gstreamer-1.0"
-ENV PKG_CONFIG_PATH "/jhbuild/install/lib/pkgconfig:/jhbuild/install/share/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
-ENV LDFLAGS "-L/jhbuild/install/lib"
+# Register JHBuild environment
 ENV C_INCLUDE_PATH "/jhbuild/install/include"
+ENV CMAKE_PREFIX_PATH "/jhbuild/install"
 ENV CPLUS_INCLUDE_PATH "/jhbuild/install/include"
 ENV GI_TYPELIB_PATH "/jhbuild/install/lib/girepository-1.0"
-ENV XDG_DATA_DIRS "/jhbuild/install/share:/usr/local/share:/usr/share"
+ENV GST_PLUGIN_PATH_1_0 "/jhbuild/install/lib/gstreamer-1.0"
+ENV LDFLAGS "-L/jhbuild/install/lib"
+ENV LD_LIBRARY_PATH "/jhbuild/install/lib"
 ENV PATH "/jhbuild/install/bin:$PATH"
+ENV PKG_CONFIG_PATH "/jhbuild/install/lib/pkgconfig:/jhbuild/install/share/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
+ENV XDG_DATA_DIRS "/jhbuild/install/share:/usr/local/share:/usr/share"
 
 # Podman proxy, connecting to host instance
 COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host

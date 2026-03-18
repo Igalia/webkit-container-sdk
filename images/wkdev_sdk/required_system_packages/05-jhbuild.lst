@@ -1,0 +1,2 @@
+# Needed for building libbacktrace in jhbuild
+libunwind-dev

@@ -241,6 +241,13 @@
     </dependencies>
   </meson>
 
+  <!-- Optional WPE Platform implementaiton. -->
+  <meson id="wpe-platform-gtk">
+    <branch repo="github.com"
+            module="Igalia/wpe-platform-gtk.git"/>
+    <!-- This depends on gtk4, but the older distro provided version is fine. -->
+  </meson>
+
   <!-- Everything in this section is just for sysprof. -->
   <meson id="libpanel" mesonargs="-Dvapi=false">
     <branch repo="github.com"

@@ -19,6 +19,7 @@ argsparse_use_option no-interactive  "Disable stdin (useful in scripts, see Cave
 
 argsparse_use_option =exec           "Treat all remaining non-option arguments (or everything after the '--' character sequence) as command to execute in the container instead of spawning a shell"
 argsparse_use_option =name:          "Name of container" default:wkdev
+argsparse_use_option =additional-flags: "Additional flags to pass directly to podman exec"
 
 argsparse_use_option max-retries:    "Maximum number of <wait>+<try-to-enter> cycles" type:uint default:10
 argsparse_use_option sleep-duration: "Amount of seconds to sleep before attempting to enter the container (during first-time container run)" type:uint default:20
@@ -42,6 +43,7 @@ argsparse_usage_description="$(cat <<EOF
     $ ${application_name} --name <container-name>
     $ ${application_name} --root --name <container-name>
     $ ${application_name} --exec --name <container-name> -- uptime
+    $ ${application_name} --additional-flags "--env MY_VAR=value" --name <container-name> -- sh -c 'echo \$MY_VAR'
 
 << Caveats >>
 
@@ -66,6 +68,7 @@ process_command_line_arguments() {
     container_name="${program_options["name"]}"
     max_retries="${program_options["max-retries"]}"
     sleep_duration_in_seconds="${program_options["sleep-duration"]}"
+    additional_flags="${program_options["additional-flags"]:-}"
 }
 
 build_podman_arguments() {
@@ -181,6 +184,11 @@ run() {
     fi
 
     propagate_environment_variables_from_host
+
+    # Add any additional flags passed by the user
+    if [ -n "${additional_flags}" ]; then
+        podman_exec_arguments+=(${additional_flags})
+    fi
 
     podman_exec_arguments+=("${container_name}")
 

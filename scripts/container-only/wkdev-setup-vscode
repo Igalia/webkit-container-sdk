@@ -40,7 +40,7 @@ install_vscode() {
         exit 1
     fi
 
-    if ! sudo apt install /tmp/code.deb; then
+    if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes /tmp/code.deb; then
         _log_ "Failed to install Visual Studio Code."
         rm /tmp/code.deb
         exit 1

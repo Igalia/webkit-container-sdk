@@ -80,16 +80,3 @@ get_image_id_by_image_name() {
 
 # Get list of all containers by name.
 get_list_of_containers() { run_podman container list --all --format "{{.Names}}"; }
-
-# Does the podman user socket exist?
-is_podman_user_socket_available() {
-
-    local podman_socket="${XDG_RUNTIME_DIR-}/podman/podman.sock"
-
-    # The socket has to exist...
-    [ -S "${podman_socket}" ] || return 1
-
-    # ... and it should be controlled by the systemd user session.
-    systemctl status --user podman.socket &>/dev/null
-    return ${?}
-}

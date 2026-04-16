@@ -75,11 +75,6 @@ build_podman_arguments() {
 
     local -n generic_arguments=${1}
 
-    # On the host, the podman user socket can be used as well:
-    # '--remote' routes podman communication through the socket,
-    # which is supposed to deliver a CLI usage with less latency.
-    is_podman_user_socket_available && generic_arguments+=("--remote")
-
     argsparse_is_option_set "debug" && generic_arguments+=("--log-level debug")
 }
 
@@ -182,6 +177,12 @@ run() {
     else
         podman_exec_arguments+=("--user" "$(id --user --real):$(id --group --real)")
     fi
+
+    # Disable the detach key binding so that Ctrl+P (readline shortcut for history backwards) works
+    # in one single keystroke. The detach behavior is not super useful with podman exec, since you can't
+    # reattach to the current shell, it will print an error when you use it, and it will not clean the
+    # state of the shell.
+    podman_exec_arguments+=("--detach-keys=")
 
     propagate_environment_variables_from_host
 

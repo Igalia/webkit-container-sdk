@@ -7,3 +7,15 @@ set python print-stack full
 set debuginfod enabled on
 set sysroot /
 handle SIGUSR1 nostop noprint
+
+# pretty printers for jhbuild dependencies (e.g. glib, GStreamer):
+add-auto-load-safe-path /jhbuild/install/share/gdb/auto-load
+add-auto-load-scripts-directory /jhbuild/install/share/gdb/auto-load
+
+# WebKit pretty printers
+python
+import sys, os
+if os.path.exists("/sdk/webkit/Tools/gdb/webkit.py"):
+    sys.path.insert(0, "/sdk/webkit/Tools/gdb")
+    import webkit
+end

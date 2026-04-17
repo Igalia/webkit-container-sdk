@@ -203,7 +203,7 @@ try_process_home_directory() {
 
     # Map given home directory path as container user home directory (eventually separated from host home directory).
     local podman_argument=("--env" "HOST_HOME=/host/home/${container_user_name}")
-    podman_argument+=("--env" "HOST_CONTAINER_HOME_PATH=${container_user_home}")
+    podman_argument+=("--label" "wkdev.home-path=${container_user_home}")
     podman_argument+=("--mount" "type=bind,source=${container_user_home},destination=/home/${container_user_name},rslave")
     podman_argument+=("--mount" "type=bind,source=${HOME},destination=/host/home/${container_user_name},rslave")
 

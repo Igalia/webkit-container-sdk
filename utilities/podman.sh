@@ -72,6 +72,11 @@ get_podman_container_home_directory_on_host() {
         | head --lines 1
 }
 
+get_podman_container_shared_directory_on_host() {
+
+    get_podman_container_label_value "${1}" "wkdev.shared-dir-path"
+}
+
 # Get currently used image name given an container name.
 get_image_name_by_container_name() {
 

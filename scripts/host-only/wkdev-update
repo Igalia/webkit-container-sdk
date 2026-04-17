@@ -11,6 +11,7 @@ source "${WKDEV_SDK}/utilities/podman.sh"
 
 argsparse_use_option debug        "Enable debug logging for podman (useful to debug container issues)"
 argsparse_use_option trace        "Enable 'xtrace' mode for this script"
+argsparse_use_option force        "Always re-create matching container(s), even when image IDs are up to date"
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -94,9 +95,18 @@ update_containers_using_image() {
 
         local status="OK"
         local status_color="green"
-        if [ "${existing_image_id}" != "${latest_image_id}" ]; then
+        local should_recreate=0
+        if argsparse_is_option_set "force"; then
+            should_recreate=1
+            status="FORCED"
+            status_color="yellow"
+        elif [ "${existing_image_id}" != "${latest_image_id}" ]; then
+            should_recreate=1
             status="OUTDATED"
             status_color="red"
+        fi
+
+        if [ ${should_recreate} -eq 1 ]; then
 
             local recreate_arguments=()
             recreate_arguments+=("--home" "$(get_podman_container_home_directory_on_host "${container_name}")")

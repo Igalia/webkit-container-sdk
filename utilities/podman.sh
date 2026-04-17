@@ -45,16 +45,31 @@ get_podman_container_init_arguments() {
     run_podman inspect --type container --format "{{range .Args}}{{.}} {{end}}" "${container_name}" 2>/dev/null
 }
 
+# Get a label value from an existing container.
+get_podman_container_label_value() {
+
+    local container_name="${1}"
+    local label_name="${2}"
+    run_podman inspect --type container --format "{{with index .Config.Labels \"${label_name}\"}}{{.}}{{end}}" "${container_name}" 2>/dev/null
+}
+
 # Get the location where the home directory for a container is stored on the host.
 get_podman_container_home_directory_on_host() {
 
     local container_name="${1}"
-    local extract_variable="HOST_CONTAINER_HOME_PATH"
-    set -o pipefail
-    run_podman inspect --type container "${container_name}" 2>/dev/null | grep "${extract_variable}" | sed -e "s/.*${extract_variable}=//" | sed -e s'/",//' | head --lines 1
-    local podman_status=${?}
-    set +o pipefail
-    return ${podman_status}
+
+    local home_path
+    home_path="$(get_podman_container_label_value "${container_name}" "wkdev.home-path")"
+    if [ -n "${home_path}" ]; then
+        echo "${home_path}"
+        return 0
+    fi
+
+    # Fallback for legacy containers created before labels were introduced.
+    run_podman inspect --type container --format "{{range .Config.Env}}{{println .}}{{end}}" "${container_name}" 2>/dev/null \
+        | grep '^HOST_CONTAINER_HOME_PATH=' \
+        | sed -e 's/^HOST_CONTAINER_HOME_PATH=//' \
+        | head --lines 1
 }
 
 # Get currently used image name given an container name.

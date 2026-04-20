@@ -11,6 +11,8 @@ source "${WKDEV_SDK}/utilities/podman.sh"
 
 argsparse_use_option debug        "Enable debug logging for podman (useful to debug container issues)"
 argsparse_use_option trace        "Enable 'xtrace' mode for this script"
+argsparse_use_option force        "Always re-create matching container(s), even when image IDs are up to date"
+argsparse_describe_parameters "container-name?"
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
@@ -25,6 +27,11 @@ process_command_line_arguments() {
     argsparse_allow_no_argument yes
 
     argsparse_parse_options "${@}"
+    if [ ${#program_params[@]} -gt 1 ]; then
+        _abort_ "At most one positional parameter is supported: <container-name>"
+    fi
+
+    target_container_name="${program_params[0]-}"
     argsparse_is_option_set "trace" && set -o xtrace
 }
 
@@ -69,13 +76,26 @@ update_containers_using_image() {
 
     local max_container_name_length=0
     local found_containers_using_image=0
+    local found_target_container=0
     for container_name in $(get_list_of_containers); do
+        if [ -n "${target_container_name}" ] && [ "${container_name}" = "${target_container_name}" ]; then
+            found_target_container=1
+        fi
+
+        if [ -n "${target_container_name}" ] && [ "${container_name}" != "${target_container_name}" ]; then
+            continue
+        fi
+
         local container_image_name_with_tag="$(get_image_name_by_container_name "${container_name}")"
         _log_ "${container_image_name_with_tag} = ${image_name}"
         [ "${container_image_name_with_tag}" = "${image_name}" ] || continue
         found_containers_using_image=$((found_containers_using_image+1))
         [ ${#container_name} -gt ${max_container_name_length} ] && max_container_name_length=${#container_name}
     done
+
+    if [ -n "${target_container_name}" ] && [ ${found_target_container} -eq 0 ]; then
+        _abort_ "Cannot find container '${target_container_name}'"
+    fi
 
     if [ ${found_containers_using_image} -eq 0 ]; then
         _log_ "-> No containers use this image, no need to recreate any of them."
@@ -86,6 +106,10 @@ update_containers_using_image() {
 
     local -A outdated_container_data=()
     for container_name in $(get_list_of_containers); do
+        if [ -n "${target_container_name}" ] && [ "${container_name}" != "${target_container_name}" ]; then
+            continue
+        fi
+
         local container_image_name_with_tag="$(get_image_name_by_container_name "${container_name}")"
         [ "${container_image_name_with_tag}" = "${image_name}" ] || continue
 
@@ -94,12 +118,28 @@ update_containers_using_image() {
 
         local status="OK"
         local status_color="green"
-        if [ "${existing_image_id}" != "${latest_image_id}" ]; then
+        local should_recreate=0
+        if argsparse_is_option_set "force"; then
+            should_recreate=1
+            status="FORCED"
+            status_color="yellow"
+        elif [ "${existing_image_id}" != "${latest_image_id}" ]; then
+            should_recreate=1
             status="OUTDATED"
             status_color="red"
+        fi
+
+        if [ ${should_recreate} -eq 1 ]; then
 
             local recreate_arguments=()
             recreate_arguments+=("--home" "$(get_podman_container_home_directory_on_host "${container_name}")")
+
+            local shared_dir
+            shared_dir="$(get_podman_container_shared_directory_on_host "${container_name}")"
+            if [ -n "${shared_dir}" ]; then
+                recreate_arguments+=("--shared-dir" "${shared_dir}")
+            fi
+
             local init_arguments=($(get_podman_container_init_arguments "${container_name}"))
             for arg in "${init_arguments[@]}"; do
                 # wkdev-create --attach passes the --exit-when-done option to .wkdev-init so that

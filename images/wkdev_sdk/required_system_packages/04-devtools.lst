@@ -36,4 +36,4 @@ knockd
 libeigen3-dev glslang-tools libudev-dev libv4l-dev libvulkan-dev
 
 # Vulkan support
-libvulkan-volk-dev
+libvulkan-volk-dev vulkan-validationlayers

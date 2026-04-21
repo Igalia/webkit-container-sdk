@@ -1,6 +1,6 @@
 # Clang toolchain (current version: 18)
 clang-18 clangd-18 clang-format-18 clang-tidy-18 lld-18
 
-# Add most recent clang version (current version 21) -- it's not set as default (see Containerfile)
-# Ubuntu provided lldb-18 and LLVM-provided lldb-21 are in conflict - however we can just pull in lldb-21, which works with clang-18 too.
-clang-21 clangd-21 clang-format-21 clang-tidy-21 lld-21 lldb-21
+# Add most recent clang version (current version 22) -- it's not set as default (see Containerfile)
+# Ubuntu provided lldb-18 and LLVM-provided lldb-22 are in conflict - however we can just pull in lldb-22, which works with clang-18 too.
+clang-22 clangd-22 clang-format-22 clang-tidy-22 lld-22 lldb-22

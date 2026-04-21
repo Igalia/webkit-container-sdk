@@ -62,7 +62,7 @@ RUN dpkg-reconfigure locales
 # Ensure a strong TLS connection is always used when downloading sensitive files.
 ARG CURL_DOWNLOAD="curl --proto =https --tlsv1.2 --show-error --silent --fail"
 
-# Add LLVM repo for clang packages (clang-21 requires apt.llvm.org).
+# Add LLVM repo for clang packages (clang-22 requires apt.llvm.org).
 COPY /rootfs/etc/apt/sources.list.d/llvm.list /etc/apt/sources.list.d/llvm.list
 RUN ${CURL_DOWNLOAD} https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc
 

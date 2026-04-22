@@ -23,13 +23,16 @@ ARG APT_AUTOREMOVE="apt-get --assume-yes autoremove"
 # Disable prompt during package configuration
 ENV DEBIAN_FRONTEND noninteractive
 
-# Used by the WebKit tooling to detect if is running inside the SDK
+# Used by the WebKit tooling to detect if is running inside the SDK.
 ENV WEBKIT_CONTAINER_SDK "1"
 
 # Enable debugging in WebKit's sandbox.
 ENV WEBKIT_ENABLE_DEBUG_PERMISSIONS_IN_SANDBOX "1"
 
-# Used in webkitdirs.pm to prefer building against system libraries instead of the Flatpak SDK.
+# This env var got deprecated in 2026-04 at 309557@main, so remove it when building
+# WebKit older than 309557@main with the last version of the SDK is not longer a need.
+# It was used in webkitdirs.pm to prefer building against system libraries instead of the Flatpak SDK.
+# More details: https://github.com/Igalia/webkit-container-sdk/pull/222
 ENV WEBKIT_BUILD_USE_SYSTEM_LIBRARIES "1"
 
 # Delete the default ubuntu user which has a UID of 1000.

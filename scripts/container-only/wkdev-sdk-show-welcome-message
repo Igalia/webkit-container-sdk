@@ -61,6 +61,8 @@ run() {
     _log_ '(_______)|_/    \/(______/ (_______/   \_/          \_______)(______/ |_/    \/'
     _log_ ""
     _log_ ""
+    _log_ "WebKit SDK container version: $(ansi::bold)$(get_sdk_version)$(ansi::normal)"
+    _log_ ""
     _log_ "Git repository 'wkdev-sdk' ($(ansi::bold) $(git branch --show-current) @ $(git rev-parse HEAD) $(ansi::normal))"
     _log_ " 🠲  Last commit: $(ansi::bold)$(git log -1 --format=%cd)$(ansi::normal)"
     _log_ ""

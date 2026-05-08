@@ -25,8 +25,8 @@ argsparse_use_option =name:       "Name of container" default:wkdev
 argsparse_use_option rm           "Force removal of container if it already exists."
 argsparse_use_option attach       "Attach to container as it starts up."
 argsparse_use_option no-pull      "Do not login or pull images."
-argsparse_use_option list-tags    "List available image tags."
-argsparse_use_option =tag:        "Create the container using a specific tag, see-also --list-tags." default:$(get_default_container_tag)
+argsparse_use_option list-tags    "List image tags published to the registry."
+argsparse_use_option version:     "Image version (<major>.<minor>, or <major>.<minor>-v<count>-<gitsha>) to use, instead of the version pinned in this checkout. A bare <major>.<minor> resolves to the highest published v<count> for that branch. Pulled from the registry on demand."
 argsparse_use_option =arch:       "Container architecture."
 
 argsparse_usage_description="$(cat <<EOF
@@ -59,13 +59,28 @@ process_command_line_arguments() {
     argsparse_parse_options "${@}"
     argsparse_is_option_set "trace" && set -o xtrace
 
+    sdk_repo_qualified="$(get_sdk_qualified_name)"
+
     if argsparse_is_option_set "list-tags"; then
         _log_ ""
-        run_podman search "$(get_sdk_qualified_name)" --list-tags --format='{{ .Tag }}'
+        list_available_sdk_versions "${sdk_repo_qualified}"
         exit 0
     fi
 
-    container_tag="${program_options["tag"]}"
+    if argsparse_is_option_set "version"; then
+        container_tag="${program_options["version"]}"
+        if [[ "${container_tag}" =~ ${WKDEV_SDK_MAJOR_MINOR_RE} ]]; then
+            local resolved
+            resolved="$(list_available_sdk_versions "${sdk_repo_qualified}" "${container_tag}" | tail -n 1)"
+            [ -z "${resolved}" ] && _abort_ "No published image matches version prefix '${container_tag}' in the registry."
+            _log_ "-> Resolved --version=${container_tag} to '${resolved}'."
+            container_tag="${resolved}"
+        elif [[ ! "${container_tag}" =~ ${WKDEV_SDK_VERSION_PUBLISHED_RE} ]]; then
+            _abort_ "--version must be of the form <major>.<minor> or <major>.<minor>-v<count>-<gitsha> (got '${container_tag}')."
+        fi
+    else
+        container_tag="$(get_default_container_tag)"
+    fi
 
     container_shell="${program_options["shell"]}"
     container_name="${program_options["name"]}"
@@ -481,20 +496,20 @@ build_podman_create_arguments() {
         arguments+=("--arch=${container_arch}")
 
         if argsparse_is_option_set "no-pull"; then
-            if ! podman image exists "$(get_sdk_qualified_name):${container_tag}"; then
-                echo "Image $(get_sdk_qualified_name):${container_tag} does not exist, trying arch-specific version."
+            if ! podman image exists "${sdk_repo_qualified}:${container_tag}"; then
+                echo "Image ${sdk_repo_qualified}:${container_tag} does not exist, trying arch-specific version."
                 container_tag="${container_tag}_${container_arch}"
             fi
         fi
     fi
 
     if argsparse_is_option_set "no-pull"; then
-        if ! podman image exists "$(get_sdk_qualified_name):${container_tag}"; then
-            echo "Image $(get_sdk_qualified_name):${container_tag} does not exist."
+        if ! podman image exists "${sdk_repo_qualified}:${container_tag}"; then
+            echo "Image ${sdk_repo_qualified}:${container_tag} does not exist."
             exit 1
         fi
     fi
-    echo "Using image $(get_sdk_qualified_name):${container_tag}."
+    echo "Using image ${sdk_repo_qualified}:${container_tag}."
 
     set +o nounset
     try_process_user ${1}
@@ -525,7 +540,7 @@ build_podman_create_arguments() {
     try_process_podman ${1}
     set -o nounset
 
-    arguments+=("$(get_sdk_qualified_name):${container_tag}")
+    arguments+=("${sdk_repo_qualified}:${container_tag}")
 
     # Entry point
     arguments+=("/wkdev-sdk/scripts/container-only/.wkdev-init")

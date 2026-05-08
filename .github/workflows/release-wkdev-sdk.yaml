@@ -1,0 +1,156 @@
+name: Release wkdev-sdk
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release-wkdev-sdk
+  cancel-in-progress: false
+
+env:
+  CONTAINERFILE_PATH: images/wkdev_sdk/Containerfile
+
+jobs:
+  bump-image-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_image_version: ${{ steps.bump.outputs.new_version }}
+      old_image_version: ${{ steps.bump.outputs.old_version }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.RELEASE_PAT }}
+        fetch-depth: 0
+
+    - name: Extract and bump image version
+      id: bump
+      run: |
+        read CURRENT_VERSION MAJOR_MINOR COUNT SHA < <(./scripts/helpers/print-sdk-version --components)
+
+        echo "old_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+
+        # Bump <count> only when the previous release was already published
+        # (i.e. the value already carries a -<gitsha>). Otherwise this is the
+        # first release for that <count> and we just stamp the sha onto it.
+        if [ -n "${SHA}" ]; then
+          COUNT=$((COUNT + 1))
+        fi
+        GIT_SHORT_SHA="$(git log -1 --pretty=%h)"
+        NEW_VERSION="${MAJOR_MINOR}-v${COUNT}-${GIT_SHORT_SHA}"
+        echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+
+        echo "Bumping wkdev-sdk version: ${CURRENT_VERSION} -> ${NEW_VERSION}"
+
+    - name: Update Containerfile
+      run: |
+        sed -i "s/^ARG WKDEV_SDK_VERSION=.*/ARG WKDEV_SDK_VERSION=${{ steps.bump.outputs.new_version }}/" ${{ env.CONTAINERFILE_PATH }}
+
+        echo "Updated Containerfile:"
+        grep '^ARG WKDEV_SDK_VERSION=' ${{ env.CONTAINERFILE_PATH }}
+
+    - name: Configure Git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Commit and push image version update
+      run: |
+        git add ${{ env.CONTAINERFILE_PATH }}
+        git commit -m "wkdev-sdk: Update image to ${{ steps.bump.outputs.new_version }}"
+        git push origin main
+
+    - name: Create and push image tag
+      run: |
+        TAG_NAME="wkdev-sdk-${{ steps.bump.outputs.new_version }}"
+        git tag "${TAG_NAME}"
+        git push origin "${TAG_NAME}"
+        echo "Created tag: ${TAG_NAME}"
+
+  wait-for-image-build:
+    needs: bump-image-version
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      checks: read
+    timeout-minutes: 240
+
+    steps:
+    - name: Wait for image build workflow to complete
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG_NAME="wkdev-sdk-${{ needs.bump-image-version.outputs.new_image_version }}"
+        WORKFLOW_NAME="build-and-publish-wkdev-sdk-image.yaml"
+
+        echo "Waiting for workflow triggered by tag ${TAG_NAME}..."
+
+        MAX_WAIT_FOR_START=120
+        WAIT_INTERVAL=15
+        ELAPSED=0
+
+        # `headBranch` is the tag name (not a branch) for tag-triggered workflow runs.
+        while [ $ELAPSED -lt $MAX_WAIT_FOR_START ]; do
+          RUN_ID=$(gh run list \
+            -R "${{ github.repository }}" \
+            --workflow="${WORKFLOW_NAME}" \
+            --limit=10 \
+            --json databaseId,headBranch,createdAt \
+            --jq "[.[] | select(.headBranch == \"${TAG_NAME}\")] | sort_by(.createdAt) | reverse | .[0].databaseId")
+
+          if [ -n "${RUN_ID}" ] && [ "${RUN_ID}" != "null" ]; then
+            echo "Found workflow run: ${RUN_ID}"
+            break
+          fi
+
+          echo "Workflow not started yet, waiting ${WAIT_INTERVAL}s..."
+          sleep ${WAIT_INTERVAL}
+          ELAPSED=$((ELAPSED + WAIT_INTERVAL))
+        done
+
+        if [ -z "${RUN_ID}" ] || [ "${RUN_ID}" = "null" ]; then
+          echo "Error: Workflow did not start within ${MAX_WAIT_FOR_START} seconds"
+          exit 1
+        fi
+
+        echo "Watching workflow run ${RUN_ID}..."
+        gh run watch -R "${{ github.repository }}" "${RUN_ID}" --exit-status
+
+        echo "Image build workflow completed successfully!"
+
+  release-summary:
+    needs: [bump-image-version, wait-for-image-build]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Release Summary
+      env:
+        OLD_IMAGE_VERSION: ${{ needs.bump-image-version.outputs.old_image_version }}
+        NEW_IMAGE_VERSION: ${{ needs.bump-image-version.outputs.new_image_version }}
+        IMAGE_JOB_RESULT: ${{ needs.bump-image-version.result }}
+        BUILD_JOB_RESULT: ${{ needs.wait-for-image-build.result }}
+      run: |
+        echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo "### Image Version" >> $GITHUB_STEP_SUMMARY
+        if [ -n "${NEW_IMAGE_VERSION}" ]; then
+          echo "- **Old:** ${OLD_IMAGE_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "- **New:** ${NEW_IMAGE_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Bump status:** ${IMAGE_JOB_RESULT}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build status:** ${BUILD_JOB_RESULT}" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- **Status:** Not completed (${IMAGE_JOB_RESULT})" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo "### Tag Created" >> $GITHUB_STEP_SUMMARY
+        if [ -n "${NEW_IMAGE_VERSION}" ]; then
+          echo "- \`wkdev-sdk-${NEW_IMAGE_VERSION}\`" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- Image tag: Not created" >> $GITHUB_STEP_SUMMARY
+        fi

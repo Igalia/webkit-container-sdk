@@ -3,7 +3,7 @@
 `wkdev-sdk-bakery` encapsulates the whole process of building the SDK including all images. Just try it:
 
 ```sh
-wkdev-sdk-bakery --mode build
+wkdev-sdk-bakery --mode build --verbose
 ```
 
 ### Adding patched projects to the SDK

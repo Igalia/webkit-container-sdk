@@ -77,20 +77,6 @@ get_podman_container_shared_directory_on_host() {
     get_podman_container_label_value "${1}" "wkdev.shared-dir-path"
 }
 
-# Get currently used image name given an container name.
-get_image_name_by_container_name() {
-
-    local container_name="${1}"
-    run_podman inspect --type container --format "{{.ImageName}}" "${container_name}" 2>/dev/null
-}
-
-# Get currently used image ID given an container name.
-get_image_id_by_container_name() {
-
-    local container_name="${1}"
-    run_podman inspect --type container --format "{{.Image}}" "${container_name}" 2>/dev/null
-}
-
 # Get most recent known image ID given an image name.
 get_image_id_by_image_name() {
 
@@ -98,5 +84,41 @@ get_image_id_by_image_name() {
     run_podman inspect --type image --format "{{.Id}}" "${image_name}" 2>/dev/null
 }
 
+# Filters a raw OCI version label value, returning it only when it matches our
+# <major>.<minor>-v<count>[-<gitsha>] scheme. Legacy images inherit an
+# `org.opencontainers.image.version` from their Ubuntu base (e.g. "24.04") which
+# would otherwise be misclassified as a wkdev-sdk version by version-comparison logic.
+filter_version_label() {
+
+    local raw="${1-}"
+    [[ "${raw}" =~ ${WKDEV_SDK_VERSION_RE} ]] && echo "${raw}"
+}
+
+# Issues a single `podman inspect` to retrieve the image name, image ID and
+# OCI version label of a container in one call. Echoes "<image_name>|<image_id>|<raw_version>".
+get_container_inspect_summary() {
+
+    local container_name="${1}"
+    run_podman inspect --type container \
+        --format '{{.ImageName}}|{{.Image}}|{{with index .Config.Labels "org.opencontainers.image.version"}}{{.}}{{end}}' \
+        "${container_name}" 2>/dev/null
+}
+
 # Get list of all containers by name.
 get_list_of_containers() { run_podman container list --all --format "{{.Names}}"; }
+
+# Lists wkdev-sdk versions present in the registry, sorted ascending (`sort -V`).
+# Optional second argument restricts the listing to versions whose <major>.<minor>
+# prefix matches (e.g. "2.53" -> all "2.53-v<count>-<gitsha>" tags).
+list_available_sdk_versions() {
+
+    local image_qualified="${1}"
+    local prefix="${2-}"
+    local pattern="${WKDEV_SDK_VERSION_RE}"
+    if [ -n "${prefix}" ]; then
+        local prefix_re="${prefix//./\\.}"
+        pattern="^${prefix_re}-v[0-9]+-[0-9a-f]+\$"
+    fi
+    run_podman search --list-tags --format '{{.Tag}}' "${image_qualified}" 2>/dev/null \
+        | grep -E "${pattern}" | sort -V
+}

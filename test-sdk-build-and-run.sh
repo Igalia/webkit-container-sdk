@@ -47,6 +47,5 @@ echo ""
 echo "[6/6] Deleting '${test_container_name}' home directory..."
 podman unshare rm -rf "${test_home_directory}" &>/dev/null
 
-# 7) Show instructions how to deploy the new SDK image
 echo ""
-echo "Ready. If everything went well, use 'scripts/host-only/wkdev-sdk-bakery --mode deploy' to push the new SDK image to the registry, once tested!"
+echo "Ready. The SDK image was built locally; publishing happens through the 'Release wkdev-sdk' GitHub Actions workflow."

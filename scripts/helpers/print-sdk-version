@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Prints the WKDEV_SDK_VERSION declared in images/wkdev_sdk/Containerfile.
+# That ARG is the single source of truth for the SDK version; CI workflows
+# and host-side tooling invoke this helper instead of re-implementing the
+# parser inline so it cannot silently drift across callers.
+#
+# Default output: "<major>.<minor>-v<count>[-<gitsha>]"
+# With --components: "<full> <major.minor> <count> <gitsha-or-empty>" (space-separated, suitable for `read`)
+set -euo pipefail
+
+mode="full"
+case "${1-}" in
+    "")              ;;
+    --components)    mode="components" ;;
+    *)               echo "Error: unknown argument '$1' (expected --components)" >&2; exit 2 ;;
+esac
+
+containerfile="$(dirname "$(realpath "$0")")/../../images/wkdev_sdk/Containerfile"
+
+if [ ! -r "${containerfile}" ]; then
+    echo "Error: cannot read ${containerfile}" >&2
+    exit 1
+fi
+
+version=$(sed -n 's/^ARG WKDEV_SDK_VERSION=\(.*\)$/\1/p' "${containerfile}")
+
+# Capture-group form of WKDEV_SDK_VERSION_RE (utilities/settings.sh); kept inline
+# because this helper runs standalone (e.g. from CI before the SDK is sourced).
+# BASH_REMATCH: [1]=<major>.<minor>, [2]=<count>, [4]=<gitsha> (empty when absent).
+if [[ ! "${version}" =~ ^([0-9]+\.[0-9]+)-v([0-9]+)(-([0-9a-f]+))?$ ]]; then
+    echo "Error: malformed or missing WKDEV_SDK_VERSION in ${containerfile} (got '${version}')" >&2
+    echo "       Expected format: ARG WKDEV_SDK_VERSION=<major>.<minor>-v<count>[-<gitsha>]" >&2
+    exit 1
+fi
+
+if [ "${mode}" = "components" ]; then
+    printf '%s %s %s %s\n' "${version}" "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[4]-}"
+else
+    echo "${version}"
+fi

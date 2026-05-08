@@ -22,15 +22,32 @@ get_default_container_registry_user_name() { echo "${WKDEV_SDK_CONTAINER_REGISTR
 #####
 ##### Container naming/versioning
 #####
-get_default_container_tag() {
-    local default='latest'
 
-    if [[ "$(git -C "${WKDEV_SDK}" rev-parse --abbrev-ref HEAD)" =~ tag/(.*) ]]; then
-        default="${BASH_REMATCH[1]}" 
+# Single source of truth for the SDK version scheme, shared by every bash tool
+# that needs to validate or filter version strings.
+#   _RE              accepts the canonical form <major>.<minor>-v<count>[-<gitsha>]
+#                    (sha optional, matching the bumped-but-unpublished Containerfile state).
+#   _PUBLISHED_RE    accepts only fully-stamped <major>.<minor>-v<count>-<gitsha>
+#                    (every image actually published to the registry has a sha).
+#   _MAJOR_MINOR_RE  accepts the bare <major>.<minor> branch prefix.
+readonly WKDEV_SDK_VERSION_RE='^[0-9]+\.[0-9]+-v[0-9]+(-[0-9a-f]+)?$'
+readonly WKDEV_SDK_VERSION_PUBLISHED_RE='^[0-9]+\.[0-9]+-v[0-9]+-[0-9a-f]+$'
+readonly WKDEV_SDK_MAJOR_MINOR_RE='^[0-9]+\.[0-9]+$'
+
+# Read from /etc/wkdev-sdk-version inside the container, ARG WKDEV_SDK_VERSION in the
+# Containerfile on the host. Intentionally no env-var/CLI override: every image used by
+# wkdev-sdk tooling is the version pinned in this checkout.
+get_sdk_version() {
+    if is_running_in_wkdev_sdk_container && [ -r /etc/wkdev-sdk-version ]; then
+        printf '%s\n' "$(</etc/wkdev-sdk-version)"
+        return
     fi
 
-    echo "${WKDEV_SDK_TAG:-"${default}"}";
+    "${WKDEV_SDK}/scripts/helpers/print-sdk-version" || _abort_ "Cannot determine SDK version (see error above)."
 }
+
+# The container tag matches the SDK version - no override possible by design.
+get_default_container_tag() { get_sdk_version; }
 
 # Given an image name, return the qualified image name "<registry>/<registry-user-name>/<image-name>"
 get_qualified_name() {

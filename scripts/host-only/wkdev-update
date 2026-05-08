@@ -11,13 +11,13 @@ source "${WKDEV_SDK}/utilities/podman.sh"
 
 argsparse_use_option debug        "Enable debug logging for podman (useful to debug container issues)"
 argsparse_use_option trace        "Enable 'xtrace' mode for this script"
-argsparse_use_option force        "Always re-create matching container(s), even when image IDs are up to date"
+argsparse_use_option force        "Always re-create matching container(s), even when already on the target version"
 argsparse_describe_parameters "container-name?"
 
 argsparse_usage_description="$(cat <<EOF
 << Purpose >>
 
-    Updates the Git repository that holds the 'wkdev-sdk' and assists in re-creating containers, if the base image changes.
+    Updates the Git repository that holds the 'wkdev-sdk' and assists in re-creating containers, if a newer SDK version is available.
 EOF
 )"
 
@@ -63,119 +63,139 @@ ask_for_confirmation() {
     done
 }
 
-update_containers_using_image() {
+print_available_versions() {
+
+    local image_qualified="${1}"
+    local target_version="${2}"
 
     _log_ ""
-    local image_name="${1}"
+    _log_ "-> Querying the registry for published wkdev-sdk versions..."
 
-    local latest_image_id="$(get_image_id_by_image_name "${image_name}")"
-    if [ -z "${latest_image_id}" ]; then
-        _log_ "-> Skipping update of image "${image_name}" - no containers use this image."
+    local available_versions
+    available_versions="$(list_available_sdk_versions "${image_qualified}")"
+
+    if [ -z "${available_versions}" ]; then
+        _log_ "   $(ansi::yellow)Warning: could not discover any published versions in the registry.$(ansi::resetForeground)"
         return
     fi
 
-    local max_container_name_length=0
-    local found_containers_using_image=0
-    local found_target_container=0
-    for container_name in $(get_list_of_containers); do
-        if [ -n "${target_container_name}" ] && [ "${container_name}" = "${target_container_name}" ]; then
-            found_target_container=1
-        fi
+    local latest_published
+    latest_published="$(echo "${available_versions}" | tail -n 1)"
+    _log_ "   Latest published version: $(ansi::bold)${latest_published}$(ansi::normal)"
 
-        if [ -n "${target_container_name}" ] && [ "${container_name}" != "${target_container_name}" ]; then
-            continue
-        fi
+    if is_version_less_than "${target_version}" "${latest_published}"; then
+        _log_ "   $(ansi::yellow)Tip: a newer version is published. Run \`git pull\` in \${WKDEV_SDK} and rerun wkdev-update to adopt it.$(ansi::resetForeground)"
+    elif is_version_less_than "${latest_published}" "${target_version}"; then
+        _log_ "   Note: target version is ahead of the registry -- local repository is pinned to an unpublished version."
+    fi
+}
 
-        local container_image_name_with_tag="$(get_image_name_by_container_name "${container_name}")"
-        _log_ "${container_image_name_with_tag} = ${image_name}"
-        [ "${container_image_name_with_tag}" = "${image_name}" ] || continue
-        found_containers_using_image=$((found_containers_using_image+1))
-        [ ${#container_name} -gt ${max_container_name_length} ] && max_container_name_length=${#container_name}
-    done
+# REBUILT classifies a container whose version label matches the target but
+# whose image digest doesn't (i.e. the tag was re-pushed for the same version);
+# offered for upgrade alongside OUTDATED so a forced rebuild is also picked up.
+update_outdated_containers() {
 
-    if [ -n "${target_container_name}" ] && [ ${found_target_container} -eq 0 ]; then
-        _abort_ "Cannot find container '${target_container_name}'"
+    local target_version="${1}"
+    local sdk_repo="${2}"
+    local target_image="${sdk_repo}:${target_version}"
+    local target_image_id
+    target_image_id="$(get_image_id_by_image_name "${target_image}")"
+    [ -z "${target_image_id}" ] && _abort_ "Cannot read image id for '${target_image}' after pulling - aborting."
+
+    local -A status_to_color=([OK]=green [OUTDATED]=red [AHEAD]=yellow [REBUILT]=red [FORCED]=yellow)
+    local -a wkdev_containers=()
+    local -A row_image=()
+    local -A row_version=()
+    local -A row_status=()
+    local -a outdated=()
+    local max_name_length=0
+
+    local -a candidate_containers
+    if [ -n "${target_container_name}" ]; then
+        get_podman_container_status "${target_container_name}" >/dev/null \
+            || _abort_ "Cannot find container '${target_container_name}'"
+        candidate_containers=("${target_container_name}")
+    else
+        mapfile -t candidate_containers < <(get_list_of_containers)
     fi
 
-    if [ ${found_containers_using_image} -eq 0 ]; then
-        _log_ "-> No containers use this image, no need to recreate any of them."
-        return
-    fi
+    for container_name in "${candidate_containers[@]}"; do
 
-    _log_ "-> Found ${found_containers_using_image} container(s) using the image '${image_name}', checking status:"
+        local image_with_tag current_image_id raw_version
+        IFS='|' read -r image_with_tag current_image_id raw_version <<< "$(get_container_inspect_summary "${container_name}")"
+        [[ "${image_with_tag}" == "${sdk_repo}:"* ]] || continue
 
-    local -A outdated_container_data=()
-    for container_name in $(get_list_of_containers); do
-        if [ -n "${target_container_name}" ] && [ "${container_name}" != "${target_container_name}" ]; then
-            continue
-        fi
-
-        local container_image_name_with_tag="$(get_image_name_by_container_name "${container_name}")"
-        [ "${container_image_name_with_tag}" = "${image_name}" ] || continue
-
-        local existing_image_id="$(get_image_id_by_container_name "${container_name}")"
-        [ -z "${existing_image_id}" ] && _abort_ "Cannot retrieve image id for container name '${container_name}'"
+        local current_version="$(filter_version_label "${raw_version}")"
 
         local status="OK"
-        local status_color="green"
-        local should_recreate=0
-        if argsparse_is_option_set "force"; then
-            should_recreate=1
-            status="FORCED"
-            status_color="yellow"
-        elif [ "${existing_image_id}" != "${latest_image_id}" ]; then
-            should_recreate=1
-            status="OUTDATED"
-            status_color="red"
+        if argsparse_is_option_set "force"; then status="FORCED"
+        elif is_version_less_than "${current_version}" "${target_version}"; then status="OUTDATED"
+        elif is_version_less_than "${target_version}" "${current_version}"; then status="AHEAD"
+        elif [ "${current_image_id}" != "${target_image_id}" ]; then status="REBUILT"
         fi
 
-        if [ ${should_recreate} -eq 1 ]; then
+        case "${status}" in OUTDATED|REBUILT|FORCED) outdated+=("${container_name}");; esac
 
-            local recreate_arguments=()
-            recreate_arguments+=("--home" "$(get_podman_container_home_directory_on_host "${container_name}")")
-
-            local shared_dir
-            shared_dir="$(get_podman_container_shared_directory_on_host "${container_name}")"
-            if [ -n "${shared_dir}" ]; then
-                recreate_arguments+=("--shared-dir" "${shared_dir}")
-            fi
-
-            local init_arguments=($(get_podman_container_init_arguments "${container_name}"))
-            for arg in "${init_arguments[@]}"; do
-                # wkdev-create --attach passes the --exit-when-done option to .wkdev-init so that
-                # podman start --attach doesn't hang forever.
-                # --exit-when-done is not an option of wkdev-create however, so we need to skip it.
-                if [[ "${arg}" != "--exit-when-done" ]]; then
-                    recreate_arguments+=("${arg}")
-                fi
-            done
-            outdated_container_data["${container_name}"]=${recreate_arguments[@]}
-        fi
-
-        printf "   Container: %-${max_container_name_length}s ⇾ " "${container_name}"
-        printf "$(ansi::bold)$(ansi::${status_color})%-8s $(ansi::resetForeground)$(ansi::normal) (image id ${existing_image_id})\n" "${status}"
+        wkdev_containers+=("${container_name}")
+        row_image["${container_name}"]="${image_with_tag}"
+        row_version["${container_name}"]="${current_version:-<unknown>}"
+        row_status["${container_name}"]="${status}"
+        [ ${#container_name} -gt ${max_name_length} ] && max_name_length=${#container_name}
     done
 
-    local outdated_container_names="${!outdated_container_data[@]}"
-    if [ -z "${outdated_container_names}" ]; then
+    if [ ${#wkdev_containers[@]} -eq 0 ]; then
         _log_ ""
-        _log_ "-> No containers need to be re-created, all use the latest image version."
+        _log_ "-> No wkdev-sdk containers found - nothing to update."
         return
     fi
 
     _log_ ""
-    _log_ "-> Trying to re-create containers, if desired..."
-    _log_ "   NOTE: Remember that all changes made to your local image are $(ansi::bold)gone$(ansi::normal) if you re-create the container."
+    _log_ "-> Found ${#wkdev_containers[@]} wkdev-sdk container(s):"
     _log_ ""
 
-    # Loop over outdated containers and re-create them, if desired.
-    for key in ${outdated_container_names}; do
-        local container_name="${key}"
-        local recreate_arguments="${outdated_container_data["${key}"]}"
-        ask_for_confirmation "   -> Do you want to re-create the $(ansi::bold)'${container_name}'$(ansi::normal) container? [y/n] " || continue
+    local name
+    for name in "${wkdev_containers[@]}"; do
+        local status="${row_status[${name}]}"
+        printf "   %-${max_name_length}s   %s   version=%-12s   $(ansi::bold)$(ansi::${status_to_color[${status}]})%-8s$(ansi::resetForeground)$(ansi::normal)\n" \
+            "${name}" "${row_image[${name}]}" "${row_version[${name}]}" "${status}"
+    done
 
-        # TODO: Handle re-creation of home directories, if the default shell configuration files, change?
-        # At least we have to warn if there is e.g. a new '.bashrc' file...
+    if [ ${#outdated[@]} -eq 0 ]; then
+        _log_ ""
+        _log_ "-> All wkdev-sdk containers are up to date."
+        return
+    fi
+
+    _log_ ""
+    _log_ "-> The following container(s) are eligible for upgrade to version ${target_version}:"
+    _log_ "   $(ansi::bold)${outdated[*]}$(ansi::normal)"
+    _log_ ""
+    _log_ "   NOTE: All changes made to the local image of a recreated container are $(ansi::bold)gone$(ansi::normal)."
+    _log_ ""
+
+    for container_name in "${outdated[@]}"; do
+
+        ask_for_confirmation "   -> Recreate $(ansi::bold)'${container_name}'$(ansi::normal) on wkdev-sdk:${target_version}? [y/n] " || continue
+
+        local recreate_arguments=()
+        recreate_arguments+=("--home" "$(get_podman_container_home_directory_on_host "${container_name}")")
+
+        local shared_dir
+        shared_dir="$(get_podman_container_shared_directory_on_host "${container_name}")"
+        if [ -n "${shared_dir}" ]; then
+            recreate_arguments+=("--shared-dir" "${shared_dir}")
+        fi
+
+        local init_arguments=($(get_podman_container_init_arguments "${container_name}"))
+        for arg in "${init_arguments[@]}"; do
+            # wkdev-create --attach passes the --exit-when-done option to .wkdev-init so that
+            # podman start --attach doesn't hang forever.
+            # --exit-when-done is not an option of wkdev-create however, so we need to skip it.
+            if [[ "${arg}" != "--exit-when-done" ]]; then
+                recreate_arguments+=("${arg}")
+            fi
+        done
+
         _log_ ""
         _log_ "       -> Stopping container..."
         run_podman_silent stop "${container_name}"
@@ -183,19 +203,9 @@ update_containers_using_image() {
         _log_ "       -> Deleting container..."
         run_podman_silent rm "${container_name}"
 
-        _log_ "       -> Re-creating container..."
-        "${WKDEV_SDK}/scripts/host-only/wkdev-create" --verbose --name "${container_name}" ${recreate_arguments[@]}
+        _log_ "       -> Re-creating container on wkdev-sdk:${target_version}..."
+        "${WKDEV_SDK}/scripts/host-only/wkdev-create" --verbose --name "${container_name}" "${recreate_arguments[@]}"
     done
-}
-
-
-update_image() {
-
-    local image_name="${1}"
-
-    _log_ ""
-    _log_ "-> Updating image '${image_name}'..."
-    run_podman pull "${image_name}" || _abort_ "Cannot update image '${image_name}'"
 }
 
 # Main functionality
@@ -207,9 +217,20 @@ run() {
     try_update_sdk_repository
     popd &>/dev/null
 
-    update_image "$(get_sdk_qualified_name):$(get_default_container_tag)"
+    local target_version="$(get_sdk_version)"
+    local repo_qualified="$(get_sdk_qualified_name)"
+    local target_image="${repo_qualified}:${target_version}"
 
-    update_containers_using_image "$(get_sdk_qualified_name):$(get_default_container_tag)"
+    _log_ ""
+    _log_ "-> Target wkdev-sdk version (from Containerfile): $(ansi::bold)${target_version}$(ansi::normal)"
+
+    print_available_versions "${repo_qualified}" "${target_version}"
+
+    _log_ ""
+    _log_ "-> Pulling target image '$(ansi::bold)${target_image}$(ansi::normal)'..."
+    run_podman pull "${target_image}" || _abort_ "Cannot pull image '${target_image}'"
+
+    update_outdated_containers "${target_version}" "${repo_qualified}"
 
     _log_ ""
     _log_ "-> Finished."

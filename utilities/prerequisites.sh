@@ -10,7 +10,10 @@ verify_executable_exists() {
     does_executable_exist "${executable}" || _abort_ "Cannot find required '${executable}' executable"
 }
 
-is_version_greater_or_equal() { [ "$(printf '%s\n' "${@}" | sort -V | head -n 1)" != "${1}" ]; }
+# Returns 0 if version $1 is greater than or equal to $2 (`sort -V` order).
+# An empty string sorts as less than any non-empty version.
+is_version_greater_or_equal() { [ "$(printf '%s\n' "${@}" | sort -V | tail -n 1)" = "${1}" ]; }
+is_version_less_than()        { ! is_version_greater_or_equal "${1-}" "${2-}"; }
 
 verify_podman_is_acceptable() {
 

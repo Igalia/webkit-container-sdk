@@ -3,11 +3,22 @@
 
 FROM ubuntu:24.04
 
+# Single source of truth for the SDK version. The release workflow bumps the
+# -v<count> component and appends the source-repo -<gitsha>; everything else
+# (OCI label, /etc/wkdev-sdk-version, welcome message) reads from here.
+# The <major>.<minor> prefix tracks the upstream WebKitGTK / WPE WebKit release
+# branch and is bumped by hand here when moving to a new branch.
+ARG WKDEV_SDK_VERSION=2.53-v1
+
 LABEL maintainer="webkit-gtk@lists.webkit.org"
-LABEL version="1.0"
-LABEL org.opencontainers.image.title="WebKit SDK"
+LABEL org.opencontainers.image.version=${WKDEV_SDK_VERSION}
+LABEL org.opencontainers.image.title="WebKit SDK (based on Ubuntu 24.04)"
 LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 24.04"
 LABEL org.opencontainers.image.source=https://github.com/Igalia/webkit-container-sdk
+
+# Bake the version into the image so the running container can introspect it
+# (welcome message, etc.) without needing access to OCI labels.
+RUN echo "${WKDEV_SDK_VERSION}" > /etc/wkdev-sdk-version
 
 # Tweakable "make -j <x>" setting.
 ARG NUMBER_OF_PARALLEL_BUILDS=4

@@ -96,12 +96,12 @@ try_install_additional_packages() {
         return 0
     fi
 
-    echo "Installing additional packages '${additional_packages}', if necessary..."
+    task_step "Installing additional packages '${additional_packages}', if necessary..."
     for package in ${additional_packages}; do
         if is_package_installed "${package}"; then
-            task_step "      Skipping '${package}' - it's already present."
+            echo "      -> Skipping '${package}' - it's already present."
         else
-            task_step "      Installing '${package}'..."
+            echo "      -> Installing '${package}'..."
             ensure_package_installed "${package}"
         fi
     done
@@ -200,7 +200,7 @@ try_setup_permissions_jhbuild_directory() {
     task_step "Setup jhbuild '${jhbuild_directory}' directory permissions..."
 
     if sudo -u "${container_user_name}" test -w "${jhbuild_directory}"; then
-        task_step "Already writable, skipping."
+        echo "      -> Already writable, skipping."
     else
         chown --recursive "${container_user_name}:${container_group_name}" "${jhbuild_directory}" &>/dev/null
     fi
@@ -213,7 +213,7 @@ try_setup_permissions_rust_directory() {
     task_step "Setup rust '${rust_directory}' directory permissions..."
 
     if sudo -u "${container_user_name}" test -w "${rust_directory}"; then
-        task_step "Already writable, skipping."
+        echo "      -> Already writable, skipping."
     else
         chown --recursive "${container_user_name}:${container_group_name}" "${rust_directory}" &>/dev/null
     fi
@@ -226,7 +226,7 @@ try_setup_root_sdk_directory() {
     task_step "Setup '${root_sdk_directory}' directory permissions..."
 
     if sudo -u "${container_user_name}" test -w "${root_sdk_directory}"; then
-        task_step "Already writable, skipping."
+        echo "      -> Already writable, skipping."
     else
         chown "${container_user_name}:${container_group_name}" "${root_sdk_directory}"
     fi

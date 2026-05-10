@@ -4,6 +4,11 @@ on:
   push:
     tags:
     - 'wkdev-sdk-*'
+    branches:
+    - main
+    paths-ignore: [ docs/**, README.md ]
+  pull_request:
+    paths-ignore: [ docs/**, README.md ]
 
 jobs:
   build:
@@ -62,6 +67,7 @@ jobs:
           wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
 
       - name: Push image
+        if: startsWith(github.ref, 'refs/tags/wkdev-sdk-')
         run: podman push ${{ env.REPO }}:${{ env.WKDEV_SDK_VERSION }}_${{ matrix.arch }}
 
       - name: Cleanup test artifacts
@@ -78,6 +84,7 @@ jobs:
   deploy:
     runs-on: [self-hosted, x64]
     needs: [build]
+    if: startsWith(github.ref, 'refs/tags/wkdev-sdk-')
     permissions:
       contents: read
       packages: write

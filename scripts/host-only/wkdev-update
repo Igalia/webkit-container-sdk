@@ -65,28 +65,21 @@ ask_for_confirmation() {
 
 print_available_versions() {
 
-    local image_qualified="${1}"
-    local target_version="${2}"
+    local target_version="${1}"
+    local latest_published="${2}"
 
     _log_ ""
     _log_ "-> Querying the registry for published wkdev-sdk versions..."
 
-    local available_versions
-    available_versions="$(list_available_sdk_versions "${image_qualified}")"
-
-    if [ -z "${available_versions}" ]; then
+    if [ -z "${latest_published}" ]; then
         _log_ "   $(ansi::yellow)Warning: could not discover any published versions in the registry.$(ansi::resetForeground)"
         return
     fi
 
-    local latest_published
-    latest_published="$(echo "${available_versions}" | tail -n 1)"
     _log_ "   Latest published version: $(ansi::bold)${latest_published}$(ansi::normal)"
 
     if is_version_less_than "${target_version}" "${latest_published}"; then
         _log_ "   $(ansi::yellow)Tip: a newer version is published. Run \`git pull\` in \${WKDEV_SDK} and rerun wkdev-update to adopt it.$(ansi::resetForeground)"
-    elif is_version_less_than "${latest_published}" "${target_version}"; then
-        _log_ "   Note: target version is ahead of the registry -- local repository is pinned to an unpublished version."
     fi
 }
 
@@ -219,18 +212,30 @@ run() {
 
     local target_version="$(get_sdk_version)"
     local repo_qualified="$(get_sdk_qualified_name)"
-    local target_image="${repo_qualified}:${target_version}"
 
     _log_ ""
     _log_ "-> Target wkdev-sdk version (from Containerfile): $(ansi::bold)${target_version}$(ansi::normal)"
 
-    print_available_versions "${repo_qualified}" "${target_version}"
+    local latest_published
+    latest_published="$(list_available_sdk_versions "${repo_qualified}" | tail -n 1)"
+
+    print_available_versions "${target_version}" "${latest_published}"
+
+    local effective_version="${target_version}"
+    if [ -n "${latest_published}" ] && is_version_less_than "${latest_published}" "${target_version}"; then
+        _log_ ""
+        _log_ "-> $(ansi::yellow)Note: target version '${target_version}' is not yet published to the registry.$(ansi::resetForeground)"
+        _log_ "   Falling back to the latest published version: $(ansi::bold)${latest_published}$(ansi::normal)"
+        effective_version="${latest_published}"
+    fi
+
+    local effective_image="${repo_qualified}:${effective_version}"
 
     _log_ ""
-    _log_ "-> Pulling target image '$(ansi::bold)${target_image}$(ansi::normal)'..."
-    run_podman pull "${target_image}" || _abort_ "Cannot pull image '${target_image}'"
+    _log_ "-> Pulling image '$(ansi::bold)${effective_image}$(ansi::normal)'..."
+    run_podman pull "${effective_image}" || _abort_ "Cannot pull image '${effective_image}'"
 
-    update_outdated_containers "${target_version}" "${repo_qualified}"
+    update_outdated_containers "${effective_version}" "${repo_qualified}"
 
     _log_ ""
     _log_ "-> Finished."

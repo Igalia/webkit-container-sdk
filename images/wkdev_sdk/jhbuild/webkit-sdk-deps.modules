@@ -141,9 +141,7 @@
     <branch repo="freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer/gstreamer.git"
-            tag="1.28.2">
-       <!-- https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/11313 -->
-       <patch file="0001-videodmabufpool-Break-ref-cycle-between-the-pool-and.patch" strip="1"/>
+            tag="1.28.3">
     </branch>
     <dependencies>
       <dep package="glib"/>
@@ -165,7 +163,7 @@
     </dependencies>
     <branch repo="freedesktop.org"
             module="gstreamer/gst-plugins-rs"
-            tag="gstreamer-1.28.2"/>
+            tag="gstreamer-1.28.3"/>
   </meson>
 
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">

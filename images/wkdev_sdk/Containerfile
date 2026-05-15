@@ -211,10 +211,10 @@ RUN mkdir -p /usr/share/wkdev-sdk/cross/armhf && \
 RUN find /etc/systemd/ -type l -name '*.service' -print -exec rm {} \;
 
 # Create the /sdk common-directory to help with ccache/sccache artifact sharing
-RUN mkdir /sdk
+RUN mkdir /sdk && chmod 777 /sdk
 
 # Change the owner to UID 1000 as a fast path
-RUN chown --recursive 1000:1000 ${RUSTUP_HOME} /jhbuild /sdk
+RUN chown --recursive 1000:1000 ${RUSTUP_HOME} /jhbuild
 
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog

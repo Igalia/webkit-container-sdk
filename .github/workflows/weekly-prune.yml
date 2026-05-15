@@ -1,0 +1,78 @@
+name: Weekly podman prune and rebuild
+
+on:
+  schedule:
+    # GitHub Actions cron is in UTC. This triggers on Sunday night.
+    - cron: '0 4 * * 0'
+  workflow_dispatch: {}
+
+jobs:
+  prune-and-rebuild:
+    strategy:
+      fail-fast: false
+      # Assuming that we would have more than one runner per arch, then
+      # GitHub doesn't support to automatically run on all runners
+      # The workaround is to list on the matrix the names of all the runners
+      # that we have, so when adding a new runner please list it here
+      # Note: The `runner` value MUST be a unique label that has to be added
+      # to that specific runner in the GitHub UI:
+      # (Settings → Actions → Runners → click runner → Labels). The `arch` is
+      # carried alongside so the build step still knows what to build.
+      matrix:
+        include:
+          - arch: amd64
+            runner: LXC:github-runner-wkdev-amd64-1@bothost-ext-8.igalia.com
+          - arch: arm64
+            runner: LXC:github-runner-wkdev-arm64-1@arm-bothost-2.bot.igalia.com
+    runs-on: [self-hosted, "${{ matrix.runner }}"]
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+      - name: Resolve version & registry coordinates
+        run: |
+          VERSION=$(./scripts/helpers/print-sdk-version)
+          echo "WKDEV_SDK_VERSION=${VERSION}" >> "${GITHUB_ENV}"
+          echo "REPO=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/wkdev-sdk" >> "${GITHUB_ENV}"
+
+      - name: Before prune -- disk usage
+        run: ./.github/scripts/disk-usage.sh snapshot /tmp/disk-beforeprune.txt "BEFORE PRUNE (${{ matrix.runner }})"
+
+      - name: Prune all podman data
+        run: podman system prune -a --force --volumes
+
+      - name: After prune -- disk usage
+        run: ./.github/scripts/disk-usage.sh snapshot /tmp/disk-afterprune.txt "AFTER PRUNE (${{ matrix.runner }})"
+
+      - name: Build image
+        run: |
+          podman build --jobs $(nproc) --build-context scripts=./scripts \
+            --build-arg WKDEV_SDK_VERSION=${{ env.WKDEV_SDK_VERSION }} \
+            -t ${{ env.REPO }}:${{ env.WKDEV_SDK_VERSION }}_${{ matrix.arch }} \
+            --arch=${{ matrix.arch }} images/wkdev_sdk
+          podman image list
+
+      - name: After prune and build -- disk usage
+        run: ./.github/scripts/disk-usage.sh snapshot /tmp/disk-afterpruneandbuild.txt "AFTER PRUNE AND BUILD (${{ matrix.runner }})"
+
+      - name: Summary
+        run: |
+          ./.github/scripts/disk-usage.sh compare \
+            /tmp/disk-beforeprune.txt \
+            /tmp/disk-afterprune.txt \
+            /tmp/disk-afterpruneandbuild.txt
+
+      - name: Upload snapshots as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: disk-snapshots-${{ matrix.runner }}
+          path: /tmp/disk-*prune*.txt
+          retention-days: 90

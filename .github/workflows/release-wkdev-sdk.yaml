@@ -11,6 +11,7 @@ env:
   CONTAINERFILE_PATH: images/wkdev_sdk/Containerfile
 
 jobs:
+  # Phase 1: Image Version Bump and Tag
   bump-image-version:
     runs-on: ubuntu-latest
     permissions:
@@ -70,6 +71,7 @@ jobs:
         git push origin "${TAG_NAME}"
         echo "Created tag: ${TAG_NAME}"
 
+  # Phase 2: Wait for Image Build Workflow
   wait-for-image-build:
     needs: bump-image-version
     runs-on: ubuntu-latest
@@ -121,6 +123,9 @@ jobs:
 
         echo "Image build workflow completed successfully!"
 
+  # ============================================================
+  # Summary Job
+  # ============================================================
   release-summary:
     needs: [bump-image-version, wait-for-image-build]
     runs-on: ubuntu-latest

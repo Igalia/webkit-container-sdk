@@ -40,6 +40,12 @@ ENV WEBKIT_CONTAINER_SDK "1"
 # Enable debugging in WebKit's sandbox.
 ENV WEBKIT_ENABLE_DEBUG_PERMISSIONS_IN_SANDBOX "1"
 
+# For improved experience using GDB.
+ENV DEBUGINFOD_URLS "https://debuginfod.ubuntu.com"
+
+# Otherwise one has to pass --break-system-packages to python, when installing custom packages.
+ENV PIP_BREAK_SYSTEM_PACKAGES 1
+
 # This env var got deprecated in 2026-04 at 309557@main, so remove it when building
 # WebKit older than 309557@main with the last version of the SDK is not longer a need.
 # It was used in webkitdirs.pm to prefer building against system libraries instead of the Flatpak SDK.
@@ -121,7 +127,7 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     ${APT_AUTOREMOVE}
 
 # GStreamer 1.26.x requires at least Meson 1.4. Install the latest version.
-RUN pip install meson==1.8.2 --break-system-packages
+RUN pip install meson==1.8.2
 
 # Add Rust environment.
 ENV RUSTUP_HOME="/opt/rust" \

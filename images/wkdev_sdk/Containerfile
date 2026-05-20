@@ -93,6 +93,11 @@ COPY /required_system_packages/*.lst .
 # We unconditionally install the GCC-based cross toolchain for armhf.
 COPY /cross .
 
+# WebKit commit to be used for running Tools/{gtk,wpe}/install-dependencies
+# Update this commit to run the new versions of the install-dependencies scripts.
+# Note: we are explicit with the commit rather than using "main" so the
+# image is reproducible and issues are more easy to bisect.
+ARG WEBKIT_COMMIT=aaa99edbf8c0cfd95b8fbac26b9ddbfb6e4fef48
 # NB: The armhf binary packages can only be found in ports.ubuntu.com. On
 # aarch64, things are already set up properly (aarch64 also uses
 # ports.ubuntu.com and specifies the architecture). However, on x86_64 the
@@ -116,10 +121,12 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     done; \
     ${APT_BUILDDEP} gst-libav1.0 gst-plugins-bad1.0 gst-plugins-base1.0 \
 	                gst-plugins-good1.0 gst-plugins-ugly1.0 && \
-    git clone --filter=blob:none --no-checkout --depth=1 https://github.com/WebKit/WebKit.git && \
-    cd WebKit && \
-    git sparse-checkout set Tools/ && \
-    git checkout main && \
+    git init WebKit && cd WebKit && \
+    git remote add origin https://github.com/WebKit/WebKit.git && \
+    git sparse-checkout init && \
+    git sparse-checkout set Tools && \
+    git fetch --filter=blob:none --depth=1 origin ${WEBKIT_COMMIT} && \
+    git checkout FETCH_HEAD && \
     yes | ./Tools/gtk/install-dependencies && \
     yes | ./Tools/wpe/install-dependencies && \
     cd .. && \

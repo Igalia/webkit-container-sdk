@@ -1,0 +1,51 @@
+name: Clean up wkdev-sdk pr-* image tags on PR close
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  delete:
+    runs-on: [self-hosted]
+    # Fork PRs are never published (the build/publish workflow excludes them),
+    # so there is nothing to clean up.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      packages: write
+
+    steps:
+    - name: Delete all pr-<N>-* image versions for this PR
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        OWNER: ${{ github.repository_owner }}
+        OWNER_TYPE: ${{ github.event.repository.owner.type }}
+        IMAGE_NAME: wkdev-sdk
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        set -euo pipefail
+        OWNER_LOWER="${OWNER,,}"
+        # The packages API path differs for users vs. orgs.
+        if [ "${OWNER_TYPE}" = "Organization" ]; then
+          base="/orgs/${OWNER_LOWER}/packages/container/${IMAGE_NAME}"
+        elif [ "${OWNER_TYPE}" = "User" ]; then
+          base="/users/${OWNER_LOWER}/packages/container/${IMAGE_NAME}"
+        else
+          echo "Error: unexpected repository owner type '${OWNER_TYPE}'"
+          exit 1
+        fi
+
+        # If the PR closed before the package was ever published, it may not exist.
+        if ! gh api "${base}" >/dev/null 2>&1; then
+          echo "No ${IMAGE_NAME} package found for ${OWNER_LOWER}; nothing to clean up."
+          exit 0
+        fi
+
+        # Releases tags begin with a digit (e.g. 2.53-v5-<sha>); the pr-<N>- prefix
+        # is unambiguous and won't match any release.
+        prefix="pr-${PR_NUMBER}-"
+        ids=$(gh api "${base}/versions" --paginate \
+                --jq ".[] | select((.metadata.container.tags // []) | any(startswith(\"${prefix}\"))) | .id")
+        for id in ${ids}; do
+          echo "Deleting version ${id}"
+          gh api -X DELETE "${base}/versions/${id}" || echo "  warning: failed to delete ${id}"
+        done

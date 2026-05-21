@@ -11,6 +11,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  # Release tags (e.g. 2.53-v5-3bdf4b8) and per-PR tags (pr-<N>-<sha>) coexist
+  # in this one image; the 'pr-' prefix is the distinguisher.
+  IMAGE_NAME: wkdev-sdk
+
 jobs:
   build:
     strategy:
@@ -25,6 +30,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      registry_tag: ${{ steps.resolve.outputs.registry_tag }}
 
     steps:
     - name: Checkout repository
@@ -34,19 +41,41 @@ jobs:
       run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
     - name: Resolve version & registry coordinates
+      id: resolve
+      env:
+        PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
-        VERSION=$(./scripts/helpers/print-sdk-version)
-        echo "VERSION=${VERSION}" >> $GITHUB_ENV
-        echo "GHCR_REPO=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
-        echo "IMAGE_WITH_TAG=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/wkdev-sdk:${VERSION}" >> $GITHUB_ENV
-
         if [[ "${GITHUB_REF}" == refs/tags/wkdev-sdk-* ]]; then
+          VERSION=$(./scripts/helpers/print-sdk-version)
+          REGISTRY_TAG="${VERSION}"
           TAG_VERSION="${GITHUB_REF#refs/tags/wkdev-sdk-}"
           if [ "${TAG_VERSION}" != "${VERSION}" ]; then
             echo "Error: git tag wkdev-sdk-${TAG_VERSION} does not match Containerfile WKDEV_SDK_VERSION=${VERSION}"
             exit 1
           fi
+        elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+          if [ -z "${PR_HEAD_SHA}" ]; then
+            echo "Error: pull_request event without head SHA"
+            exit 1
+          fi
+          read _ MAJOR_MINOR _ _ < <(./scripts/helpers/print-sdk-version --components)
+          VERSION="${MAJOR_MINOR}-v1-${PR_HEAD_SHA:0:7}"
+          REGISTRY_TAG="pr-${PR_NUMBER}-${PR_HEAD_SHA:0:7}"
+        else
+          echo "Error: unsupported event ${GITHUB_EVENT_NAME} on ref ${GITHUB_REF}"
+          exit 1
         fi
+
+        echo "registry_tag=${REGISTRY_TAG}" >> $GITHUB_OUTPUT
+
+        # VERSION is what's baked into the image as WKDEV_SDK_VERSION (must satisfy
+        # WKDEV_SDK_VERSION_RE so in-container tooling treats it as a real version).
+        # REGISTRY_TAG is the local + registry tag; for PR builds it uses the pr-*
+        # form, which wkdev-create --version accepts via WKDEV_SDK_PR_TAG_RE.
+        echo "VERSION=${VERSION}" >> $GITHUB_ENV
+        echo "REGISTRY_TAG=${REGISTRY_TAG}" >> $GITHUB_ENV
+        echo "IMAGE_WITH_TAG=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}:${REGISTRY_TAG}" >> $GITHUB_ENV
 
     - name: Build image
       run: |
@@ -60,13 +89,15 @@ jobs:
         CONTAINER="wkdev-$(date +%s)"
         echo "CONTAINER=${CONTAINER}" >> $GITHUB_ENV
         source ./register-sdk-on-host.sh
-        wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch ${{ matrix.arch }}
+        wkdev-create --create-home --home ${HOME}/${CONTAINER}-home --verbose --attach --no-pull --name ${CONTAINER} --arch ${{ matrix.arch }} --version "${{ env.REGISTRY_TAG }}"
         wkdev-enter -n ${CONTAINER} --exec -- git clone --depth=1 https://github.com/WebKit/WebKit.git
         wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --wpe --release --generate-project-only
         wkdev-enter -n ${CONTAINER} --exec -- ./WebKit/Tools/Scripts/build-webkit --gtk --release --generate-project-only
 
     - name: Push image
-      if: startsWith(github.ref, 'refs/tags/wkdev-sdk-')
+      if: |
+        startsWith(github.ref, 'refs/tags/wkdev-sdk-') ||
+        (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
       run: podman push ${{ env.IMAGE_WITH_TAG }}_${{ matrix.arch }}
 
     - name: Clean up test artifacts
@@ -79,28 +110,31 @@ jobs:
         # Clean up any leftover containers and home directories from previous failed runs
         podman ps -a --filter "name=^wkdev-" --format "{{.Names}}" | xargs -r podman rm --force 2>/dev/null || true
         find ${HOME} -maxdepth 1 -type d -name "wkdev-*-home" -exec rm -rf {} + 2>/dev/null || true
+        # Reclaim the freshly built image; per-PR-commit cadence would otherwise grow
+        # the self-hosted runner's image store without bound.
+        podman rmi --force ${{ env.IMAGE_WITH_TAG }}_${{ matrix.arch }} 2>/dev/null || true
 
   deploy:
     runs-on: [self-hosted, x64]
     needs: [build]
-    if: startsWith(github.ref, 'refs/tags/wkdev-sdk-')
+    if: |
+      startsWith(github.ref, 'refs/tags/wkdev-sdk-') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     permissions:
       contents: read
       packages: write
+      pull-requests: write
+    env:
+      REGISTRY_TAG: ${{ needs.build.outputs.registry_tag }}
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
     - name: Log in to GitHub Container Registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | skopeo login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
-    - name: Resolve version & registry coordinates
+    - name: Resolve registry coordinates
       run: |
-        VERSION="${GITHUB_REF#refs/tags/wkdev-sdk-}"
-        echo "VERSION=${VERSION}" >> $GITHUB_ENV
         echo "GHCR_REPO=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
-        echo "IMAGE_WITH_TAG=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/wkdev-sdk:${VERSION}" >> $GITHUB_ENV
+        echo "IMAGE_WITH_TAG=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}:${REGISTRY_TAG}" >> $GITHUB_ENV
 
     - name: Validate all architecture images exist in registry
       id: validate
@@ -127,9 +161,9 @@ jobs:
       uses: bots-house/ghcr-delete-image-action@v1.1.0
       with:
         owner: ${{ env.GHCR_REPO }}
-        name: wkdev-sdk
+        name: ${{ env.IMAGE_NAME }}
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ env.VERSION }}_amd64
+        tag: ${{ env.REGISTRY_TAG }}_amd64
 
     - name: Clean up arch-specific images on validation failure (arm64)
       if: failure() && steps.validate.outputs.validation_failed == 'true'
@@ -137,9 +171,9 @@ jobs:
       uses: bots-house/ghcr-delete-image-action@v1.1.0
       with:
         owner: ${{ env.GHCR_REPO }}
-        name: wkdev-sdk
+        name: ${{ env.IMAGE_NAME }}
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ env.VERSION }}_arm64
+        tag: ${{ env.REGISTRY_TAG }}_arm64
 
     - name: Pull arch-specific images to local storage
       run: |
@@ -156,17 +190,17 @@ jobs:
       uses: bots-house/ghcr-delete-image-action@v1.1.0
       with:
         owner: ${{ env.GHCR_REPO }}
-        name: wkdev-sdk
+        name: ${{ env.IMAGE_NAME }}
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ env.VERSION }}_amd64
+        tag: ${{ env.REGISTRY_TAG }}_amd64
 
     - name: Delete arch-specific tag (arm64)
       uses: bots-house/ghcr-delete-image-action@v1.1.0
       with:
         owner: ${{ env.GHCR_REPO }}
-        name: wkdev-sdk
+        name: ${{ env.IMAGE_NAME }}
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ env.VERSION }}_arm64
+        tag: ${{ env.REGISTRY_TAG }}_arm64
 
     - name: Create multi-arch manifest from local storage
       run: |
@@ -183,3 +217,12 @@ jobs:
       run: |
         podman manifest rm ${{ env.IMAGE_WITH_TAG }} 2>/dev/null || true
         podman rmi --force ${{ env.IMAGE_WITH_TAG }}_amd64 ${{ env.IMAGE_WITH_TAG }}_arm64 2>/dev/null || true
+
+    - name: Comment on PR with deployed image
+      if: github.event_name == 'pull_request'
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        header: wkdev-sdk-pr-image
+        message: |
+          Test image deployed to the registry: `${{ env.IMAGE_WITH_TAG }}`
+          Create a container from it with: `wkdev-create --version ${{ env.REGISTRY_TAG }}`

@@ -30,9 +30,14 @@ get_default_container_registry_user_name() { echo "${WKDEV_SDK_CONTAINER_REGISTR
 #   _PUBLISHED_RE    accepts only fully-stamped <major>.<minor>-v<count>-<gitsha>
 #                    (every image actually published to the registry has a sha).
 #   _MAJOR_MINOR_RE  accepts the bare <major>.<minor> branch prefix.
+#   _PR_TAG_RE       accepts the per-PR build tag pr-<PR-number>-<gitsha>. PR tags
+#                    are deliberately *not* matched by _RE / _PUBLISHED_RE so they
+#                    never appear in release-version listings or comparisons; the
+#                    only place they're accepted is wkdev-create --version.
 readonly WKDEV_SDK_VERSION_RE='^[0-9]+\.[0-9]+-v[0-9]+(-[0-9a-f]+)?$'
 readonly WKDEV_SDK_VERSION_PUBLISHED_RE='^[0-9]+\.[0-9]+-v[0-9]+-[0-9a-f]+$'
 readonly WKDEV_SDK_MAJOR_MINOR_RE='^[0-9]+\.[0-9]+$'
+readonly WKDEV_SDK_PR_TAG_RE='^pr-[0-9]+-[0-9a-f]+$'
 
 # Read from /etc/wkdev-sdk-version inside the container, ARG WKDEV_SDK_VERSION in the
 # Containerfile on the host. Intentionally no env-var/CLI override: every image used by

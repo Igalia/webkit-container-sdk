@@ -26,7 +26,7 @@ argsparse_use_option rm           "Force removal of container if it already exis
 argsparse_use_option attach       "Attach to container as it starts up."
 argsparse_use_option no-pull      "Do not login or pull images."
 argsparse_use_option list-tags    "List image tags published to the registry."
-argsparse_use_option version:     "Image version (<major>.<minor>, or <major>.<minor>-v<count>-<gitsha>) to use, instead of the version pinned in this checkout. A bare <major>.<minor> resolves to the highest published v<count> for that branch. Pulled from the registry on demand."
+argsparse_use_option version:     "Image version (<major>.<minor>, <major>.<minor>-v<count>-<gitsha>, or pr-<PR-number>-<gitsha>) to use, instead of the version pinned in this checkout. A bare <major>.<minor> resolves to the highest published v<count> for that branch. The pr-* form selects a per-PR build pushed by CI. Pulled from the registry on demand."
 argsparse_use_option =arch:       "Container architecture."
 
 argsparse_usage_description="$(cat <<EOF
@@ -75,8 +75,9 @@ process_command_line_arguments() {
             [ -z "${resolved}" ] && _abort_ "No published image matches version prefix '${container_tag}' in the registry."
             _log_ "-> Resolved --version=${container_tag} to '${resolved}'."
             container_tag="${resolved}"
-        elif [[ ! "${container_tag}" =~ ${WKDEV_SDK_VERSION_PUBLISHED_RE} ]]; then
-            _abort_ "--version must be of the form <major>.<minor> or <major>.<minor>-v<count>-<gitsha> (got '${container_tag}')."
+        elif [[ ! "${container_tag}" =~ ${WKDEV_SDK_VERSION_PUBLISHED_RE} ]] \
+          && [[ ! "${container_tag}" =~ ${WKDEV_SDK_PR_TAG_RE} ]]; then
+            _abort_ "--version must be of the form <major>.<minor>, <major>.<minor>-v<count>-<gitsha>, or pr-<PR-number>-<gitsha> (got '${container_tag}')."
         fi
     else
         container_tag="$(get_default_container_tag)"

@@ -11,6 +11,29 @@ and compile using `./Tools/Scripts/build-webkit [--gtk|--wpe]`, as usual.
 There is extra documentation in the [**docs**](https://github.com/Igalia/webkit-container-sdk/tree/main/docs)
 subdirectory for further information the SDK provides but the guide below will cover common usage.
 
+### Prerequisites
+
+The only host-side dependency is [`podman`](https://podman.io). Install it through your distribution's
+package manager before continuing with the Quickstart guide:
+
+| Distribution                | Install command                              |
+|-----------------------------|----------------------------------------------|
+| Fedora                      | `sudo dnf install podman`                    |
+| Debian (sid) / Ubuntu 23.04+| `sudo apt install podman`                    |
+| Arch Linux                  | `sudo pacman -S podman`                      |
+| openSUSE Tumbleweed         | `sudo zypper install podman`                 |
+
+Verify the installation by running:
+
+```sh
+podman --version
+podman run --rm hello-world
+```
+
+If both commands succeed, `podman` is ready to use and you can move on to the Quickstart guide.
+Refer to [docs/00-Introduction.md](docs/00-Introduction.md) for further background and notes on
+running the SDK rootless.
+
 ### Quickstart guide
 
 1. Integrate the SDK with your shell environment.

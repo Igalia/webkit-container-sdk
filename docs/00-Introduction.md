@@ -37,13 +37,30 @@ development.
 
 ### Setup procedure
 
-On your **host system** ensure that **podman** is installed.
+On your **host system** the only required dependency is [**podman**](https://podman.io).
+Install it via your distribution's package manager:
 
-* [podman](https://podman.io)
-  * Fedora: [podman](https://packages.fedoraproject.org/pkgs/podman/podman)
-  * Debian (sid): [podman](https://packages.debian.org/sid/podman)
-  * Ubuntu (starting from 23.04): [podman](https://packages.ubuntu.com/lunar/podman)
-  * macOS: [podman](https://formulae.brew.sh/formula/podman)
+* Fedora: `sudo dnf install podman` ([package](https://packages.fedoraproject.org/pkgs/podman/podman))
+* Debian (sid): `sudo apt install podman` ([package](https://packages.debian.org/sid/podman))
+* Ubuntu (starting from 23.04): `sudo apt install podman` ([package](https://packages.ubuntu.com/lunar/podman))
+* Arch Linux: `sudo pacman -S podman`
+* openSUSE Tumbleweed: `sudo zypper install podman`
+
+The SDK is regularly tested with **podman 4.x** and **5.x**. Older versions may work but
+are not actively supported.
+
+Verify the installation by running:
+
+```sh
+podman --version
+podman run --rm hello-world
+```
+
+The second command pulls a tiny test image and runs it to confirm that **rootless** container
+execution is functional on your system. If it fails, consult the
+[podman rootless setup guide](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md)
+-- typical fixes involve ensuring that `/etc/subuid` and `/etc/subgid` contain entries for your
+user and that the `fuse-overlayfs` package is installed.
 
 That's all you need to install on your host system. Now it's the time to get a fresh WebKit source
 checkout, or update/clean an existing one.

@@ -10,16 +10,6 @@ FROM public.ecr.aws/ubuntu/ubuntu:24.04
 # branch and is bumped by hand here when moving to a new branch.
 ARG WKDEV_SDK_VERSION=2.53-v5-3bdf4b8
 
-LABEL maintainer="webkit-gtk@lists.webkit.org"
-LABEL org.opencontainers.image.version=${WKDEV_SDK_VERSION}
-LABEL org.opencontainers.image.title="WebKit SDK (based on Ubuntu 24.04)"
-LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 24.04"
-LABEL org.opencontainers.image.source=https://github.com/Igalia/webkit-container-sdk
-
-# Bake the version into the image so the running container can introspect it
-# (welcome message, etc.) without needing access to OCI labels.
-RUN echo "${WKDEV_SDK_VERSION}" > /etc/wkdev-sdk-version
-
 # Tweakable "make -j <x>" setting.
 ARG NUMBER_OF_PARALLEL_BUILDS=4
 ARG CONTAINER_LOCALE=en_US.UTF-8
@@ -30,27 +20,14 @@ ARG APT_BUILDDEP="apt-get --assume-yes build-dep"
 ARG APT_UPGRADE="apt-get --assume-yes upgrade"
 ARG APT_INSTALL="apt-get --assume-yes install --no-install-recommends"
 ARG APT_AUTOREMOVE="apt-get --assume-yes autoremove"
+ARG APT_CLEAN="apt-get clean"
+ARG APT_RM_CACHES="rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*"
 
 # Disable prompt during package configuration
 ENV DEBIAN_FRONTEND noninteractive
 
-# Used by the WebKit tooling to detect if is running inside the SDK.
-ENV WEBKIT_CONTAINER_SDK "1"
-
-# Enable debugging in WebKit's sandbox.
-ENV WEBKIT_ENABLE_DEBUG_PERMISSIONS_IN_SANDBOX "1"
-
-# For improved experience using GDB.
-ENV DEBUGINFOD_URLS "https://debuginfod.ubuntu.com"
-
 # Otherwise one has to pass --break-system-packages to python, when installing custom packages.
 ENV PIP_BREAK_SYSTEM_PACKAGES 1
-
-# This env var got deprecated in 2026-04 at 309557@main, so remove it when building
-# WebKit older than 309557@main with the last version of the SDK is not longer a need.
-# It was used in webkitdirs.pm to prefer building against system libraries instead of the Flatpak SDK.
-# More details: https://github.com/Igalia/webkit-container-sdk/pull/222
-ENV WEBKIT_BUILD_USE_SYSTEM_LIBRARIES "1"
 
 # Delete the default ubuntu user which has a UID of 1000.
 # Podman refuses to map a user from the host if the UID is already in /etc/passwd.
@@ -68,7 +45,8 @@ RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/no-sandbox
 # early bootstrapping: .deb package configuration + locale generation + curl for downloading GPG keys.
 RUN ${APT_UPDATE} && \
     ${APT_INSTALL} apt-utils ca-certificates curl dialog libterm-readline-gnu-perl locales unminimize && \
-    ${APT_UPGRADE} && ${APT_AUTOREMOVE}
+    ${APT_UPGRADE} && ${APT_AUTOREMOVE} && \
+    ${APT_CLEAN} && ${APT_RM_CACHES}
 
 # Disable exclusion of locales / translations / documentation (default in Ubuntu images)
 RUN yes | /usr/bin/unminimize
@@ -131,7 +109,8 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     yes | ./Tools/wpe/install-dependencies && \
     cd .. && \
     rm -rf WebKit && \
-    ${APT_AUTOREMOVE}
+    ${APT_AUTOREMOVE} && \
+    ${APT_CLEAN} && ${APT_RM_CACHES}
 
 # GStreamer 1.26.x requires at least Meson 1.4. Install the latest version.
 RUN pip install meson==1.8.2
@@ -229,5 +208,30 @@ RUN mkdir /sdk && chmod 777 /sdk
 # Change the owner to UID 1000 as a fast path
 RUN chown --recursive 1000:1000 ${RUSTUP_HOME} /jhbuild
 
+# Used by the WebKit tooling to detect if is running inside the SDK.
+ENV WEBKIT_CONTAINER_SDK "1"
+
+# Enable debugging in WebKit's sandbox.
+ENV WEBKIT_ENABLE_DEBUG_PERMISSIONS_IN_SANDBOX "1"
+
+# For improved experience using GDB.
+ENV DEBUGINFOD_URLS "https://debuginfod.ubuntu.com"
+
+# This env var got deprecated in 2026-04 at 309557@main, so remove it when building
+# WebKit older than 309557@main with the last version of the SDK is not longer a need.
+# It was used in webkitdirs.pm to prefer building against system libraries instead of the Flatpak SDK.
+# More details: https://github.com/Igalia/webkit-container-sdk/pull/222
+ENV WEBKIT_BUILD_USE_SYSTEM_LIBRARIES "1"
+
 # Switch back to interactive prompt, when using apt.
 ENV DEBIAN_FRONTEND dialog
+
+LABEL maintainer="webkit-gtk@lists.webkit.org"
+LABEL org.opencontainers.image.version=${WKDEV_SDK_VERSION}
+LABEL org.opencontainers.image.title="WebKit SDK (based on Ubuntu 24.04)"
+LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 24.04"
+LABEL org.opencontainers.image.source=https://github.com/Igalia/webkit-container-sdk
+
+# Bake the version into the image so the running container can introspect it
+# (welcome message, etc.) without needing access to OCI labels.
+RUN echo "${WKDEV_SDK_VERSION}" > /etc/wkdev-sdk-version

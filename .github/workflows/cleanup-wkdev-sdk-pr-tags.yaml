@@ -6,7 +6,7 @@ on:
 
 jobs:
   delete:
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, x64]
     # Fork PRs are never published (the build/publish workflow excludes them),
     # so there is nothing to clean up.
     if: github.event.pull_request.head.repo.full_name == github.repository

@@ -13,7 +13,7 @@ env:
 jobs:
   # Phase 1: Image Version Bump and Tag
   bump-image-version:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, x64]
     permissions:
       contents: write
     outputs:
@@ -74,7 +74,7 @@ jobs:
   # Phase 2: Wait for Image Build Workflow
   wait-for-image-build:
     needs: bump-image-version
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, x64]
     permissions:
       actions: read
       checks: read
@@ -128,7 +128,7 @@ jobs:
   # ============================================================
   release-summary:
     needs: [bump-image-version, wait-for-image-build]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, x64]
     if: always()
 
     steps:

@@ -142,7 +142,7 @@
     <branch repo="freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer/gstreamer.git"
-            tag="1.28.3">
+            tag="1.28.4">
     </branch>
     <dependencies>
       <dep package="glib"/>
@@ -164,7 +164,7 @@
     </dependencies>
     <branch repo="freedesktop.org"
             module="gstreamer/gst-plugins-rs"
-            tag="gstreamer-1.28.3"/>
+            tag="gstreamer-1.28.4"/>
   </meson>
 
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">

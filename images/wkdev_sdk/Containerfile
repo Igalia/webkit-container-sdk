@@ -1,7 +1,7 @@
-# Copyright 2024 Igalia S.L.
+# Copyright 2024-2026 Igalia S.L.
 # SPDX-License: MIT
 
-FROM public.ecr.aws/ubuntu/ubuntu:24.04
+FROM public.ecr.aws/ubuntu/ubuntu:26.04
 
 # Single source of truth for the SDK version. The release workflow bumps the
 # -v<count> component and appends the source-repo -<gitsha>; everything else
@@ -60,10 +60,6 @@ RUN dpkg-reconfigure locales
 # Ensure a strong TLS connection is always used when downloading sensitive files.
 ARG CURL_DOWNLOAD="curl --proto =https --tlsv1.2 --show-error --silent --fail"
 
-# Add LLVM repo for clang packages (clang-22 requires apt.llvm.org).
-COPY /rootfs/etc/apt/sources.list.d/llvm.list /etc/apt/sources.list.d/llvm.list
-RUN ${CURL_DOWNLOAD} https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-
 # Install all dependencies for WebKit/GStreamer/etc in one pass.
 WORKDIR /var/tmp/wkdev-packages
 COPY /required_system_packages/*.lst .
@@ -75,7 +71,7 @@ COPY /cross .
 # Update this commit to run the new versions of the install-dependencies scripts.
 # Note: we are explicit with the commit rather than using "main" so the
 # image is reproducible and issues are more easy to bisect.
-ARG WEBKIT_COMMIT=aaa99edbf8c0cfd95b8fbac26b9ddbfb6e4fef48
+ARG WEBKIT_COMMIT=e6ef72584f2d1153f9d9e51af2f87f5ffc2a8712
 # NB: The armhf binary packages can only be found in ports.ubuntu.com. On
 # aarch64, things are already set up properly (aarch64 also uses
 # ports.ubuntu.com and specifies the architecture). However, on x86_64 the
@@ -83,11 +79,10 @@ ARG WEBKIT_COMMIT=aaa99edbf8c0cfd95b8fbac26b9ddbfb6e4fef48
 # generate the corresponding ubuntu-armhf.sources as well as rewrite
 # ubuntu.sources to only use the default sources for amd64.
 RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources && \
-    if [ "$(uname -m)" = "x86_64" ]; then \
-        sed -r 's@(archive|security).ubuntu.com/ubuntu@ports.ubuntu.com/ubuntu-ports@g' </etc/apt/sources.list.d/ubuntu.sources >/etc/apt/sources.list.d/ubuntu-armhf.sources; \
-        sed -i -r 's/^(Components:.*)/\1\nArchitectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources; \
-        sed -i -r 's/^(Components:.*)/\1\nArchitectures: armhf/' /etc/apt/sources.list.d/ubuntu-armhf.sources; \
-    fi && \
+    HOST_ARCH="$(dpkg --print-architecture)" && \
+    sed -r 's@(archive|security).ubuntu.com/ubuntu@ports.ubuntu.com/ubuntu-ports@g' </etc/apt/sources.list.d/ubuntu.sources >/etc/apt/sources.list.d/ubuntu-armhf.sources && \
+    sed -i -r "s/^(Components:.*)/\1\nArchitectures: ${HOST_ARCH}/" /etc/apt/sources.list.d/ubuntu.sources && \
+    sed -i -r 's/^(Components:.*)/\1\nArchitectures: armhf/' /etc/apt/sources.list.d/ubuntu-armhf.sources && \
     dpkg --add-architecture armhf && \
     ${APT_UPDATE} && \
     export LST_FILES=*.lst && \
@@ -136,7 +131,6 @@ RUN git clone https://github.com/ystreet/librice.git && \
 # Copy jhbuild helper files and do the initial build & install
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
-COPY /jhbuild/patches /jhbuild/patches
 
 WORKDIR /jhbuild
 RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
@@ -171,8 +165,8 @@ RUN /tmp/create-clang-symlinks 18 && rm /tmp/create-clang-symlinks
 
 # Install Swift toolchain (pinned to a stable release for reproducible builds).
 # Upstream provides official builds for x86_64 and aarch64 only.
-# Note: Ubuntu 24.04 has no native swiftlang package; revisit once we
-# switch to 26.04 LTS.
+# Note: the swiftlang package in Ubuntu 26.04 is not recent enough, so we use the
+# upstream 24.04 binaries which run fine on 26.04.
 ARG SWIFT_VERSION=6.3.2
 ENV PATH="/opt/swift/usr/bin:${PATH}"
 
@@ -193,10 +187,6 @@ RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \
     for directory in /usr/include/x86_64-linux-gnu/qt6/*; do \
       ln -s ${directory} ${directory}/${QT_VERSION}  >/dev/null 2>&1 || true; \
     done
-
-# Specify the default OpenXR runtime
-RUN mkdir -p /etc/xdg/openxr/1 && \
-    ln -s /jhbuild/install/share/openxr/1/openxr_monado.json /etc/xdg/openxr/1/active_runtime.json
 
 # Check GStreamer plugins are installed.
 RUN gst-inspect-1.0 audiornnoise && \
@@ -247,8 +237,8 @@ ENV DEBIAN_FRONTEND dialog
 
 LABEL maintainer="webkit-gtk@lists.webkit.org"
 LABEL org.opencontainers.image.version=${WKDEV_SDK_VERSION}
-LABEL org.opencontainers.image.title="WebKit SDK (based on Ubuntu 24.04)"
-LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 24.04"
+LABEL org.opencontainers.image.title="WebKit SDK (based on Ubuntu 26.04)"
+LABEL org.opencontainers.image.description="Provides a complete WebKit Gtk/WPE development environment based on Ubuntu 26.04"
 LABEL org.opencontainers.image.source=https://github.com/Igalia/webkit-container-sdk
 
 # Bake the version into the image so the running container can introspect it

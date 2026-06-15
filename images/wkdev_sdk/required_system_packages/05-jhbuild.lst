@@ -1,2 +1,11 @@
-# Needed for building libbacktrace in jhbuild
-libunwind-dev
+# Debugging / profiling
+libbacktrace-dev libunwind-dev
+sysprof libsysprof-6-dev libsysprof-capture-4-dev libpanel-dev
+
+# OpenXR runtime. libopenxr1-monado ships /usr/share/openxr/1/openxr_monado.json
+# (only "Recommended" by monado-service, so it must be listed explicitly because
+# we install with --no-install-recommends).
+monado-service monado-cli libopenxr1-monado
+
+# For Epiphany
+gcr4 libgcr-4-dev

@@ -6,36 +6,25 @@
   <metamodule id="webkit-sdk-deps">
     <dependencies>
       <dep package="dicts"/>
-      <dep package="libicu"/>
-      <dep package="harfbuzz"/>
       <dep package="libwpe"/>
-      <dep package="libsoup"/>
       <dep package="wpebackend-fdo"/>
       <dep package="gst-plugins-rs"/>
       <dep package="gstreamer"/>
       <dep package="sparkle-cdm"/>
-      <dep package="libbacktrace"/>
-      <dep package="sysprof"/>
       <dep package="libspiel"/>
       <dep package="openxr"/>
-      <dep package="monado"/>
     </dependencies>
   </metamodule>
 
   <!-- Please use http/https to access repositories to be friendly to users stuck behind firewalls. -->
-  <repository type="system" name="system"/>
   <repository type="tarball" name="wpewebkit.org"
       href="https://wpewebkit.org/releases/"/>
-  <repository type="tarball" name="xmlsoft.org"
-      href="http://xmlsoft.org"/>
   <repository type="git" name="freedesktop.org"
       href="https://gitlab.freedesktop.org/"/>
   <repository type="tarball" name="github-tarball"
       href="https://github.com/"/>
   <repository type="git" name="github.com"
       href="https://github.com"/>
-  <repository type="git" name="gitlab.gnome.org"
-      href="https://gitlab.gnome.org/"/>
 
   <meson id="sparkle-cdm">
     <branch repo="github.com"
@@ -56,34 +45,9 @@
     <branch repo="wpewebkit.org"
             checkoutdir="libwpe"
             module="libwpe-${version}.tar.xz"
-            version="1.16.2"
-            hash="sha256:960bdd11c3f2cf5bd91569603ed6d2aa42fd4000ed7cac930a804eac367888d7"/>
+            version="1.16.3"
+            hash="sha256:c880fa8d607b2aa6eadde7d6d6302b1396ebc38368fe2332fa20e193c7ee1420"/>
   </cmake>
-
-  <!-- Ship the last version of ICU because it helps to pass more Test262 JSC tests. -->
-  <autotools id="libicu" autogen-sh="./source/configure" autogenargs="--disable-samples --disable-tests">
-     <branch module="unicode-org/icu/releases/download/release-78.2/icu4c-78.2-sources.tgz"
-             version="78.2"
-             checkoutdir="icu-${version}"
-             repo="github-tarball"
-             hash="sha256:3e99687b5c435d4b209630e2d2ebb79906c984685e78635078b672e03c89df35">
-       <patch file="icudata-stdlibs.patch" strip="1"/>
-     </branch>
-  </autotools>
-
-  <!-- Building harfbuzz is needed because the system version is linked against an older libicu, which is ABI-incompatible with the version shipped here. -->
-  <meson id="harfbuzz" mesonargs="-Dintrospection=enabled -Dgobject=enabled -Dtests=disabled -Ddocs=disabled">
-    <dependencies>
-      <dep package="glib"/>
-      <dep package="libicu"/>
-    </dependencies>
-    <branch module="harfbuzz/harfbuzz"
-            repo="github.com"
-            tag="13.1.1"
-            version="13.1.1"
-            checkoutdir="harfbuzz-${version}">
-    </branch>
-  </meson>
 
   <meson id="wpebackend-fdo">
     <dependencies>
@@ -92,34 +56,10 @@
     <branch repo="wpewebkit.org"
             checkoutdir="wpebackend-fdo"
             module="wpebackend-fdo-${version}.tar.xz"
-            version="1.14.3"
-            hash="sha256:10121842595a850291db3e82f3db0b9984df079022d386ce42c2b8508159dc6c">
+            version="1.16.1"
+            hash="sha256:544ae14012f8e7e426b8cb522eb0aaaac831ad7c35601d1cf31d37670e0ebb3b">
     </branch>
   </meson>
-
-  <meson id="gtk4" mesonargs="-Dbuild-demos=false -Dbuild-examples=false -Dbuild-tests=false -Dbuild-testsuite=false">
-    <branch repo="github.com"
-            checkoutdir="gtk4"
-            module="GNOME/gtk.git" tag="4.16.2"/>
-   <dependencies>
-      <dep package="glib"/>
-   </dependencies>
-  </meson>
-
-  <meson id="libadwaita" mesonargs="-Dexamples=false -Dgtk_doc=true -Dtests=false -Dvapi=false">
-    <branch repo="github.com"
-            module="GNOME/libadwaita.git" tag="1.6.0"/>
-    <dependencies>
-      <dep package="gtk4"/>
-      <dep package="sassc"/>
-    </dependencies>
-  </meson>
-
-  <autotools id="libbacktrace" autogenargs="--with-system-libunwind --enable-shared --disable-static">
-    <branch repo="github.com"
-            module="ianlancetaylor/libbacktrace.git"
-            checkoutdir="libbacktrace"/>
-  </autotools>
 
   <meson id="libspiel" mesonargs="-Dtests=false -Ddocs=false -Dlibspeechprovider:docs=false -Dlibspeechprovider:introspection=false">
     <branch repo="github.com"
@@ -145,7 +85,6 @@
             tag="1.28.4">
     </branch>
     <dependencies>
-      <dep package="glib"/>
       <dep package="openh264"/>
     </dependencies>
   </meson>
@@ -153,8 +92,8 @@
   <meson id="dav1d" mesonargs="-Denable_examples=false -Denable_tests=false -Denable_tools=false -Dxxhash_muxer=disabled">
     <branch repo="github.com"
             module="videolan/dav1d.git"
-            tag="1.4.2"
-            version="1.4.2" />
+            tag="1.5.3"
+            version="1.5.3" />
   </meson>
 
   <meson id="gst-plugins-rs" mesonargs="-Ddoc=disabled -Dexamples=disabled -Dtests=disabled --auto-features=disabled -Daudiofx=enabled -Dclosedcaption=enabled -Ddav1d=enabled -Drtp=enabled -Disobmff=enabled">
@@ -167,16 +106,20 @@
             tag="gstreamer-1.28.4"/>
   </meson>
 
+  <!-- glib, glib-networking and libsoup are provided by the system on Ubuntu
+       26.04 and are intentionally not part of the webkit-sdk-deps metamodule, so
+       they are not built by default. They are kept here so it is still possible
+       to hack on them with a single command, e.g. `jhbuild build libsoup`. -->
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">
     <branch repo="github.com"
             checkoutdir="glib"
-            module="GNOME/glib.git" tag="2.82.1"/>
+            module="GNOME/glib.git" tag="2.88.1"/>
   </meson>
 
   <meson id="glib-networking">
     <branch repo="github.com"
             checkoutdir="glib-networking"
-            module="GNOME/glib-networking.git" tag="2.80.0"/>
+            module="GNOME/glib-networking.git" tag="2.80.1"/>
     <dependencies>
       <dep package="glib"/>
     </dependencies>
@@ -185,7 +128,7 @@
   <meson id="libsoup" mesonargs="-Dtests=false">
     <branch repo="github.com"
             checkoutdir="libsoup"
-            module="GNOME/libsoup.git" tag="3.6.6"/>
+            module="GNOME/libsoup.git" tag="3.7.1"/>
     <dependencies>
       <dep package="glib"/>
       <dep package="glib-networking"/>
@@ -197,82 +140,21 @@
 	    checkoutdir="openxr"
 	    module="KhronosGroup/OpenXR-SDK/archive/refs/tags/release-${version}.tar.gz"
 	    rename-tarball="OpenXR-SDK-release-${version}.tar.gz"
-	    version="1.1.54"
-	    hash="sha256:2055688081066e37238be996534f349420ac52ed34f8514836704232121ee7f3"/>
-  </cmake>
-
-  <cmake id="monado">
-    <branch repo="freedesktop.org"
-	    checkoutdir="monado"
-	    module="monado/monado.git" tag="v25.0.0"/>
+	    version="1.1.59.1"
+	    hash="sha256:f66c1a308a60556c79b723cb0b14bcc51913de8382632ba19af2d5eaf54add50"/>
   </cmake>
 
   <!-- Everything in this section is just for Epiphany. -->
-  <systemmodule id="sassc">
-    <branch repo="system"/>
-    <systemdependencies>
-      <dep type="path" name="sassc" />
-    </systemdependencies>
-  </systemmodule>
-
-  <systemmodule id="gcr">
-    <pkg-config>gcr-4.pc</pkg-config>
-    <branch repo="system" version="3.9.0" />
-  </systemmodule>
-
-  <systemmodule id="libarchive">
-    <pkg-config>libarchive.pc</pkg-config>
-    <branch repo="system"/>
-  </systemmodule>
-
-  <systemmodule id="libportal-gtk4">
-    <pkg-config>libportal-gtk4.pc</pkg-config>
-    <branch repo="system" version="0.6" />
-  </systemmodule>
-
   <meson id="epiphany">
     <branch repo="github.com"
-            module="GNOME/epiphany.git" tag="47.0"/>
-    <dependencies>
-      <dep package="glib"/>
-      <dep package="gtk4"/>
-      <dep package="gcr"/>
-      <dep package="libarchive"/>
-      <dep package="libportal-gtk4"/>
-      <dep package="libadwaita"/>
-    </dependencies>
-  </meson>
-
-  <!-- Everything in this section is just for sysprof. -->
-  <meson id="libpanel" mesonargs="-Dvapi=false">
-    <branch repo="github.com"
-            module="GNOME/libpanel.git" tag="1.8.0"/>
-    <dependencies>
-      <dep package="libadwaita"/>
-    </dependencies>
-  </meson>
-
-  <meson id="libdex" mesonargs="-Dvapi=false">
-    <branch repo="github.com"
-            module="GNOME/libdex.git" tag="0.8.0"/>
-  </meson>
-
-  <meson id="sysprof" mesonargs="-Dexamples=false -Dpolkit-agent=disabled -Dsysprofd=host -Dtests=false">
-    <branch repo="github.com"
-            module="GNOME/sysprof.git" tag="47.0">
-    </branch>
-    <dependencies>
-      <dep package="libadwaita"/>
-      <dep package="libdex"/>
-      <dep package="libpanel"/>
-    </dependencies>
+            module="GNOME/epiphany.git" tag="50.4"/>
   </meson>
 
   <!-- Everything in this section is optional to aid in debugging. -->
   <cmake id="nghttp2" cmakeargs="-DENABLE_DEBUG=ON -DENABLE_LIB_ONLY=ON -DENABLE_DOC=OFF">
     <branch repo="github.com"
             module="nghttp2/nghttp2"
-            tag="v1.64.0"/>
+            tag="v1.69.0"/>
   </cmake>
 
 </moduleset>

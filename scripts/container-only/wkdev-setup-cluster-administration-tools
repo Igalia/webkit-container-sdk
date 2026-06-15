@@ -97,30 +97,48 @@ install_packer() {
         return
     fi
 
-    local base_url='https://apt.releases.hashicorp.com'
+    # HashiCorp's apt repository does not always track the newest Ubuntu
+    # releases (e.g. 26.04 "resolute" has no 'packer' package), so fetch the
+    # official release zip directly — this works on any distro/arch combo.
 
-    if ! curl --silent --fail --location "${base_url}"/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/hashicorp-archive-keyring.gpg > /dev/null; then
-        _log_ "Failed to add gpg key for Packer."
+    if ! command -v unzip > /dev/null; then
+        if ! sudo apt install -y unzip; then
+            _log_ "Failed to install 'unzip', required to extract the Packer release archive."
+            exit 1
+        fi
+    fi
+
+    local arch
+    arch="$(dpkg --print-architecture)"
+
+    local latest_version
+    latest_version=$(curl --silent --fail --location 'https://api.releases.hashicorp.com/v1/releases/packer/latest' \
+        | grep -oP '"version"\s*:\s*"\K[^"]+' | head -n1)
+
+    if [ -z "${latest_version}" ]; then
+        _log_ "Failed to determine the latest Packer release version."
         exit 1
     fi
 
-    if ! echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.gpg] "${base_url}" $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list; then
-        _log_ "Failed to add apt repository for Packer."
+    local download_url="https://releases.hashicorp.com/packer/${latest_version}/packer_${latest_version}_linux_${arch}.zip"
+    local archive='/tmp/packer.zip'
+
+    if ! curl --silent --fail --location "${download_url}" -o "${archive}"; then
+        _log_ "Failed to download Packer ${latest_version} (${arch}) from ${download_url}."
         exit 1
     fi
 
-    if ! sudo apt update; then
-        _log_ "Failed to update package list using apt."
+    if ! sudo unzip -o -q "${archive}" packer -d /usr/local/bin; then
+        _log_ "Failed to extract Packer binary into /usr/local/bin."
+        rm -f "${archive}"
         exit 1
     fi
 
-    if ! sudo apt install packer; then
-        _log_ "Failed to install Packer."
-        exit 1
-    fi
+    sudo chmod +x /usr/local/bin/packer
+    rm -f "${archive}"
 
     _log_ ""
-    _log_ "Packer has been installed."
+    _log_ "Packer ${latest_version} has been installed."
 }
 
 install_kubectl() {

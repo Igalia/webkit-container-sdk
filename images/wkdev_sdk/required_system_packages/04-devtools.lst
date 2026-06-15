@@ -13,13 +13,16 @@ asciidoc doxygen doxygen-latex doxygen-doxyparse graphviz python3-sphinx devhelp
 # For WebKit scripts such as git-webkit
 python3-pip python3-cffi python3-distro python3-venv
 
+# Needed for jhbuild / gstreamer
+python-gi-dev python3-gi
+
 # For WebKit scripts such as cross-toolchain-helper
 chrpath cpio diffstat lz4 zstd
 
 # For podman-host
 podman
 
-# For libadwaita
+# For AppStream metadata (Epiphany)
 libyaml-dev
 libappstream-dev
 

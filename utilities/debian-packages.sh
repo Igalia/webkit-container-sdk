@@ -20,8 +20,11 @@ add_ppa() {
     dirmngr --shutdown
     rm -r "${HOME}/.gnupg"
 
-    echo "deb [signed-by=${keyring}] http://ppa.launchpad.net/${ppa_repo}/ubuntu noble main
-deb-src [signed-by=${keyring}] http://ppa.launchpad.net/${ppa_repo}/ubuntu noble main" > "/etc/apt/sources.list.d/${name}.list"
+    local codename
+    codename="$(. /etc/os-release && echo "${UBUNTU_CODENAME}")"
+
+    echo "deb [signed-by=${keyring}] http://ppa.launchpad.net/${ppa_repo}/ubuntu ${codename} main
+deb-src [signed-by=${keyring}] http://ppa.launchpad.net/${ppa_repo}/ubuntu ${codename} main" > "/etc/apt/sources.list.d/${name}.list"
 }
 
 is_package_installed() {

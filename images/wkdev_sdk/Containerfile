@@ -107,6 +107,25 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     ${APT_AUTOREMOVE} && \
     ${APT_CLEAN} && ${APT_RM_CACHES}
 
+# Install Swift toolchain (pinned to a stable release for reproducible builds).
+# Upstream provides official builds for x86_64 and aarch64 only.
+# Note: the swiftlang package in Ubuntu 26.04 is not recent enough, so we use the
+# upstream 24.04 binaries which run fine on 26.04.
+ARG SWIFT_VERSION=6.3.2
+ENV PATH="/opt/swift/usr/bin:${PATH}"
+
+RUN case "$(uname -m)" in \
+        x86_64)  SWIFT_ARCH_SUFFIX="" ;; \
+        aarch64) SWIFT_ARCH_SUFFIX="-aarch64" ;; \
+        *) echo "Unsupported architecture for Swift: $(uname -m)" >&2; exit 1 ;; \
+    esac && \
+    mkdir -p /opt/swift && \
+    ${CURL_DOWNLOAD} --location --output /tmp/swift.tar.gz \
+        "https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404${SWIFT_ARCH_SUFFIX}/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04${SWIFT_ARCH_SUFFIX}.tar.gz" && \
+    tar zxf /tmp/swift.tar.gz --strip-components=1 -C /opt/swift && \
+    rm /tmp/swift.tar.gz && \
+    find /opt/swift -type f -exec strip --strip-unneeded '{}' \; 2>/dev/null || true
+
 # GStreamer 1.26.x requires at least Meson 1.4. Install the latest version.
 RUN pip install meson==1.8.2
 
@@ -140,6 +159,7 @@ RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
     make install && \
     export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
     jhbuild --exit-on-error --no-interact build && \
+    rm -r /jhbuild/checkout/llvm-project && \
     rm -r /var/tmp/jhbuild
 
 # Register JHBuild environment
@@ -158,29 +178,6 @@ ENV XDG_DATA_DIRS "/jhbuild/install/share:/usr/local/share:/usr/share"
 COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host
 
 COPY /rootfs/etc/ccache.conf /etc/ccache.conf
-
-# Convenience symlinks for clang tools, the VSCode extension doesn't find these by default.
-COPY --from=scripts /helpers/create-clang-symlinks /tmp/create-clang-symlinks
-RUN /tmp/create-clang-symlinks 18 && rm /tmp/create-clang-symlinks
-
-# Install Swift toolchain (pinned to a stable release for reproducible builds).
-# Upstream provides official builds for x86_64 and aarch64 only.
-# Note: the swiftlang package in Ubuntu 26.04 is not recent enough, so we use the
-# upstream 24.04 binaries which run fine on 26.04.
-ARG SWIFT_VERSION=6.3.2
-ENV PATH="/opt/swift/usr/bin:${PATH}"
-
-RUN case "$(uname -m)" in \
-        x86_64)  SWIFT_ARCH_SUFFIX="" ;; \
-        aarch64) SWIFT_ARCH_SUFFIX="-aarch64" ;; \
-        *) echo "Unsupported architecture for Swift: $(uname -m)" >&2; exit 1 ;; \
-    esac && \
-    mkdir -p /opt/swift && \
-    ${CURL_DOWNLOAD} --location --output /tmp/swift.tar.gz \
-        "https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404${SWIFT_ARCH_SUFFIX}/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04${SWIFT_ARCH_SUFFIX}.tar.gz" && \
-    tar zxf /tmp/swift.tar.gz --strip-components=1 -C /opt/swift && \
-    rm /tmp/swift.tar.gz && \
-    find /opt/swift -type f -exec strip --strip-unneeded '{}' \; 2>/dev/null || true
 
 # Fix Qt6 system packages - missing symlinks in the Ubuntu-provided packages.
 RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \

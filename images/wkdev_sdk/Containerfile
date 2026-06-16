@@ -8,7 +8,7 @@ FROM public.ecr.aws/ubuntu/ubuntu:24.04
 # (OCI label, /etc/wkdev-sdk-version, welcome message) reads from here.
 # The <major>.<minor> prefix tracks the upstream WebKitGTK / WPE WebKit release
 # branch and is bumped by hand here when moving to a new branch.
-ARG WKDEV_SDK_VERSION=2.53-v6-d535e88
+ARG WKDEV_SDK_VERSION=2.53-v7-db028f9
 
 # Tweakable "make -j <x>" setting.
 ARG NUMBER_OF_PARALLEL_BUILDS=4

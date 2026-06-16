@@ -1,2 +1,0 @@
-# GNU GCC Toolchain (current version: 14)
-gcc-14 g++-14 gdb libc6-dev

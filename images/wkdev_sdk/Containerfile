@@ -107,9 +107,6 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     ${APT_AUTOREMOVE} && \
     ${APT_CLEAN} && ${APT_RM_CACHES}
 
-# GStreamer 1.26.x requires at least Meson 1.4. Install the latest version.
-RUN pip install meson==1.8.2
-
 # Add Rust environment.
 ENV RUSTUP_HOME="/opt/rust" \
     CARGO_HOME="/opt/rust" \

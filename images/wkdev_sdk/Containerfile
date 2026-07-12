@@ -120,6 +120,10 @@ RUN export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
     rm -r /jhbuild/checkout/llvm-project && \
     rm -rf /var/tmp/jhbuild
 
+# Prevent APT from installing toolchain packages that conflict with the Swift-built
+# LLVM toolchain. This must happen after swiftlang has bootstrapped that toolchain.
+COPY /rootfs/etc/apt/preferences.d/blacklist-llvm-toolchains /etc/apt/preferences.d/blacklist-llvm-toolchains
+
 # Register JHBuild environment
 ENV C_INCLUDE_PATH "/jhbuild/install/include"
 ENV CMAKE_PREFIX_PATH "/jhbuild/install"

@@ -107,25 +107,6 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     ${APT_AUTOREMOVE} && \
     ${APT_CLEAN} && ${APT_RM_CACHES}
 
-# Install Swift toolchain (pinned to a stable release for reproducible builds).
-# Upstream provides official builds for x86_64 and aarch64 only.
-# Note: the swiftlang package in Ubuntu 26.04 is not recent enough, so we use the
-# upstream 24.04 binaries which run fine on 26.04.
-ARG SWIFT_VERSION=6.3.2
-ENV PATH="/opt/swift/usr/bin:${PATH}"
-
-RUN case "$(uname -m)" in \
-        x86_64)  SWIFT_ARCH_SUFFIX="" ;; \
-        aarch64) SWIFT_ARCH_SUFFIX="-aarch64" ;; \
-        *) echo "Unsupported architecture for Swift: $(uname -m)" >&2; exit 1 ;; \
-    esac && \
-    mkdir -p /opt/swift && \
-    ${CURL_DOWNLOAD} --location --output /tmp/swift.tar.gz \
-        "https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404${SWIFT_ARCH_SUFFIX}/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04${SWIFT_ARCH_SUFFIX}.tar.gz" && \
-    tar zxf /tmp/swift.tar.gz --strip-components=1 -C /opt/swift && \
-    rm /tmp/swift.tar.gz && \
-    find /opt/swift -type f -exec strip --strip-unneeded '{}' \; 2>/dev/null || true
-
 # Add Rust environment.
 ENV RUSTUP_HOME="/opt/rust" \
     CARGO_HOME="/opt/rust" \
@@ -149,18 +130,27 @@ COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
 COPY /jhbuild/triggers /usr/local/share/jhbuild/triggers
 COPY /rootfs/etc/ld.so.conf.d/wkdev-sdk.conf /etc/ld.so.conf.d/wkdev-sdk.conf
+COPY /jhbuild/swift-distribution-extras.cmake /jhbuild/swift-distribution-extras.cmake
+COPY /jhbuild/patches /jhbuild/patches
 
 WORKDIR /jhbuild
-RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
+RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git --branch=pgriffis/multiple-sources && \
     cd jhbuild && \
     ./autogen.sh --prefix=/usr/local && \
     make && \
     make install && \
-    install -d /jhbuild/install/lib/swift/linux /jhbuild/install/lib/swift/host /jhbuild/install/lib/swift/pm/llbuild && \
+    rm -r /jhbuild/jhbuild
+
+RUN ${APT_UPDATE} && apt-get install -y swiftlang && \
     export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
+    jhbuild --exit-on-error --no-interact build swift-toolchain && \
+    apt-get remove -y swiftlang && \
+    rm -r /jhbuild/checkout /var/tmp/jhbuild/ /jhbuild/install/lib/swift_static && \
+    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_RM_CACHES}
+
+RUN export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
     jhbuild --exit-on-error --no-interact build && \
-    rm -r /jhbuild/checkout/llvm-project && \
-    rm -r /var/tmp/jhbuild
+    rm -r /jhbuild/checkout /var/tmp/jhbuild/
 
 # Prevent APT from installing toolchain packages that conflict with the Swift-built
 # LLVM toolchain. This must happen after swiftlang has bootstrapped that toolchain.

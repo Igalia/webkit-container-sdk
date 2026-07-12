@@ -1,0 +1,57 @@
+diff --git a/cmake/modules/SwiftSharedCMakeConfig.cmake b/cmake/modules/SwiftSharedCMakeConfig.cmake
+index 9dc0056aa92..d38ed00706f 100644
+--- a/cmake/modules/SwiftSharedCMakeConfig.cmake
++++ b/cmake/modules/SwiftSharedCMakeConfig.cmake
+@@ -356,7 +356,25 @@ function(swift_common_llvm_config target)
+     endif()
+   else()
+     # If Swift was not built standalone, dispatch to 'llvm_config()'.
+-    llvm_config("${target}" ${ARGN})
++    if(LLVM_LINK_LLVM_DYLIB)
++      llvm_config("${target}" USE_SHARED ${ARGN})
++
++      # Swift host tools do not use add_llvm_executable(), so they do not get
++      # llvm_setup_rpath().  Keep them tied to the libLLVM from this toolchain
++      # instead of allowing the dynamic loader to select a system libLLVM with
++      # an incompatible ABI.
++      get_target_property(target_type "${target}" TYPE)
++      if("${target_type}" STREQUAL "EXECUTABLE")
++        set_property(TARGET "${target}" APPEND PROPERTY
++          INSTALL_RPATH "$ORIGIN/../lib")
++      elseif("${target_type}" STREQUAL "SHARED_LIBRARY" OR
++             "${target_type}" STREQUAL "MODULE_LIBRARY")
++        set_property(TARGET "${target}" APPEND PROPERTY
++          INSTALL_RPATH "$ORIGIN")
++      endif()
++    else()
++      llvm_config("${target}" ${ARGN})
++    endif()
+   endif()
+ endfunction()
+ 
+diff --git a/lib/ClangImporter/CMakeLists.txt b/lib/ClangImporter/CMakeLists.txt
+--- a/lib/ClangImporter/CMakeLists.txt
++++ b/lib/ClangImporter/CMakeLists.txt
+@@ -29,6 +29,15 @@ add_swift_host_library(swiftClangImporter STATIC
+ )
++
++if(LLVM_LINK_LLVM_DYLIB)
++  set(swift_clang_importer_bitstream_library LLVM)
++else()
++  set(swift_clang_importer_bitstream_library LLVMBitstreamReader)
++endif()
++set(swift_clang_importer_bitstream_library
++    ${swift_clang_importer_bitstream_library} PARENT_SCOPE)
++
+ target_link_libraries(swiftClangImporter PRIVATE
+   swiftAST
+   swiftParse
+   clangTooling
+-  LLVMBitstreamReader)
++  ${swift_clang_importer_bitstream_library})
+diff --git a/lib/DriverTool/CMakeLists.txt b/lib/DriverTool/CMakeLists.txt
+--- a/lib/DriverTool/CMakeLists.txt
++++ b/lib/DriverTool/CMakeLists.txt
+@@ -23 +23 @@ set(driver_common_libs
+-                LLVMBitstreamReader)
++                ${swift_clang_importer_bitstream_library})

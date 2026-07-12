@@ -5,6 +5,7 @@
 
   <metamodule id="webkit-sdk-deps">
     <dependencies>
+      <dep package="swift-toolchain"/>
       <dep package="dicts"/>
       <dep package="libwpe"/>
       <dep package="wpebackend-fdo"/>
@@ -13,7 +14,6 @@
       <dep package="sparkle-cdm"/>
       <dep package="libspiel"/>
       <dep package="openxr"/>
-      <dep package="clang-tools"/>
     </dependencies>
   </metamodule>
 
@@ -145,20 +145,131 @@
 	    hash="sha256:f66c1a308a60556c79b723cb0b14bcc51913de8382632ba19af2d5eaf54add50"/>
   </cmake>
 
+  <!-- This tries to match the official Swift distribution in features, plus clang tools we want, minus some static libraries. -->
+  <!-- Some important details to get right here:
+    Ubuntu ships llvm-21 but their swiftlang is based on llvm-17. We cannot mix the two and set CMAKE_PROGRAM_PATH.
+    On top of that we are building llvm-21 here and the swift tools try to use that immediately without SWIFT_BUILD_RUNTIME_WITH_HOST_COMPILER.
+    SWIFT_STDLIB_ENABLE_LTO is broken, it mixes up output from the bundled and host LLVM anyway.
+    Swift mixes up using the plugin-server of bundled and host (swift-distribution-extras.cmake).
+
+    LLVM/Clang support building as shared libraries but it appears Swift has never tested that.
+    CLANG_LINK_CLANG_DYLIB is deeply broken, swift pulls in static objects from clang in many places.
+    LLVM_LINK_LLVM_DYLIB is salvagable with a small patch (swift-link-llvm-dylib.patch).
+    SWIFT_BUILD_DYNAMIC_STDLIB almost works... We need to actually install the shared library.
+    All of these are wins, libLLVM is massive (~114MB * 2 I think), Swift stdlib (~15MB), clang-cpp (~60MB * a lot).
+  -->
   <cmake
-        id="clang-tools"
-        makeargs="distribution"
-        makeinstallargs="install-distribution-stripped"
-        cmakeargs="-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra' -DLLVM_DISTRIBUTION_COMPONENTS='clang-format;clang-tidy;clang-apply-replacements;clang-resource-headers;clang-headers;clang-scan-deps'"
+        id="swift-toolchain"
+        cmakedir="llvm"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_PROGRAM_PATH='/usr/libexec/swift/bin'
+                   -DCMAKE_C_COMPILER=clang
+                   -DCMAKE_CXX_COMPILER=clang++
+                   -DPython3_EXECUTABLE=/usr/bin/python3
+                   -C ${checkoutroot}/swift/cmake/caches/Linux-x86_64.cmake
+                   -C /jhbuild/swift-distribution-extras.cmake
+                   -DLLVM_USE_LINKER=lld
+                   -DLLVM_ENABLE_LTO=Thin
+                   -DLLVM_EXTERNAL_PROJECTS='cmark;swift'
+                   -DLLVM_EXTERNAL_CMARK_SOURCE_DIR=${checkoutroot}/cmark
+                   -DLLVM_EXTERNAL_SWIFT_SOURCE_DIR=${checkoutroot}/swift
+                   -DLLVM_TARGETS_TO_BUILD='AArch64;X86'
+                   -DLLVM_ENABLE_RUNTIMES=compiler-rt
+                   -DLLVM_ENABLE_ZLIB=ON
+                   -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
+                   -DCOMPILER_RT_BUILD_XRAY=OFF
+                   -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF
+                   -DCOMPILER_RT_BUILD_ORC=OFF
+                   -DLLDB_BUILD_INTEL_MPX=OFF
+                   -DLLDB_BUILD_INTEL_PT=OFF
+                   -DLLDB_ENABLE_LUA=OFF
+                   -DLLDB_INCLUDE_TESTS=OFF
+                   -DLLDB_ENABLE_PROTOCOL_SERVERS=OFF
+                   -DLLVM_BUILD_LLVM_DYLIB=ON
+                   -DLLVM_LINK_LLVM_DYLIB=ON
+                   -DLLVM_TOOL_LLVM_SHLIB_BUILD=ON
+                   -DCLANG_LINK_CLANG_DYLIB=OFF
+                   -DSWIFT_PATH_TO_CMARK_BUILD=${buildroot}/llvm-project/tools/cmark
+                   -DSWIFT_PATH_TO_LIBDISPATCH_SOURCE=${checkoutroot}/swift-corelibs-libdispatch
+                   -DSWIFT_PATH_TO_SWIFT_SYNTAX_SOURCE=${checkoutroot}/swift-syntax
+                   -DSWIFT_PATH_TO_STRING_PROCESSING_SOURCE=${checkoutroot}/swift-experimental-string-processing
+                   -DSWIFT_ENABLE_DISPATCH=ON
+                   -DSWIFT_ENABLE_SYNCHRONIZATION=ON
+                   -DSWIFT_ENABLE_VOLATILE=ON
+                   -DSWIFT_ENABLE_RUNTIME_MODULE=ON
+                   -DSWIFT_ENABLE_BACKTRACING=ON
+                   -DSWIFT_ENABLE_EXPERIMENTAL_CONCURRENCY=ON
+                   -DSWIFT_ENABLE_EXPERIMENTAL_DISTRIBUTED=ON
+                   -DSWIFT_ENABLE_EXPERIMENTAL_STRING_PROCESSING=ON
+                   -DSWIFT_ENABLE_EXPERIMENTAL_OBSERVATION=ON
+                   -DSWIFT_ENABLE_EXPERIMENTAL_DIFFERENTIABLE_PROGRAMMING=ON
+                   -DSWIFT_BUILD_RUNTIME_WITH_HOST_COMPILER=ON
+                   -DSWIFT_BUILD_DYNAMIC_STDLIB=ON
+                   -DSWIFT_BUILD_DYNAMIC_SDK_OVERLAY=ON
+                   -DSWIFT_BUILD_STATIC_STDLIB=OFF
+                   -DSWIFT_BUILD_STATIC_SDK_OVERLAY=OFF
+                   -DSWIFT_BUILD_REGEX_PARSER_IN_COMPILER=ON
+                   -DSWIFT_BUILD_SWIFT_SYNTAX=ON
+                   -DSWIFT_TOOLS_ENABLE_LTO=Thin
+                   -DSWIFT_TOOL_SWIFT_IDE_TEST_BUILD=OFF
+                   -DSWIFT_TOOL_SWIFT_SCAN_TEST_BUILD=OFF"
+        ninjaargs="distribution"
+        ninjainstallargs="install-distribution-stripped tools/cmark/install/strip"
     >
-    <!-- They don't make releases for every version so we have to rely on tags -->
     <branch
             repo="github-tarball"
             checkoutdir="llvm-project"
-            module="https://github.com/swiftlang/llvm-project/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
-            version="6.3.2"
-            hash="sha256:9c25e21345cbb91d8ed3c695907b1cc7b0d511690060ffb9a23e3744b2198eee"
+            module="swiftlang/llvm-project/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="llvm-project-swift-${version}-RELEASE.tar.gz"
+            version="6.3.3"
+            hash="sha256:4e0bfc8045a1036d3a49c65d411ffca1e4b6af117ac2bf5070871f375c097610"
+        >
+    </branch>
+    <branch
+            repo="github-tarball"
+            checkoutdir="cmark"
+            module="swiftlang/swift-cmark/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-cmark-swift-${version}-RELEASE.tar.gz"
+            version="6.3.3"
+            hash="sha256:c9f981c268b4d2beca1d43878f5dd1d69dc629e62157bc400064d6c6111e2020"
+        >
+    </branch>
+    <branch
+            repo="github-tarball"
+            checkoutdir="swift-corelibs-libdispatch"
+            module="swiftlang/swift-corelibs-libdispatch/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-corelibs-libdispatch-swift-${version}-RELEASE.tar.gz"
+            version="6.3.3"
+            hash="sha256:c3a61c08387937622a291e08e64eb4ec0be07f1df252574552641129057951bb"
         />
+    <branch
+            repo="github-tarball"
+            checkoutdir="swift"
+            module="swiftlang/swift/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-swift-${version}-RELEASE.tar.gz"
+            version="6.3.3"
+            hash="sha256:a96425b6626ede8518423810450763da541fb28501e27009badb6a6f6534c411"
+        >
+      <patch file="swift-link-llvm-dylib.patch" strip="1"/>
+      <patch file="swift-install-libdispatch.patch" strip="1"/>
+      <patch file="swift-fix-triple.patch" strip="1"/>
+    </branch>
+    <branch
+            repo="github-tarball"
+            checkoutdir="swift-syntax"
+            module="swiftlang/swift-syntax/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-syntax-${version}.tar.gz"
+            version="603.0.2"
+            hash="sha256:4858b54834fae301e36ea63529302d51ce0b4de9da48a465ebab6f6f3d096cf2"
+    />
+    <branch
+            repo="github-tarball"
+            checkoutdir="swift-experimental-string-processing"
+            module="swiftlang/swift-experimental-string-processing/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-experimental-string-processing-swift-${version}-RELEASE.tar.gz"
+            version="6.3.3"
+            hash="sha256:1ca338ea222031f5d67fa34922a55111ffb67524197f33a6be0540abaafe0b52"
+    />
   </cmake>
 
   <!-- Everything in this section is just for Epiphany. -->

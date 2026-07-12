@@ -1,2 +1,0 @@
-# Swift toolchain dependencies (toolchain itself is downloaded in Containerfile)
-gnupg2 libcurl4-openssl-dev libz3-dev libstdc++-14-dev

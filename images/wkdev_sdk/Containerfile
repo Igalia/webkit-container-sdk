@@ -126,9 +126,6 @@ RUN case "$(uname -m)" in \
     rm /tmp/swift.tar.gz && \
     find /opt/swift -type f -exec strip --strip-unneeded '{}' \; 2>/dev/null || true
 
-# GStreamer 1.26.x requires at least Meson 1.4. Install the latest version.
-RUN pip install meson==1.8.2
-
 # Add Rust environment.
 ENV RUSTUP_HOME="/opt/rust" \
     CARGO_HOME="/opt/rust" \

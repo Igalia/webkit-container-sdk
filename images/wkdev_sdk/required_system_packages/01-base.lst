@@ -22,3 +22,6 @@ libx265-dev
 
 # Vulkan
 mesa-vulkan-drivers vulkan-tools
+
+# Build systems
+meson

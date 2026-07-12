@@ -1,0 +1,5 @@
+# The SDK ships a Swift-built LLVM toolchain in /jhbuild/install. Installing
+# Ubuntu's toolchain packages would put conflicting binaries on the system.
+Package: clang clang-* clangd clangd-* llvm llvm-* lld lld-* lldb lldb-* swiftlang swiftlang-*
+Pin: release *
+Pin-Priority: -1

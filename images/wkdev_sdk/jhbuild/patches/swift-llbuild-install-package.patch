@@ -1,0 +1,71 @@
+--- a/cmake/modules/CMakeLists.txt
++++ b/cmake/modules/CMakeLists.txt
+@@ -4,3 +4,13 @@
+ 
+ get_property(LLBuild_EXPORTS GLOBAL PROPERTY LLBuild_EXPORTS)
+ export(TARGETS ${LLBuild_EXPORTS} FILE ${LLBuild_EXPORTS_FILE})
++
++configure_file(LLBuildInstalledConfig.cmake.in
++  ${CMAKE_CURRENT_BINARY_DIR}/installed/LLBuildConfig.cmake @ONLY)
++install(FILES ${CMAKE_CURRENT_BINARY_DIR}/installed/LLBuildConfig.cmake
++  DESTINATION lib/cmake/LLBuild)
++install(FILES ${PROJECT_SOURCE_DIR}/products/libllbuild/include/module.modulemap
++  DESTINATION include)
++install(FILES ${CMAKE_BINARY_DIR}/products/llbuildSwift/llbuildSwift.swiftmodule
++              ${CMAKE_BINARY_DIR}/products/llbuildSwift/llbuildSwift.swiftdoc
++  DESTINATION lib/swift/linux/${CMAKE_SYSTEM_PROCESSOR})
+--- /dev/null
++++ b/cmake/modules/LLBuildInstalledConfig.cmake.in
+@@ -0,0 +1,19 @@
++get_filename_component(_LLBuild_PREFIX
++  "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
++
++if(NOT TARGET llbuild)
++  add_library(llbuild SHARED IMPORTED)
++  set_target_properties(llbuild PROPERTIES
++    IMPORTED_LOCATION "${_LLBuild_PREFIX}/lib/swift/pm/llbuild/libllbuild.so"
++    INTERFACE_INCLUDE_DIRECTORIES "${_LLBuild_PREFIX}/include")
++endif()
++
++if(NOT TARGET llbuildSwift)
++  add_library(llbuildSwift SHARED IMPORTED)
++  set_target_properties(llbuildSwift PROPERTIES
++    IMPORTED_LOCATION "${_LLBuild_PREFIX}/lib/swift/pm/llbuild/libllbuildSwift.so"
++    INTERFACE_INCLUDE_DIRECTORIES
++      "${_LLBuild_PREFIX}/lib/swift/linux;${_LLBuild_PREFIX}/include")
++endif()
++
++unset(_LLBuild_PREFIX)
+--- a/products/libllbuild/CMakeLists.txt
++++ b/products/libllbuild/CMakeLists.txt
+@@ -9,7 +9,7 @@
+ 
+ add_llbuild_library(llbuild
+   ${SOURCES}
+-  STATIC)
++  SHARED)
+ 
+ set_property(TARGET llbuild PROPERTY MACOSX_RPATH ON)
+ 
+@@ -47,8 +47,8 @@
+   PATTERN "*.h")
+ 
+ install(TARGETS llbuild
+-  ARCHIVE DESTINATION lib${LLBUILD_LIBDIR_SUFFIX}
+-  LIBRARY DESTINATION lib${LLBUILD_LIBDIR_SUFFIX}
++  ARCHIVE DESTINATION lib/swift/pm/llbuild
++  LIBRARY DESTINATION lib/swift/pm/llbuild
+   RUNTIME DESTINATION bin
+   COMPONENT llbuild)
+ set_property(GLOBAL APPEND PROPERTY LLBuild_EXPORTS llbuild)
+--- a/products/llbuildSwift/CMakeLists.txt
++++ b/products/llbuildSwift/CMakeLists.txt
+@@ -54,7 +54,7 @@
+   if(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+     target_link_options(llbuildSwift PRIVATE "SHELL:-no-toolchain-stdlib-rpath")
+     set_target_properties(llbuildSwift PROPERTIES
+-      INSTALL_RPATH "$ORIGIN/../../$<LOWER_CASE:${CMAKE_SYSTEM_NAME}>")
++      INSTALL_RPATH "$ORIGIN/../../$<LOWER_CASE:${CMAKE_SYSTEM_NAME}>;$ORIGIN")
+   endif()
+ endif()
+ set_target_properties(llbuildSwift PROPERTIES

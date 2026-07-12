@@ -1,0 +1,91 @@
+diff --git a/cmake/modules/CMakeLists.txt b/cmake/modules/CMakeLists.txt
+index 10cc0e100dfcfa1a5a8363247b4010ad5ec2dc76..03c43405be45b598049c31dca0b708c10dc4a313 100644
+--- a/cmake/modules/CMakeLists.txt
++++ b/cmake/modules/CMakeLists.txt
+@@ -1,7 +1,14 @@
+ 
+ set(DISPATCH_EXPORTS_FILE ${CMAKE_CURRENT_BINARY_DIR}/dispatchExports.cmake)
+ configure_file(dispatchConfig.cmake.in
+-  ${CMAKE_CURRENT_BINARY_DIR}/dispatchConfig.cmake)
++  ${CMAKE_CURRENT_BINARY_DIR}/dispatchConfig.cmake
++  @ONLY)
+ 
+ get_property(DISPATCH_EXPORTS GLOBAL PROPERTY DISPATCH_EXPORTS)
+ export(TARGETS ${DISPATCH_EXPORTS} FILE ${DISPATCH_EXPORTS_FILE})
++
++install(EXPORT dispatchExports
++  FILE dispatchExports.cmake
++  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/dispatch)
++install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dispatchConfig.cmake
++  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/dispatch)
+diff --git a/cmake/modules/dispatchConfig.cmake.in b/cmake/modules/dispatchConfig.cmake.in
+index 81228f2710d6cb777efa370dd65c5d42a84b83ce..d49f8e7fc833a3b22f2053878d1afac0d584d326 100644
+--- a/cmake/modules/dispatchConfig.cmake.in
++++ b/cmake/modules/dispatchConfig.cmake.in
+@@ -1,7 +1,10 @@
+-
++
+ set(DISPATCH_HAS_SWIFT_SDK_OVERLAY @ENABLE_SWIFT@)
+-
++
+ if(NOT TARGET dispatch)
+-  include(@DISPATCH_EXPORTS_FILE@)
++  include(${CMAKE_CURRENT_LIST_DIR}/dispatchExports.cmake)
++  if(TARGET swiftDispatch AND NOT TARGET Dispatch)
++    add_library(Dispatch ALIAS swiftDispatch)
++  endif()
+ endif()
+-
++
+diff --git a/src/BlocksRuntime/CMakeLists.txt b/src/BlocksRuntime/CMakeLists.txt
+index 3732b0aec70f8310ed1926483af960867c9a9f57..2d8467dbc141098008e30fe227eba0ece39dcb37 100644
+--- a/src/BlocksRuntime/CMakeLists.txt
++++ b/src/BlocksRuntime/CMakeLists.txt
+@@ -16,7 +16,8 @@ if(WIN32)
+ endif()
+ 
+ target_include_directories(BlocksRuntime PUBLIC
+-  ${CMAKE_CURRENT_SOURCE_DIR})
++  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
++  $<INSTALL_INTERFACE:${INSTALL_BLOCK_HEADERS_DIR}>)
+ if(HAVE_OBJC AND CMAKE_DL_LIBS)
+   target_link_libraries(BlocksRuntime PUBLIC
+     ${CMAKE_DL_LIBS})
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index c105830545b38d0b148a3ce48e61c58b7ce5c32c..0ad4cf5f310478fcc52b722fcff63ed3d944440a 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -85,10 +85,11 @@ if(HAVE_OBJC)
+ endif()
+ 
+ target_include_directories(dispatch PUBLIC
+-  ${PROJECT_BINARY_DIR}
+-  ${PROJECT_SOURCE_DIR}
+-  ${CMAKE_CURRENT_SOURCE_DIR}
+-  ${CMAKE_CURRENT_BINARY_DIR})
++  $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
++  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
++  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
++  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
++  $<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}/swift>)
+ target_include_directories(dispatch PRIVATE
+   ${PROJECT_SOURCE_DIR}/private)
+ 
+diff --git a/src/swift/CMakeLists.txt b/src/swift/CMakeLists.txt
+index a0082fb1e539cf131efbc7ccafa1abf3c3c71af7..0e77ee676c6ebbbb54bbd1f6271990a2d2761030 100644
+--- a/src/swift/CMakeLists.txt
++++ b/src/swift/CMakeLists.txt
+@@ -21,11 +21,11 @@ target_compile_options(swiftDispatch PRIVATE
+   "SHELL:-Xcc -I${PROJECT_SOURCE_DIR}"
+   "SHELL:-Xcc -I${PROJECT_SOURCE_DIR}/src/swift/shims")
+ target_compile_options(swiftDispatch PUBLIC
+-  "SHELL:-vfsoverlay ${CMAKE_BINARY_DIR}/dispatch-vfs-overlay.yaml")
++  "$<BUILD_INTERFACE:SHELL:-vfsoverlay ${CMAKE_BINARY_DIR}/dispatch-vfs-overlay.yaml>")
+ set_target_properties(swiftDispatch PROPERTIES
+   Swift_MODULE_NAME Dispatch
+   Swift_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/swift
+-  INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_BINARY_DIR}/swift)
++  INTERFACE_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/swift>;$<INSTALL_INTERFACE:${INSTALL_SWIFT_MODULE_DIR}>")
+ target_link_libraries(swiftDispatch PRIVATE
+   $<$<BOOL:${HAVE_OBJC}>:DispatchStubs>
+   BlocksRuntime::BlocksRuntime)

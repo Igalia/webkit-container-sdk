@@ -1,0 +1,25 @@
+--- a/products/libllbuild/CMakeLists.txt
++++ b/products/libllbuild/CMakeLists.txt
+@@ -21,6 +21,13 @@
+   llvmSupport
+   SQLite::SQLite3)
+ 
++if(UNIX AND NOT APPLE)
++  target_link_options(llbuild PRIVATE
++    "LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/llbuild.exports")
++  set_property(TARGET llbuild APPEND PROPERTY
++    LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/llbuild.exports")
++endif()
++
+ if(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+   target_link_libraries(llbuild PRIVATE
+     curses)
+--- a/products/libllbuild/llbuild.exports
++++ b/products/libllbuild/llbuild.exports
+@@ -0,0 +1,6 @@
++{
++  global:
++    llb_*;
++  local:
++    *;
++};

@@ -38,7 +38,7 @@ the projects JHBuild knows about with `jhbuild list --all-modules`. The process
 is identical for all of these projects.
 
 If you want to add a new project you can make [a moduleset file](https://gnome.pages.gitlab.gnome.org/jhbuild/moduleset-syntax.html)
-to use the same workflow. Examples can be found in `/jhbuild/webkit-sdk-deps.modules`
+to use the same workflow. Examples can be found in `/jhbuild/*.modules`
 (our default modules) and  `/jhbuild/jhbuild/modulesets/`. You can then build a
 custom moduleset with `jhbuild -m ~/myproject.modules build myproject` for example.
 

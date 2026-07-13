@@ -90,16 +90,8 @@
     </dependencies>
   </meson>
 
-  <meson id="dav1d" mesonargs="-Denable_examples=false -Denable_tests=false -Denable_tools=false -Dxxhash_muxer=disabled">
-    <branch repo="github.com"
-            module="videolan/dav1d.git"
-            tag="1.5.3"
-            version="1.5.3" />
-  </meson>
-
   <meson id="gst-plugins-rs" mesonargs="-Ddoc=disabled -Dexamples=disabled -Dtests=disabled --auto-features=disabled -Daudiofx=enabled -Dclosedcaption=enabled -Ddav1d=enabled -Drtp=enabled -Disobmff=enabled">
     <dependencies>
-      <dep package="dav1d"/>
       <dep package="gstreamer"/>
     </dependencies>
     <branch repo="freedesktop.org"

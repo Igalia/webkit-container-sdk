@@ -147,6 +147,8 @@ RUN git clone https://github.com/ystreet/librice.git && \
 # Copy jhbuild helper files and do the initial build & install
 COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
+COPY /jhbuild/triggers /usr/local/share/jhbuild/triggers
+COPY /rootfs/etc/ld.so.conf.d/wkdev-sdk.conf /etc/ld.so.conf.d/wkdev-sdk.conf
 
 WORKDIR /jhbuild
 RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
@@ -154,6 +156,7 @@ RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
     ./autogen.sh --prefix=/usr/local && \
     make && \
     make install && \
+    install -d /jhbuild/install/lib/swift/linux /jhbuild/install/lib/swift/host /jhbuild/install/lib/swift/pm/llbuild && \
     export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
     jhbuild --exit-on-error --no-interact build && \
     rm -r /jhbuild/checkout/llvm-project && \

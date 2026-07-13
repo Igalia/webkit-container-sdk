@@ -140,17 +140,18 @@ RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git --branch=pgriffis/multi
     make install && \
     rm -r /jhbuild/jhbuild
 
-RUN --mount=type=cache,target=/var/cache/apt \
+RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/tmp/jhbuild/downloads \
     ${APT_UPDATE} && apt-get install -y swiftlang && \
     export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
     jhbuild --exit-on-error --no-interact build swift-toolchain && \
     apt-get remove -y swiftlang && \
-    rm -r /jhbuild/checkout /var/tmp/jhbuild/ /jhbuild/install/lib/swift_static && \
+    rm -r /jhbuild/checkout /var/tmp/jhbuild/build /jhbuild/install/lib/swift_static && \
     ${APT_AUTOREMOVE} && ${APT_CLEAN}
 
-RUN export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
+RUN --mount=type=cache,target=/var/tmp/jhbuild/downloads \
+    export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
     jhbuild --exit-on-error --no-interact build && \
-    rm -r /jhbuild/checkout /var/tmp/jhbuild/
+    rm -r /jhbuild/checkout /var/tmp/jhbuild/build
 
 # Prevent APT from installing toolchain packages that conflict with the Swift-built
 # LLVM toolchain. This must happen after swiftlang has bootstrapped that toolchain.

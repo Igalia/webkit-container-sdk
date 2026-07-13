@@ -20,8 +20,7 @@ ARG APT_BUILDDEP="apt-get --assume-yes build-dep"
 ARG APT_UPGRADE="apt-get --assume-yes upgrade"
 ARG APT_INSTALL="apt-get --assume-yes install --no-install-recommends"
 ARG APT_AUTOREMOVE="apt-get --assume-yes autoremove"
-ARG APT_CLEAN="apt-get clean"
-ARG APT_RM_CACHES="rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*"
+ARG APT_CLEAN="rm -rf /var/lib/apt/lists"
 
 # Disable prompt during package configuration
 ENV DEBIAN_FRONTEND noninteractive
@@ -43,10 +42,10 @@ RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/no-sandbox
 
 # Update package list, upgrade to latest version, install necessary packages for
 # early bootstrapping: .deb package configuration + locale generation + curl for downloading GPG keys.
-RUN ${APT_UPDATE} && \
+RUN --mount=type=cache,target=/var/cache/apt \
+    ${APT_UPDATE} && \
     ${APT_INSTALL} apt-utils ca-certificates curl dialog libterm-readline-gnu-perl locales unminimize && \
-    ${APT_UPGRADE} && ${APT_AUTOREMOVE} && \
-    ${APT_CLEAN} && ${APT_RM_CACHES}
+    ${APT_UPGRADE} && ${APT_AUTOREMOVE} && ${APT_CLEAN}
 
 # Disable exclusion of locales / translations / documentation (default in Ubuntu images)
 RUN yes | /usr/bin/unminimize
@@ -78,7 +77,8 @@ ARG WEBKIT_COMMIT=e6ef72584f2d1153f9d9e51af2f87f5ffc2a8712
 # default sources point to {archive,securyt}.ubuntu.com. There, we need to
 # generate the corresponding ubuntu-armhf.sources as well as rewrite
 # ubuntu.sources to only use the default sources for amd64.
-RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources && \
+RUN --mount=type=cache,target=/var/cache/apt \
+    sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources && \
     HOST_ARCH="$(dpkg --print-architecture)" && \
     sed -r 's@(archive|security).ubuntu.com/ubuntu@ports.ubuntu.com/ubuntu-ports@g' </etc/apt/sources.list.d/ubuntu.sources >/etc/apt/sources.list.d/ubuntu-armhf.sources && \
     sed -i -r "s/^(Components:.*)/\1\nArchitectures: ${HOST_ARCH}/" /etc/apt/sources.list.d/ubuntu.sources && \
@@ -104,8 +104,7 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     yes | ./Tools/wpe/install-dependencies && \
     cd .. && \
     rm -rf WebKit && \
-    ${APT_AUTOREMOVE} && \
-    ${APT_CLEAN} && ${APT_RM_CACHES}
+    ${APT_AUTOREMOVE} && ${APT_CLEAN}
 
 # Add Rust environment.
 ENV RUSTUP_HOME="/opt/rust" \
@@ -141,12 +140,13 @@ RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git --branch=pgriffis/multi
     make install && \
     rm -r /jhbuild/jhbuild
 
-RUN ${APT_UPDATE} && apt-get install -y swiftlang && \
+RUN --mount=type=cache,target=/var/cache/apt \
+    ${APT_UPDATE} && apt-get install -y swiftlang && \
     export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
     jhbuild --exit-on-error --no-interact build swift-toolchain && \
     apt-get remove -y swiftlang && \
     rm -r /jhbuild/checkout /var/tmp/jhbuild/ /jhbuild/install/lib/swift_static && \
-    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_RM_CACHES}
+    ${APT_AUTOREMOVE} && ${APT_CLEAN}
 
 RUN export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
     jhbuild --exit-on-error --no-interact build && \

@@ -9,11 +9,13 @@ tarballdir = '/jhbuild/downloads'
 modulesets_dir = '/jhbuild'
 
 if 'WKDEV_IN_IMAGE_BUILD' in os.environ:
-    # In our image build we put these in a cached directory.
-    checkoutroot = '/jhbuild/checkout'
+    # In our image build we put these in a tmp directory not kept.
+    checkoutroot = '/var/tmp/jhbuild/checkout'
     buildroot = '/var/tmp/jhbuild/build'
-    tarballdir = '/var/tmp/jhbuild/downloads'
     shallow_clone = True
+    # And we put this in a cached directory.
+    tarballdir = '/var/cache/jhbuild/downloads'
+    
 else:
     checkoutroot = os.path.expanduser('~/checkout')
 

@@ -132,7 +132,8 @@ COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
 COPY /jhbuild/webkit-sdk-deps.modules /jhbuild/webkit-sdk-deps.modules
 
 WORKDIR /jhbuild
-RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
+RUN --mount=type=cache,target=/var/cache/jhbuild \
+    git clone https://gitlab.gnome.org/GNOME/jhbuild.git && \
     cd jhbuild && \
     ./autogen.sh --prefix=/usr/local && \
     make && \

@@ -70,13 +70,6 @@
     </dependencies>
   </meson>
 
-  <meson id="openh264" mesonargs="-Dtests=disabled">
-    <branch repo="github.com"
-            checkoutdir="openh264"
-            module="cisco/openh264.git"
-            tag="v2.6.0" >
-    </branch>
-  </meson>
 
   <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=disabled -Dintrospection=disabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dgst-examples=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Dwebrtc=enabled -Dgst-plugins-ugly:gpl=enabled -Dgst-plugins-bad:gpl=enabled -Dgpl=enabled -Dges=disabled -Drtsp_server=disabled -Dqt5=disabled -Dqt6=disabled">
     <branch repo="freedesktop.org"
@@ -84,9 +77,6 @@
             module="gstreamer/gstreamer.git"
             tag="1.28.4">
     </branch>
-    <dependencies>
-      <dep package="openh264"/>
-    </dependencies>
   </meson>
 
   <meson id="gst-plugins-rs" mesonargs="-Ddoc=disabled -Dexamples=disabled -Dtests=disabled --auto-features=disabled -Daudiofx=enabled -Dclosedcaption=enabled -Ddav1d=enabled -Drtp=enabled -Disobmff=enabled">

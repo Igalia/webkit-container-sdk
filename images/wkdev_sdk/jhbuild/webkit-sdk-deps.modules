@@ -20,6 +20,7 @@
   <metamodule id="swift-libs">
     <dependencies>
       <dep package="swift-foundation"/>
+      <dep package="swift-driver"/>
     </dependencies>
   </metamodule>
 
@@ -273,7 +274,7 @@
   >
     <branch
         repo="github-tarball"
-        checkoutdir="swift-corelibs-libdispatch-standalone"
+        checkoutdir="swift-libdispatch--corelibs-libdispatch"
         module="swiftlang/swift-corelibs-libdispatch/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
         rename-tarball="swift-corelibs-libdispatch-swift-${version}-RELEASE.tar.gz"
         version="6.3.3"
@@ -318,7 +319,7 @@
                    -DSwiftFoundation_MACRO=${buildroot}/swift-foundation/lib
                    -D_SwiftFoundation_SourceDIR=${checkoutroot}/swift-foundation
                    -D_SwiftFoundationICU_SourceDIR=${checkoutroot}/swift-foundation-icu
-                   -D_SwiftCollections_SourceDIR=${checkoutroot}/swift-collections"
+                   -D_SwiftCollections_SourceDIR=${checkoutroot}/swift-foundation--collections"
   >
     <branch
         repo="github-tarball"
@@ -346,7 +347,7 @@
     />
     <branch
         repo="github-tarball"
-        checkoutdir="swift-collections"
+        checkoutdir="swift-foundation--collections"
         module="apple/swift-collections/archive/refs/tags/${version}.tar.gz"
         rename-tarball="swift-collections-${version}.tar.gz"
         version="1.1.6"
@@ -355,6 +356,74 @@
     <dependencies>
       <dep package="swift-libdispatch"/>
       <dep package="swift-foundation-macros"/>
+    </dependencies>
+  </cmake>
+
+  <!--
+      Most, but not all, cmake projects in Swift assume it is built statically, I went through
+      them all and made them shared once, it largely works, but we shouldn't maintain that ourselves.
+      So I've tried to respect the defaults of just bundling where it makes sense, I've noted exceptions.
+
+      This sounds nice except that they all continue to install private headers and static libraries that
+      we have to remove anyway.
+
+      Since multiple projects bundle the same source I try to avoid conflicts with `checkoutdir` by prefixing
+      the module name. This avoids mistakes where you patch it for one module and not another.
+  -->
+
+  <!-- Projects like to use this statically except it installs system tools, headers, etc.
+       It's actually a shared project, so let's treat it as such. -->
+  <cmake id="swift-llbuild"
+         cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                    -DCMAKE_CXX_COMPILER=clang++
+                    -DBUILD_SHARED_LIBS=ON
+                    -DBUILD_TESTING=OFF
+                    -DLLBUILD_SUPPORT_BINDINGS=Swift">
+    <branch repo="github-tarball"
+            checkoutdir="swift-llbuild"
+            module="swiftlang/swift-llbuild/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-llbuild-${version}.tar.gz"
+            version="6.3.3"
+            hash="sha256:89d9267a1ae741c4d12a58fa3f81a3d07985b5947795eb2edbb41ead373f6a46">
+      <patch file="swift-llbuild-install-package.patch" strip="1"/>
+      <patch file="swift-llbuild-hide-private-symbols.patch" strip="1"/>
+    </branch>
+    <dependencies>
+      <dep package="swift-foundation"/>
+    </dependencies>
+  </cmake>
+
+  <cmake id="swift-driver"
+         cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                    -DCMAKE_CXX_COMPILER=clang++
+                    -DBUILD_SHARED_LIBS=OFF
+                    -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+                    -DFETCHCONTENT_SOURCE_DIR_ARGUMENTPARSER=${checkoutroot}/swift-driver--argument-parser
+                    -DFETCHCONTENT_SOURCE_DIR_TOOLSSUPPORTCORE=${checkoutroot}/swift-driver---tools-support-core">
+    <branch repo="github-tarball"
+            checkoutdir="swift-driver"
+            module="swiftlang/swift-driver/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-driver-${version}.tar.gz"
+            version="6.3.3"
+            hash="sha256:d4fcada9b5ad99ed9194b3fae35de234a56d80e833dc19016ac8e904dcc7cd76">
+      <patch file="swift-driver-install-rpath.patch" strip="1"/>
+      <patch file="swift-driver-exclude-vendored-from-install.patch" strip="1"/>
+      <patch file="swift-driver-do-not-install-internal-libraries.patch" strip="1"/>
+    </branch>
+    <branch repo="github-tarball"
+            checkoutdir="swift-driver--argument-parser"
+            module="apple/swift-argument-parser/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-argument-parser-${version}.tar.gz"
+            version="1.6.1"
+            hash="sha256:d2fbb15886115bb2d9bfb63d4c1ddd4080cbb4bfef2651335c5d3b9dd5f3c8ba"/>
+    <branch repo="github-tarball"
+            checkoutdir="swift-driver---tools-support-core"
+            module="swiftlang/swift-tools-support-core/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-tools-support-core-${version}.tar.gz"
+            version="6.3.3"
+            hash="sha256:df4dc7e94360d3af711b78d28691df1082faf389d0db78c0ea702e2217a4036f"/>
+    <dependencies>
+      <dep package="swift-llbuild"/>
     </dependencies>
   </cmake>
 

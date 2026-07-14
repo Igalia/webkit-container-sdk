@@ -154,6 +154,7 @@
                    -DCMAKE_PROGRAM_PATH='/usr/libexec/swift/bin'
                    -DCMAKE_C_COMPILER=clang
                    -DCMAKE_CXX_COMPILER=clang++
+                   -DCMAKE_LINKER_TYPE=LLD
                    -DPython3_EXECUTABLE=/usr/bin/python3
                    -C ${checkoutroot}/swift/cmake/caches/Linux-x86_64.cmake
                    -C /jhbuild/swift-distribution-extras.cmake
@@ -268,6 +269,7 @@
         id="swift-libdispatch"
         cmakeargs="-DCMAKE_BUILD_TYPE=Release
                    -DCMAKE_C_COMPILER=clang
+                   -DCMAKE_LINKER_TYPE=LLD
                    -DBUILD_SHARED_LIBS=ON
                    -DENABLE_SWIFT=ON
                    -DBUILD_TESTING=OFF"
@@ -293,6 +295,7 @@
         cmakedir="Sources/FoundationMacros"
         cmakeargs="-DCMAKE_BUILD_TYPE=Release
                    -DCMAKE_C_COMPILER=clang
+                   -DCMAKE_LINKER_TYPE=LLD
                    -DFETCHCONTENT_FULLY_DISCONNECTED=ON"
   >
     <branch
@@ -312,6 +315,7 @@
         id="swift-foundation"
         cmakeargs="-DCMAKE_BUILD_TYPE=Release
                    -DCMAKE_C_COMPILER=clang
+                   -DCMAKE_LINKER_TYPE=LLD
                    -DBUILD_SHARED_LIBS=ON
                    -DFOUNDATION_BUILD_TOOLS=OFF
                    -DFOUNDATION_BUILD_NETWORKING=ON
@@ -376,6 +380,7 @@
   <cmake id="swift-llbuild"
          cmakeargs="-DCMAKE_BUILD_TYPE=Release
                     -DCMAKE_CXX_COMPILER=clang++
+                    -DCMAKE_LINKER_TYPE=LLD
                     -DBUILD_SHARED_LIBS=ON
                     -DBUILD_TESTING=OFF
                     -DLLBUILD_SUPPORT_BINDINGS=Swift">
@@ -396,6 +401,7 @@
   <cmake id="swift-driver"
          cmakeargs="-DCMAKE_BUILD_TYPE=Release
                     -DCMAKE_CXX_COMPILER=clang++
+                    -DCMAKE_LINKER_TYPE=LLD
                     -DBUILD_SHARED_LIBS=OFF
                     -DFETCHCONTENT_FULLY_DISCONNECTED=ON
                     -DFETCHCONTENT_SOURCE_DIR_ARGUMENTPARSER=${checkoutroot}/swift-driver--argument-parser

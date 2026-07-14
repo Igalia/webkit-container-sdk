@@ -24,4 +24,4 @@ check_sysdeps = False
 # List of modulesets to use
 moduleset = [ '/jhbuild/webkit-sdk-deps.modules' ]
 # A list of the modules to build.
-modules = [ 'webkit-sdk-deps' ]
+modules = [ 'webkit-sdk-deps', 'swift-libs' ]

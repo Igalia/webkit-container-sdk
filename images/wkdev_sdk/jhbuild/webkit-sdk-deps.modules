@@ -17,6 +17,12 @@
     </dependencies>
   </metamodule>
 
+  <metamodule id="swift-libs">
+    <dependencies>
+      <dep package="swift-foundation"/>
+    </dependencies>
+  </metamodule>
+
   <!-- Please use http/https to access repositories to be friendly to users stuck behind firewalls. -->
   <repository type="tarball" name="wpewebkit.org"
       href="https://wpewebkit.org/releases/"/>
@@ -252,6 +258,104 @@
             version="6.3.3"
             hash="sha256:1ca338ea222031f5d67fa34922a55111ffb67524197f33a6be0540abaafe0b52"
     />
+  </cmake>
+
+ <!-- The unified Swift build bootstraps libdispatch without its Swift
+       overlay. Rebuild it with the completed compiler so Foundation gets the
+       Dispatch module as well as the C runtime. -->
+  <cmake
+        id="swift-libdispatch"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_C_COMPILER=clang
+                   -DBUILD_SHARED_LIBS=ON
+                   -DENABLE_SWIFT=ON
+                   -DBUILD_TESTING=OFF"
+  >
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-corelibs-libdispatch-standalone"
+        module="swiftlang/swift-corelibs-libdispatch/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-corelibs-libdispatch-swift-${version}-RELEASE.tar.gz"
+        version="6.3.3"
+        hash="sha256:c3a61c08387937622a291e08e64eb4ec0be07f1df252574552641129057951bb"
+    >
+      <patch file="swift-libdispatch-install-cmake.patch" strip="1"/>
+    </branch>
+    <dependencies>
+      <dep package="swift-toolchain"/>
+    </dependencies>
+  </cmake>
+
+  <!-- This is built twice, first just for its macros. -->
+  <cmake
+        id="swift-foundation-macros"
+        cmakedir="Sources/FoundationMacros"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_C_COMPILER=clang
+                   -DFETCHCONTENT_FULLY_DISCONNECTED=ON"
+  >
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation"
+        module="swiftlang/swift-foundation/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-foundation-swift-${version}-RELEASE.tar.gz"
+        version="6.3.3"
+        hash="sha256:23972ee7ef5e103fa2a9df2704abce787b0f64073fec3df1846c2f2039bf0f3d"
+    />
+    <dependencies>
+      <dep package="swift-toolchain"/>
+    </dependencies>
+  </cmake>
+
+  <cmake
+        id="swift-foundation"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_C_COMPILER=clang
+                   -DBUILD_SHARED_LIBS=ON
+                   -DFOUNDATION_BUILD_TOOLS=OFF
+                   -DFOUNDATION_BUILD_NETWORKING=ON
+                   -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+                   -DSwiftFoundation_MACRO=${buildroot}/swift-foundation/lib
+                   -D_SwiftFoundation_SourceDIR=${checkoutroot}/swift-foundation
+                   -D_SwiftFoundationICU_SourceDIR=${checkoutroot}/swift-foundation-icu
+                   -D_SwiftCollections_SourceDIR=${checkoutroot}/swift-collections"
+  >
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-corelibs-foundation"
+        module="swiftlang/swift-corelibs-foundation/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-corelibs-foundation-swift-${version}-RELEASE.tar.gz"
+        version="6.3.3"
+        hash="sha256:cfba08125b15c3138f6d1e2b6cf5058ef2f294f3a08c54ef322d903a5002c20d"
+    />
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation"
+        module="swiftlang/swift-foundation/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-foundation-swift-${version}-RELEASE.tar.gz"
+        version="6.3.3"
+        hash="sha256:23972ee7ef5e103fa2a9df2704abce787b0f64073fec3df1846c2f2039bf0f3d"
+    />
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation-icu"
+        module="swiftlang/swift-foundation-icu/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-foundation-icu-swift-${version}-RELEASE.tar.gz"
+        version="6.3.3"
+        hash="sha256:3568e41730bce792bb90fbc592ad37df319a62352587ff134a8e554751063cf8"
+    />
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-collections"
+        module="apple/swift-collections/archive/refs/tags/${version}.tar.gz"
+        rename-tarball="swift-collections-${version}.tar.gz"
+        version="1.1.6"
+        hash="sha256:2f558b33b6eba5b0c263110d7cb1a11b59d63059e845dc1984c65359e36f29da"
+    />
+    <dependencies>
+      <dep package="swift-libdispatch"/>
+      <dep package="swift-foundation-macros"/>
+    </dependencies>
   </cmake>
 
   <!-- Everything in this section is just for Epiphany. -->

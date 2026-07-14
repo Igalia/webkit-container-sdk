@@ -19,6 +19,7 @@ set(LLVM_BUILTIN_TARGETS "${SWIFT_NATIVE_HOST_TRIPLE}" CACHE STRING "" FORCE)
 list(APPEND SWIFT_INSTALL_COMPONENTS
   stdlib
   sdk-overlay
+  swift-syntax-lib
 )
 list(REMOVE_DUPLICATES SWIFT_INSTALL_COMPONENTS)
 set(SWIFT_INSTALL_COMPONENTS
@@ -70,6 +71,7 @@ list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS
 list(APPEND LLVM_DISTRIBUTION_COMPONENTS
   stdlib
   sdk-overlay
+  swift-syntax-lib
   clangd
   clang-format
   clang-tidy

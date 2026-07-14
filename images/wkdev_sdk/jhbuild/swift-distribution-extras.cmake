@@ -1,5 +1,6 @@
-# The default triple ends up being x86_64-unknown-linux-gnu but
-#   Swift expects x86_64-pc-linux-gnu
+# Ubuntu's x86_64 bootstrap Swift runtime modules use the `pc` vendor, while
+# aarch64 uses `unknown`.  Normalize the compiler triple before overriding the
+# Linux-x86_64 cache's target variables.
 string(REPLACE ";" ":" SWIFT_PROGRAM_PATH "${CMAKE_PROGRAM_PATH}")
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -E env
@@ -10,6 +11,11 @@ execute_process(
   RESULT_VARIABLE SWIFT_NATIVE_HOST_TRIPLE_RESULT)
 if(NOT SWIFT_NATIVE_HOST_TRIPLE_RESULT EQUAL 0 OR NOT SWIFT_NATIVE_HOST_TRIPLE)
   message(FATAL_ERROR "Could not determine the native compiler triple")
+endif()
+if(SWIFT_NATIVE_HOST_TRIPLE MATCHES "^x86_64-")
+  set(SWIFT_NATIVE_HOST_TRIPLE "x86_64-pc-linux-gnu")
+elseif(SWIFT_NATIVE_HOST_TRIPLE MATCHES "^aarch64-")
+  set(SWIFT_NATIVE_HOST_TRIPLE "aarch64-unknown-linux-gnu")
 endif()
 set(LLVM_HOST_TRIPLE "${SWIFT_NATIVE_HOST_TRIPLE}" CACHE STRING "" FORCE)
 set(LLVM_DEFAULT_TARGET_TRIPLE "${SWIFT_NATIVE_HOST_TRIPLE}" CACHE STRING "" FORCE)

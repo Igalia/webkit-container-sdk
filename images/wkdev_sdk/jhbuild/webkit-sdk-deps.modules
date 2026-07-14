@@ -21,6 +21,7 @@
     <dependencies>
       <dep package="swift-foundation"/>
       <dep package="swift-driver"/>
+      <dep package="swift-format"/>
     </dependencies>
   </metamodule>
 
@@ -430,6 +431,40 @@
             hash="sha256:df4dc7e94360d3af711b78d28691df1082faf389d0db78c0ea702e2217a4036f"/>
     <dependencies>
       <dep package="swift-llbuild"/>
+    </dependencies>
+  </cmake>
+
+  <cmake id="swift-format"
+         cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                    -DCMAKE_C_COMPILER=clang
+                    -DCMAKE_LINKER_TYPE=LLD
+                    -DBUILD_SHARED_LIBS=OFF
+                    -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+                    -DFETCHCONTENT_SOURCE_DIR_ARGUMENTPARSER=${checkoutroot}/swift-format--argument-parser
+                    -DFETCHCONTENT_SOURCE_DIR_MARKDOWN=${checkoutroot}/swift-format--markdown
+                    -Dcmark-gfm_DIR=${prefix}/lib/cmake">
+    <branch repo="github-tarball"
+            checkoutdir="swift-format"
+            module="swiftlang/swift-format/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-format-${version}.tar.gz"
+            version="6.3.3"
+            hash="sha256:83f8e638f64f546a98ce92331febaa095f840456123a702fe0bf537634f0dcdd">
+      <patch file="swift-format-bundle-dependencies.patch" strip="1"/>
+    </branch>
+    <branch repo="github-tarball"
+            checkoutdir="swift-format--argument-parser"
+            module="apple/swift-argument-parser/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-argument-parser-${version}.tar.gz"
+            version="1.2.3"
+            hash="sha256:4a10bbef290a2167c5cc340b39f1f7ff6a8cf4e1b5433b68548bf5f1e542e908"/>
+    <branch repo="github-tarball"
+            checkoutdir="swift-format--markdown"
+            module="swiftlang/swift-markdown/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-markdown-${version}.tar.gz"
+            version="6.3.3"
+            hash="sha256:93684a45e81577a8640292e406c7e645adf9c9e143c59527e833cd49609c98cf"/>
+    <dependencies>
+      <dep package="swift-foundation"/>
     </dependencies>
   </cmake>
 

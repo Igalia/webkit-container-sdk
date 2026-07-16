@@ -1,0 +1,24 @@
+diff --git a/cmake/modules/Libdispatch.cmake b/cmake/modules/Libdispatch.cmake
+index e50973918f1..1d50af6ee85 100644
+--- a/cmake/modules/Libdispatch.cmake
++++ b/cmake/modules/Libdispatch.cmake
+@@ -143,6 +143,19 @@ foreach(sdk ${DISPATCH_SDKS})
+         BUILD_ALWAYS
+         1)
+ 
++      swift_install_in_component(
++        FILES
++          "${SWIFTLIB_DIR}/${SWIFT_SDK_${sdk}_LIB_SUBDIR}/${SWIFT_SDK_${sdk}_SHARED_LIBRARY_PREFIX}dispatch${SWIFT_SDK_${sdk}_SHARED_LIBRARY_SUFFIX}"
++          "${SWIFTLIB_DIR}/${SWIFT_SDK_${sdk}_LIB_SUBDIR}/${SWIFT_SDK_${sdk}_SHARED_LIBRARY_PREFIX}BlocksRuntime${SWIFT_SDK_${sdk}_SHARED_LIBRARY_SUFFIX}"
++        DESTINATION
++          "lib${LLVM_LIBDIR_SUFFIX}/swift/${SWIFT_SDK_${sdk}_LIB_SUBDIR}"
++        COMPONENT stdlib
++        PERMISSIONS
++          OWNER_READ OWNER_WRITE OWNER_EXECUTE
++          GROUP_READ GROUP_EXECUTE
++          WORLD_READ WORLD_EXECUTE)
++      add_dependencies(stdlib "${LIBDISPATCH_VARIANT_NAME}-install")
++
+       ExternalProject_Get_Property("${LIBDISPATCH_VARIANT_NAME}" install_dir)
+ 
+       if(NOT SWIFT_BUILT_STANDALONE AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")

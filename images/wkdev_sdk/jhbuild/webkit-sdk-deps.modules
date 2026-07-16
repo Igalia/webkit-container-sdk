@@ -5,6 +5,7 @@
 
   <metamodule id="webkit-sdk-deps">
     <dependencies>
+      <dep package="swift-toolchain"/>
       <dep package="dicts"/>
       <dep package="libwpe"/>
       <dep package="wpebackend-fdo"/>
@@ -13,6 +14,14 @@
       <dep package="sparkle-cdm"/>
       <dep package="libspiel"/>
       <dep package="openxr"/>
+    </dependencies>
+  </metamodule>
+
+  <metamodule id="swift-libs">
+    <dependencies>
+      <dep package="swift-foundation"/>
+      <dep package="swift-driver"/>
+      <dep package="swift-format"/>
     </dependencies>
   </metamodule>
 
@@ -70,13 +79,6 @@
     </dependencies>
   </meson>
 
-  <meson id="openh264" mesonargs="-Dtests=disabled">
-    <branch repo="github.com"
-            checkoutdir="openh264"
-            module="cisco/openh264.git"
-            tag="v2.6.0" >
-    </branch>
-  </meson>
 
   <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=disabled -Dintrospection=disabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dgst-examples=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Dwebrtc=enabled -Dgst-plugins-ugly:gpl=enabled -Dgst-plugins-bad:gpl=enabled -Dgpl=enabled -Dges=disabled -Drtsp_server=disabled -Dqt5=disabled -Dqt6=disabled">
     <branch repo="freedesktop.org"
@@ -84,21 +86,10 @@
             module="gstreamer/gstreamer.git"
             tag="1.28.4">
     </branch>
-    <dependencies>
-      <dep package="openh264"/>
-    </dependencies>
-  </meson>
-
-  <meson id="dav1d" mesonargs="-Denable_examples=false -Denable_tests=false -Denable_tools=false -Dxxhash_muxer=disabled">
-    <branch repo="github.com"
-            module="videolan/dav1d.git"
-            tag="1.5.3"
-            version="1.5.3" />
   </meson>
 
   <meson id="gst-plugins-rs" mesonargs="-Ddoc=disabled -Dexamples=disabled -Dtests=disabled --auto-features=disabled -Daudiofx=enabled -Dclosedcaption=enabled -Ddav1d=enabled -Drtp=enabled -Disobmff=enabled">
     <dependencies>
-      <dep package="dav1d"/>
       <dep package="gstreamer"/>
     </dependencies>
     <branch repo="freedesktop.org"
@@ -142,6 +133,339 @@
 	    rename-tarball="OpenXR-SDK-release-${version}.tar.gz"
 	    version="1.1.59.1"
 	    hash="sha256:f66c1a308a60556c79b723cb0b14bcc51913de8382632ba19af2d5eaf54add50"/>
+  </cmake>
+
+  <!-- This tries to match the official Swift distribution in features, plus clang tools we want, minus some static libraries. -->
+  <!-- Some important details to get right here:
+    Ubuntu ships llvm-21 but their swiftlang is based on llvm-17. We cannot mix the two and set CMAKE_PROGRAM_PATH.
+    On top of that we are building llvm-21 here and the swift tools try to use that immediately without SWIFT_BUILD_RUNTIME_WITH_HOST_COMPILER.
+    SWIFT_STDLIB_ENABLE_LTO is broken, it mixes up output from the bundled and host LLVM anyway.
+    Swift mixes up using the plugin-server of bundled and host (swift-distribution-extras.cmake).
+
+    LLVM/Clang support building as shared libraries but it appears Swift has never tested that.
+    CLANG_LINK_CLANG_DYLIB is deeply broken, swift pulls in static objects from clang in many places.
+    LLVM_LINK_LLVM_DYLIB is salvagable with a small patch (swift-link-llvm-dylib.patch).
+    SWIFT_BUILD_DYNAMIC_STDLIB almost works... We need to actually install the shared library.
+    All of these are wins, libLLVM is massive (~114MB * 2 I think), Swift stdlib (~15MB), clang-cpp (~60MB * a lot).
+  -->
+  <cmake
+        id="swift-toolchain"
+        cmakedir="llvm"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_PROGRAM_PATH='/usr/libexec/swift/bin'
+                   -DCMAKE_C_COMPILER=clang
+                   -DCMAKE_CXX_COMPILER=clang++
+                   -DCMAKE_LINKER_TYPE=LLD
+                   -DPython3_EXECUTABLE=/usr/bin/python3
+                   -C ${checkoutroot}/swift/cmake/caches/Linux-x86_64.cmake
+                   -C /jhbuild/swift-distribution-extras.cmake
+                   -DLLVM_USE_LINKER=lld
+                   -DLLVM_ENABLE_LTO=Thin
+                   -DLLVM_EXTERNAL_PROJECTS='cmark;swift'
+                   -DLLVM_EXTERNAL_CMARK_SOURCE_DIR=${checkoutroot}/cmark
+                   -DLLVM_EXTERNAL_SWIFT_SOURCE_DIR=${checkoutroot}/swift
+                   -DLLVM_TARGETS_TO_BUILD='AArch64;X86'
+                   -DLLVM_ENABLE_RUNTIMES=compiler-rt
+                   -DLLVM_ENABLE_ZLIB=ON
+                   -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
+                   -DCOMPILER_RT_BUILD_XRAY=OFF
+                   -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF
+                   -DCOMPILER_RT_BUILD_ORC=OFF
+                   -DLLDB_BUILD_INTEL_MPX=OFF
+                   -DLLDB_BUILD_INTEL_PT=OFF
+                   -DLLDB_ENABLE_LUA=OFF
+                   -DLLDB_INCLUDE_TESTS=OFF
+                   -DLLDB_ENABLE_PROTOCOL_SERVERS=OFF
+                   -DLLVM_BUILD_LLVM_DYLIB=ON
+                   -DLLVM_LINK_LLVM_DYLIB=ON
+                   -DLLVM_TOOL_LLVM_SHLIB_BUILD=ON
+                   -DCLANG_LINK_CLANG_DYLIB=OFF
+                   -DSWIFT_PATH_TO_CMARK_BUILD=${buildroot}/llvm-project/tools/cmark
+                   -DSWIFT_PATH_TO_LIBDISPATCH_SOURCE=${checkoutroot}/swift-corelibs-libdispatch
+                   -DSWIFT_PATH_TO_SWIFT_SYNTAX_SOURCE=${checkoutroot}/swift-syntax
+                   -DSWIFT_PATH_TO_STRING_PROCESSING_SOURCE=${checkoutroot}/swift-experimental-string-processing
+                   -DSWIFT_ENABLE_DISPATCH=ON
+                   -DSWIFT_ENABLE_SYNCHRONIZATION=ON
+                   -DSWIFT_ENABLE_VOLATILE=ON
+                   -DSWIFT_ENABLE_RUNTIME_MODULE=ON
+                   -DSWIFT_ENABLE_BACKTRACING=ON
+                   -DSWIFT_ENABLE_EXPERIMENTAL_CONCURRENCY=ON
+                   -DSWIFT_ENABLE_EXPERIMENTAL_DISTRIBUTED=ON
+                   -DSWIFT_ENABLE_EXPERIMENTAL_STRING_PROCESSING=ON
+                   -DSWIFT_ENABLE_EXPERIMENTAL_OBSERVATION=ON
+                   -DSWIFT_ENABLE_EXPERIMENTAL_DIFFERENTIABLE_PROGRAMMING=ON
+                   -DSWIFT_BUILD_RUNTIME_WITH_HOST_COMPILER=ON
+                   -DSWIFT_BUILD_DYNAMIC_STDLIB=ON
+                   -DSWIFT_BUILD_DYNAMIC_SDK_OVERLAY=ON
+                   -DSWIFT_BUILD_STATIC_STDLIB=OFF
+                   -DSWIFT_BUILD_STATIC_SDK_OVERLAY=OFF
+                   -DSWIFT_BUILD_REGEX_PARSER_IN_COMPILER=ON
+                   -DSWIFT_BUILD_SWIFT_SYNTAX=ON
+                   -DSWIFT_TOOLS_ENABLE_LTO=Thin
+                   -DSWIFT_TOOL_SWIFT_IDE_TEST_BUILD=OFF
+                   -DSWIFT_TOOL_SWIFT_SCAN_TEST_BUILD=OFF"
+        ninjaargs="distribution"
+        ninjainstallargs="install-distribution-stripped tools/cmark/install/strip"
+    >
+    <branch
+            repo="github-tarball"
+            checkoutdir="llvm-project"
+            module="swiftlang/llvm-project/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="llvm-project-swift-${version}-RELEASE.tar.gz"
+            version="6.3.3"
+            hash="sha256:4e0bfc8045a1036d3a49c65d411ffca1e4b6af117ac2bf5070871f375c097610"
+        >
+    </branch>
+    <branch
+            repo="github-tarball"
+            checkoutdir="cmark"
+            module="swiftlang/swift-cmark/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-cmark-swift-${version}-RELEASE.tar.gz"
+            version="6.3.3"
+            hash="sha256:c9f981c268b4d2beca1d43878f5dd1d69dc629e62157bc400064d6c6111e2020"
+        >
+    </branch>
+    <branch
+            repo="github-tarball"
+            checkoutdir="swift-corelibs-libdispatch"
+            module="swiftlang/swift-corelibs-libdispatch/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-corelibs-libdispatch-swift-${version}-RELEASE.tar.gz"
+            version="6.3.3"
+            hash="sha256:c3a61c08387937622a291e08e64eb4ec0be07f1df252574552641129057951bb"
+        />
+    <branch
+            repo="github-tarball"
+            checkoutdir="swift"
+            module="swiftlang/swift/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-swift-${version}-RELEASE.tar.gz"
+            version="6.3.3"
+            hash="sha256:a96425b6626ede8518423810450763da541fb28501e27009badb6a6f6534c411"
+        >
+      <patch file="swift-link-llvm-dylib.patch" strip="1"/>
+      <patch file="swift-install-libdispatch.patch" strip="1"/>
+      <patch file="swift-fix-triple.patch" strip="1"/>
+    </branch>
+    <branch
+            repo="github-tarball"
+            checkoutdir="swift-syntax"
+            module="swiftlang/swift-syntax/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-syntax-${version}.tar.gz"
+            version="603.0.2"
+            hash="sha256:4858b54834fae301e36ea63529302d51ce0b4de9da48a465ebab6f6f3d096cf2"
+    />
+    <branch
+            repo="github-tarball"
+            checkoutdir="swift-experimental-string-processing"
+            module="swiftlang/swift-experimental-string-processing/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-experimental-string-processing-swift-${version}-RELEASE.tar.gz"
+            version="6.3.3"
+            hash="sha256:1ca338ea222031f5d67fa34922a55111ffb67524197f33a6be0540abaafe0b52"
+    />
+  </cmake>
+
+ <!-- The unified Swift build bootstraps libdispatch without its Swift
+       overlay. Rebuild it with the completed compiler so Foundation gets the
+       Dispatch module as well as the C runtime. -->
+  <cmake
+        id="swift-libdispatch"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_C_COMPILER=clang
+                   -DCMAKE_LINKER_TYPE=LLD
+                   -DBUILD_SHARED_LIBS=ON
+                   -DENABLE_SWIFT=ON
+                   -DBUILD_TESTING=OFF"
+  >
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-libdispatch--corelibs-libdispatch"
+        module="swiftlang/swift-corelibs-libdispatch/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-corelibs-libdispatch-swift-${version}-RELEASE.tar.gz"
+        version="6.3.3"
+        hash="sha256:c3a61c08387937622a291e08e64eb4ec0be07f1df252574552641129057951bb"
+    >
+      <patch file="swift-libdispatch-install-cmake.patch" strip="1"/>
+    </branch>
+    <dependencies>
+      <dep package="swift-toolchain"/>
+    </dependencies>
+  </cmake>
+
+  <!-- This is built twice, first just for its macros. -->
+  <cmake
+        id="swift-foundation-macros"
+        cmakedir="Sources/FoundationMacros"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_C_COMPILER=clang
+                   -DCMAKE_LINKER_TYPE=LLD
+                   -DFETCHCONTENT_FULLY_DISCONNECTED=ON"
+  >
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation"
+        module="swiftlang/swift-foundation/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-foundation-swift-${version}-RELEASE.tar.gz"
+        version="6.3.3"
+        hash="sha256:23972ee7ef5e103fa2a9df2704abce787b0f64073fec3df1846c2f2039bf0f3d"
+    />
+    <dependencies>
+      <dep package="swift-toolchain"/>
+    </dependencies>
+  </cmake>
+
+  <cmake
+        id="swift-foundation"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_C_COMPILER=clang
+                   -DCMAKE_LINKER_TYPE=LLD
+                   -DBUILD_SHARED_LIBS=ON
+                   -DFOUNDATION_BUILD_TOOLS=OFF
+                   -DFOUNDATION_BUILD_NETWORKING=ON
+                   -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+                   -DSwiftFoundation_MACRO=${buildroot}/swift-foundation/lib
+                   -D_SwiftFoundation_SourceDIR=${checkoutroot}/swift-foundation
+                   -D_SwiftFoundationICU_SourceDIR=${checkoutroot}/swift-foundation-icu
+                   -D_SwiftCollections_SourceDIR=${checkoutroot}/swift-foundation--collections"
+  >
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-corelibs-foundation"
+        module="swiftlang/swift-corelibs-foundation/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-corelibs-foundation-swift-${version}-RELEASE.tar.gz"
+        version="6.3.3"
+        hash="sha256:cfba08125b15c3138f6d1e2b6cf5058ef2f294f3a08c54ef322d903a5002c20d"
+    />
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation"
+        module="swiftlang/swift-foundation/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-foundation-swift-${version}-RELEASE.tar.gz"
+        version="6.3.3"
+        hash="sha256:23972ee7ef5e103fa2a9df2704abce787b0f64073fec3df1846c2f2039bf0f3d"
+    />
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation-icu"
+        module="swiftlang/swift-foundation-icu/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-foundation-icu-swift-${version}-RELEASE.tar.gz"
+        version="6.3.3"
+        hash="sha256:3568e41730bce792bb90fbc592ad37df319a62352587ff134a8e554751063cf8"
+    />
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation--collections"
+        module="apple/swift-collections/archive/refs/tags/${version}.tar.gz"
+        rename-tarball="swift-collections-${version}.tar.gz"
+        version="1.1.6"
+        hash="sha256:2f558b33b6eba5b0c263110d7cb1a11b59d63059e845dc1984c65359e36f29da"
+    />
+    <dependencies>
+      <dep package="swift-libdispatch"/>
+      <dep package="swift-foundation-macros"/>
+    </dependencies>
+  </cmake>
+
+  <!--
+      Most, but not all, cmake projects in Swift assume it is built statically, I went through
+      them all and made them shared once, it largely works, but we shouldn't maintain that ourselves.
+      So I've tried to respect the defaults of just bundling where it makes sense, I've noted exceptions.
+
+      This sounds nice except that they all continue to install private headers and static libraries that
+      we have to remove anyway.
+
+      Since multiple projects bundle the same source I try to avoid conflicts with `checkoutdir` by prefixing
+      the module name. This avoids mistakes where you patch it for one module and not another.
+  -->
+
+  <!-- Projects like to use this statically except it installs system tools, headers, etc.
+       It's actually a shared project, so let's treat it as such. -->
+  <cmake id="swift-llbuild"
+         cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                    -DCMAKE_CXX_COMPILER=clang++
+                    -DCMAKE_LINKER_TYPE=LLD
+                    -DBUILD_SHARED_LIBS=ON
+                    -DBUILD_TESTING=OFF
+                    -DLLBUILD_SUPPORT_BINDINGS=Swift">
+    <branch repo="github-tarball"
+            checkoutdir="swift-llbuild"
+            module="swiftlang/swift-llbuild/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-llbuild-${version}.tar.gz"
+            version="6.3.3"
+            hash="sha256:89d9267a1ae741c4d12a58fa3f81a3d07985b5947795eb2edbb41ead373f6a46">
+      <patch file="swift-llbuild-install-package.patch" strip="1"/>
+      <patch file="swift-llbuild-hide-private-symbols.patch" strip="1"/>
+    </branch>
+    <dependencies>
+      <dep package="swift-foundation"/>
+    </dependencies>
+  </cmake>
+
+  <cmake id="swift-driver"
+         cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                    -DCMAKE_CXX_COMPILER=clang++
+                    -DCMAKE_LINKER_TYPE=LLD
+                    -DBUILD_SHARED_LIBS=OFF
+                    -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+                    -DFETCHCONTENT_SOURCE_DIR_ARGUMENTPARSER=${checkoutroot}/swift-driver--argument-parser
+                    -DFETCHCONTENT_SOURCE_DIR_TOOLSSUPPORTCORE=${checkoutroot}/swift-driver---tools-support-core">
+    <branch repo="github-tarball"
+            checkoutdir="swift-driver"
+            module="swiftlang/swift-driver/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-driver-${version}.tar.gz"
+            version="6.3.3"
+            hash="sha256:d4fcada9b5ad99ed9194b3fae35de234a56d80e833dc19016ac8e904dcc7cd76">
+      <patch file="swift-driver-install-rpath.patch" strip="1"/>
+      <patch file="swift-driver-exclude-vendored-from-install.patch" strip="1"/>
+      <patch file="swift-driver-do-not-install-internal-libraries.patch" strip="1"/>
+    </branch>
+    <branch repo="github-tarball"
+            checkoutdir="swift-driver--argument-parser"
+            module="apple/swift-argument-parser/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-argument-parser-${version}.tar.gz"
+            version="1.6.1"
+            hash="sha256:d2fbb15886115bb2d9bfb63d4c1ddd4080cbb4bfef2651335c5d3b9dd5f3c8ba"/>
+    <branch repo="github-tarball"
+            checkoutdir="swift-driver---tools-support-core"
+            module="swiftlang/swift-tools-support-core/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-tools-support-core-${version}.tar.gz"
+            version="6.3.3"
+            hash="sha256:df4dc7e94360d3af711b78d28691df1082faf389d0db78c0ea702e2217a4036f"/>
+    <dependencies>
+      <dep package="swift-llbuild"/>
+    </dependencies>
+  </cmake>
+
+  <cmake id="swift-format"
+         cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                    -DCMAKE_C_COMPILER=clang
+                    -DCMAKE_LINKER_TYPE=LLD
+                    -DBUILD_SHARED_LIBS=OFF
+                    -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+                    -DFETCHCONTENT_SOURCE_DIR_ARGUMENTPARSER=${checkoutroot}/swift-format--argument-parser
+                    -DFETCHCONTENT_SOURCE_DIR_MARKDOWN=${checkoutroot}/swift-format--markdown
+                    -Dcmark-gfm_DIR=${prefix}/lib/cmake">
+    <branch repo="github-tarball"
+            checkoutdir="swift-format"
+            module="swiftlang/swift-format/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-format-${version}.tar.gz"
+            version="6.3.3"
+            hash="sha256:83f8e638f64f546a98ce92331febaa095f840456123a702fe0bf537634f0dcdd">
+      <patch file="swift-format-bundle-dependencies.patch" strip="1"/>
+    </branch>
+    <branch repo="github-tarball"
+            checkoutdir="swift-format--argument-parser"
+            module="apple/swift-argument-parser/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-argument-parser-${version}.tar.gz"
+            version="1.2.3"
+            hash="sha256:4a10bbef290a2167c5cc340b39f1f7ff6a8cf4e1b5433b68548bf5f1e542e908"/>
+    <branch repo="github-tarball"
+            checkoutdir="swift-format--markdown"
+            module="swiftlang/swift-markdown/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-markdown-${version}.tar.gz"
+            version="6.3.3"
+            hash="sha256:93684a45e81577a8640292e406c7e645adf9c9e143c59527e833cd49609c98cf"/>
+    <dependencies>
+      <dep package="swift-foundation"/>
+    </dependencies>
   </cmake>
 
   <!-- Everything in this section is just for Epiphany. -->

@@ -22,6 +22,6 @@ use_local_modulesets = True
 # Assume we have sysdeps installed
 check_sysdeps = False
 # List of modulesets to use
-moduleset = [ '/jhbuild/webkit-sdk-deps.modules' ]
+moduleset = [ '/jhbuild/webkit-deps.modules', '/jhbuild/gstreamer.modules', '/jhbuild/extra-projects.modules' ]
 # A list of the modules to build.
-modules = [ 'webkit-sdk-deps' ]
+modules = [ 'webkit-deps', 'gstreamer-full' ]

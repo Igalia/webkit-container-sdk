@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<!DOCTYPE moduleset SYSTEM "moduleset.dtd">
+<?xml-stylesheet type="text/xsl" href="moduleset.xsl"?>
+<moduleset>
+
+  <metamodule id="webkit-deps">
+    <dependencies>
+      <dep package="dicts"/>
+      <dep package="libwpe"/>
+      <dep package="wpebackend-fdo"/>
+      <dep package="sparkle-cdm"/>
+      <dep package="openxr"/>
+    </dependencies>
+  </metamodule>
+
+  <!-- Please use http/https to access repositories to be friendly to users stuck behind firewalls. -->
+  <repository type="tarball" name="wpewebkit.org"
+      href="https://wpewebkit.org/releases/"/>
+  <repository type="git" name="freedesktop.org"
+      href="https://gitlab.freedesktop.org/"/>
+  <repository type="tarball" name="github-tarball"
+      href="https://github.com/"/>
+  <repository type="git" name="github.com"
+      href="https://github.com"/>
+
+  <meson id="sparkle-cdm">
+    <branch repo="github.com"
+            checkoutdir="sparkle-cdm"
+            tag="2026.1"
+            module="Sparkle-CDM/sparkle-cdm"/>
+  </meson>
+
+  <autotools id="dicts" supports-non-srcdir-builds="no"
+             skip-autogen="true">
+  <branch repo="github.com"
+          checkoutdir="webkitgtk-test-dicts"
+          module="mrobinson/webkitgtk-test-dicts.git"
+          tag="0.0.1"/>
+  </autotools>
+
+  <cmake id="libwpe">
+    <branch repo="wpewebkit.org"
+            checkoutdir="libwpe"
+            module="libwpe-${version}.tar.xz"
+            version="1.16.3"
+            hash="sha256:c880fa8d607b2aa6eadde7d6d6302b1396ebc38368fe2332fa20e193c7ee1420"/>
+  </cmake>
+
+  <meson id="wpebackend-fdo">
+    <dependencies>
+      <dep package="libwpe"/>
+    </dependencies>
+    <branch repo="wpewebkit.org"
+            checkoutdir="wpebackend-fdo"
+            module="wpebackend-fdo-${version}.tar.xz"
+            version="1.16.1"
+            hash="sha256:544ae14012f8e7e426b8cb522eb0aaaac831ad7c35601d1cf31d37670e0ebb3b">
+    </branch>
+  </meson>
+
+  <cmake id="openxr">
+    <branch repo="github-tarball"
+	    checkoutdir="openxr"
+	    module="KhronosGroup/OpenXR-SDK/archive/refs/tags/release-${version}.tar.gz"
+	    rename-tarball="OpenXR-SDK-release-${version}.tar.gz"
+	    version="1.1.59.1"
+	    hash="sha256:f66c1a308a60556c79b723cb0b14bcc51913de8382632ba19af2d5eaf54add50"/>
+  </cmake>
+
+</moduleset>

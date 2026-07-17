@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<!DOCTYPE moduleset SYSTEM "moduleset.dtd">
+<?xml-stylesheet type="text/xsl" href="moduleset.xsl"?>
+<moduleset>
+
+  <!-- Please use http/https to access repositories to be friendly to users stuck behind firewalls. -->
+  <repository type="git" name="freedesktop.org"
+      href="https://gitlab.freedesktop.org/"/>
+  <repository type="tarball" name="github-tarball"
+      href="https://github.com/"/>
+  <repository type="git" name="github.com"
+      href="https://github.com"/>
+
+  <!-- glib, glib-networking and libsoup are provided by the system on Ubuntu
+       26.04 and are intentionally not part of the webkit-sdk-deps metamodule, so
+       they are not built by default. They are kept here so it is still possible
+       to hack on them with a single command, e.g. `jhbuild build libsoup`. -->
+  <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">
+    <branch repo="github.com"
+            checkoutdir="glib"
+            module="GNOME/glib.git" tag="2.88.1"/>
+  </meson>
+
+  <meson id="glib-networking">
+    <branch repo="github.com"
+            checkoutdir="glib-networking"
+            module="GNOME/glib-networking.git" tag="2.80.1"/>
+    <dependencies>
+      <dep package="glib"/>
+    </dependencies>
+  </meson>
+
+  <meson id="libsoup" mesonargs="-Dtests=false">
+    <branch repo="github.com"
+            checkoutdir="libsoup"
+            module="GNOME/libsoup.git" tag="3.7.1"/>
+    <dependencies>
+      <dep package="glib"/>
+      <dep package="glib-networking"/>
+    </dependencies>
+  </meson>
+
+  <!-- Everything in this section is just for Epiphany. -->
+  <meson id="epiphany">
+    <branch repo="github.com"
+            module="GNOME/epiphany.git" tag="50.4"/>
+  </meson>
+
+  <!-- Everything in this section is optional to aid in debugging. -->
+  <cmake id="nghttp2" cmakeargs="-DENABLE_DEBUG=ON -DENABLE_LIB_ONLY=ON -DENABLE_DOC=OFF">
+    <branch repo="github.com"
+            module="nghttp2/nghttp2"
+            tag="v1.69.0"/>
+  </cmake>
+
+</moduleset>

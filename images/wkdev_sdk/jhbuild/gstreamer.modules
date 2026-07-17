@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!DOCTYPE moduleset SYSTEM "moduleset.dtd">
+<?xml-stylesheet type="text/xsl" href="moduleset.xsl"?>
+<moduleset>
+
+<metamodule id="gstreamer-full">
+  <dependencies>
+    <dep package="gstreamer"/>
+    <dep package="gst-plugins-rs"/>
+    <dep package="libspiel"/>
+  </dependencies>
+</metamodule>
+
+  <!-- Please use http/https to access repositories to be friendly to users stuck behind firewalls. -->
+  <repository type="git" name="freedesktop.org"
+      href="https://gitlab.freedesktop.org/"/>
+  <repository type="tarball" name="github-tarball"
+      href="https://github.com/"/>
+  <repository type="git" name="github.com"
+      href="https://github.com"/>
+
+  <meson id="libspiel" mesonargs="-Dtests=false -Ddocs=false -Dlibspeechprovider:docs=false -Dlibspeechprovider:introspection=false">
+    <branch repo="github.com"
+            checkoutdir="libspiel"
+            module="project-spiel/libspiel"/>
+    <dependencies>
+      <dep package="gstreamer"/>
+    </dependencies>
+  </meson>
+
+  <meson id="gstreamer" mesonargs="-Dlibnice=enabled -Dpython=disabled -Dintrospection=disabled -Dgst-plugins-bad:microdns=disabled -Dgst-plugins-bad:avtp=disabled -Dgst-examples=disabled -Dexamples=disabled -Dtests=disabled -Ddoc=disabled -Dgtk_doc=disabled -Dwebrtc=enabled -Dgst-plugins-ugly:gpl=enabled -Dgst-plugins-bad:gpl=enabled -Dgpl=enabled -Dges=disabled -Drtsp_server=disabled -Dqt5=disabled -Dqt6=disabled">
+    <branch repo="freedesktop.org"
+            checkoutdir="gstreamer"
+            module="gstreamer/gstreamer.git"
+            tag="1.28.4">
+    </branch>
+  </meson>
+
+  <meson id="gst-plugins-rs" mesonargs="-Ddoc=disabled -Dexamples=disabled -Dtests=disabled --auto-features=disabled -Daudiofx=enabled -Dclosedcaption=enabled -Ddav1d=enabled -Drtp=enabled -Disobmff=enabled">
+    <dependencies>
+      <dep package="gstreamer"/>
+    </dependencies>
+    <branch repo="freedesktop.org"
+            module="gstreamer/gst-plugins-rs"
+            tag="gstreamer-1.28.4"/>
+  </meson>
+
+</moduleset>

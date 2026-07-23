@@ -142,14 +142,6 @@ RUN rustup default 1.94.0 && \
     rustup component remove rust-docs && \
     cargo install --root /usr/local --version 0.10.20 --locked cargo-c
 
-RUN git clone https://github.com/ystreet/librice.git && \
-    cd librice && \
-    git checkout v0.4.3 && \
-    cargo cinstall -p rice-proto --release --prefix=/usr --libdir=lib/$(gcc -dumpmachine) --library-type=cdylib && \
-    cargo cinstall -p rice-io --release --prefix=/usr --libdir=lib/$(gcc -dumpmachine) --library-type=cdylib && \
-    cd .. && \
-    rm -fr librice
-
 COPY /jhbuild/gstreamer.modules /jhbuild/gstreamer.modules
 RUN export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
     jhbuild --exit-on-error --no-interact -m /jhbuild/gstreamer.modules build gstreamer-full && \
@@ -198,13 +190,8 @@ RUN gst-inspect-1.0 audiornnoise && \
     gst-inspect-1.0 cea608tott && \
     gst-inspect-1.0 dav1ddec && \
     gst-inspect-1.0 isofmp4mux && \
-    gst-inspect-1.0 rsrtp && \
     gst-inspect-1.0 x264enc && \
     gst-inspect-1.0 x265enc
-
-# Check locally installed libraries.
-RUN pkg-config --modversion rice-io && \
-    pkg-config --modversion rice-proto
 
 # Place the toolchainfiles in a discoverable location.
 RUN mkdir -p /usr/share/wkdev-sdk/cross/armhf && \

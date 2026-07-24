@@ -32,7 +32,7 @@
     <branch repo="freedesktop.org"
             checkoutdir="gstreamer"
             module="gstreamer/gstreamer.git"
-            tag="1.28.4">
+            tag="1.28.5">
     </branch>
   </meson>
 
@@ -42,7 +42,7 @@
     </dependencies>
     <branch repo="freedesktop.org"
             module="gstreamer/gst-plugins-rs"
-            tag="gstreamer-1.28.4"/>
+            tag="gstreamer-1.28.5"/>
   </meson>
 
 </moduleset>

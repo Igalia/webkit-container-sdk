@@ -147,6 +147,12 @@ RUN export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
     jhbuild --exit-on-error --no-interact -m /jhbuild/gstreamer.modules build gstreamer-full && \
     rm -rf /var/tmp/jhbuild
 
+# FIXME: pipewiresrc ships in pipewire's tree rather than the GStreamer monorepo,
+# so it comes from the Ubuntu package instead of being built above. This is a hack
+# but works for now. Eventually we can just replace the systems pipewire if we must.
+RUN ln -sf "/usr/lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH)/gstreamer-1.0/libgstpipewire.so" \
+           /jhbuild/install/lib/gstreamer-1.0/libgstpipewire.so
+
 RUN cargo install --root /usr/local --version 0.14.0 --locked sccache
 
 # Podman proxy, connecting to host instance
@@ -190,6 +196,7 @@ RUN gst-inspect-1.0 audiornnoise && \
     gst-inspect-1.0 cea608tott && \
     gst-inspect-1.0 dav1ddec && \
     gst-inspect-1.0 isofmp4mux && \
+    gst-inspect-1.0 pipewiresrc && \
     gst-inspect-1.0 x264enc && \
     gst-inspect-1.0 x265enc
 

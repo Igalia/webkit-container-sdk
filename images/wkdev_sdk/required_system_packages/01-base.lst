@@ -8,7 +8,7 @@ iptables libcap2-bin libyajl2 uidmap
 libnvidia-egl-wayland1
 
 # Pipewire support
-wireplumber
+wireplumber gstreamer1.0-pipewire
 
 # General utilities
 apt-file aptly atop at-spi2-core bash-completion bind9-dnsutils emacs git htop iotop iputils-ping kmod less libportal-dev libportal-gtk4-dev libxcb-cursor-dev locate man-db nano openssh-client python3-virtualenv strace sudo zip unzip vim-gtk3 wget

@@ -11,8 +11,8 @@
   <repository type="git" name="github.com"
       href="https://github.com"/>
 
-  <!-- glib, glib-networking and libsoup are provided by the system on Ubuntu
-       26.04 and are intentionally not part of the webkit-sdk-deps metamodule, so
+  <!-- glib, glib-networking are provided by the system on Ubuntu
+       26.04 and are intentionally not part of the webkit-deps metamodule, so
        they are not built by default. They are kept here so it is still possible
        to hack on them with a single command, e.g. `jhbuild build libsoup`. -->
   <meson id="glib" mesonargs="--localstatedir=/var -Dlibmount=disabled -Dtests=false">
@@ -30,15 +30,6 @@
     </dependencies>
   </meson>
 
-  <meson id="libsoup" mesonargs="-Dtests=false">
-    <branch repo="github.com"
-            checkoutdir="libsoup"
-            module="GNOME/libsoup.git" tag="3.7.1"/>
-    <dependencies>
-      <dep package="glib"/>
-      <dep package="glib-networking"/>
-    </dependencies>
-  </meson>
 
   <!-- Everything in this section is just for Epiphany. -->
   <meson id="epiphany">

@@ -9,6 +9,7 @@
       <dep package="libwpe"/>
       <dep package="wpebackend-fdo"/>
       <dep package="sparkle-cdm"/>
+      <dep package="libsoup"/>
       <dep package="openxr"/>
     </dependencies>
   </metamodule>
@@ -56,6 +57,12 @@
             version="1.16.1"
             hash="sha256:544ae14012f8e7e426b8cb522eb0aaaac831ad7c35601d1cf31d37670e0ebb3b">
     </branch>
+  </meson>
+
+  <meson id="libsoup" mesonargs="-Dtests=false">
+    <branch repo="github.com"
+            checkoutdir="libsoup"
+            module="GNOME/libsoup.git" tag="3.7.2"/>
   </meson>
 
   <cmake id="openxr">

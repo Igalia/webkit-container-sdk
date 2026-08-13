@@ -35,6 +35,7 @@ jobs:
 
     steps:
     - name: Checkout repository
+      id: checkout
       uses: actions/checkout@v4
 
     - name: Log in to GitHub Container Registry
@@ -79,10 +80,8 @@ jobs:
 
     - name: Build image
       run: |
-        podman build --jobs $(nproc) --build-context scripts=./scripts \
-          --build-arg WKDEV_SDK_VERSION=${{ env.VERSION }} \
-          -t ${{ env.IMAGE_WITH_TAG }}_${{ matrix.arch }} --arch=${{ matrix.arch }} images/wkdev_sdk
-        podman image list
+        ./.github/scripts/build-wkdev-sdk-image.sh "${{ env.VERSION }}" \
+          "${{ env.IMAGE_WITH_TAG }}_${{ matrix.arch }}" "${{ matrix.arch }}"
 
     - name: Test image
       run: |
@@ -100,6 +99,10 @@ jobs:
         (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
       run: podman push ${{ env.IMAGE_WITH_TAG }}_${{ matrix.arch }}
 
+    # Removes the test container and home directory from this run, plus any leftovers from previous crashed runs.
+    # The image we just built is kept as build cache in case there is a new push to this PR; only the images from
+    # older pushes to this same PR are deleted.
+    # Anything else left in podman storage is reclaimed by the daily maintenance workflow when disk runs low.
     - name: Clean up test artifacts
       if: always()
       run: |
@@ -107,12 +110,32 @@ jobs:
           podman rm --force ${{ env.CONTAINER }} 2>/dev/null || true
           rm -rf ${HOME}/${{ env.CONTAINER }}-home || true
         fi
-        # Clean up any leftover containers and home directories from previous failed runs
         podman ps -a --filter "name=^wkdev-" --format "{{.Names}}" | xargs -r podman rm --force 2>/dev/null || true
         find ${HOME} -maxdepth 1 -type d -name "wkdev-*-home" -exec rm -rf {} + 2>/dev/null || true
-        # Reclaim the freshly built image; per-PR-commit cadence would otherwise grow
-        # the self-hosted runner's image store without bound.
-        podman rmi --force ${{ env.IMAGE_WITH_TAG }}_${{ matrix.arch }} 2>/dev/null || true
+        # Only prune the older images once this build produced its own image.
+        # If the build failed (or never ran, leaving IMAGE_WITH_TAG empty),
+        # the image from the previous push is the best cache the next push
+        # has, so keep everything and leave the reclamation to the
+        # maintenance workflow.
+        CURRENT_IMAGE="${{ env.IMAGE_WITH_TAG }}_${{ matrix.arch }}"
+        if [ "${{ github.event_name }}" = "pull_request" ] && podman image exists "${CURRENT_IMAGE}"; then
+          podman images --format '{{.Repository}}:{{.Tag}}' \
+            | grep -F "${IMAGE_NAME}:pr-${{ github.event.pull_request.number }}-" \
+            | grep -v -F "${CURRENT_IMAGE}" \
+            | xargs -r podman rmi --force 2>/dev/null || true
+        fi
+
+    # Storage reclamation happens via the daily scheduled podman-storage-maintenance workflow,
+    # but that workflow can only reach runners listed in its matrix (entries are runner names,
+    # used as unique labels). A runner missing from it never gets its storage reset, so audit
+    # that this machine is listed and fail the job if not so this gets investigated and fixed.
+    # Skipped when the checkout failed: without the repo there is nothing to audit against,
+    # and a false "runner not covered" error would mask the real failure.
+    - name: Fail if this runner is missing from the maintenance matrix
+      if: always() && steps.checkout.outcome == 'success'
+      env:
+        RUNNER_NAME: ${{ runner.name }}
+      run: ./.github/scripts/assert-runner-in-maintenance-matrix.sh
 
   deploy:
     runs-on: [self-hosted, x64]
@@ -128,13 +151,30 @@ jobs:
       REGISTRY_TAG: ${{ needs.build.outputs.registry_tag }}
 
     steps:
+    - name: Checkout repository
+      id: checkout
+      uses: actions/checkout@v4
+
     - name: Log in to GitHub Container Registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | skopeo login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
-    - name: Resolve registry coordinates
+    - name: Resolve registry coordinates and local image state
       run: |
-        echo "GHCR_REPO=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
-        echo "IMAGE_WITH_TAG=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}:${REGISTRY_TAG}" >> $GITHUB_ENV
+        GHCR_REPO="${GITHUB_REPOSITORY_OWNER,,}"
+        IMAGE_WITH_TAG="ghcr.io/${GHCR_REPO}/${IMAGE_NAME}:${REGISTRY_TAG}"
+        echo "GHCR_REPO=${GHCR_REPO}" >> $GITHUB_ENV
+        echo "IMAGE_WITH_TAG=${IMAGE_WITH_TAG}" >> $GITHUB_ENV
+
+        # The amd64 build may have run on this machine and kept its image as
+        # cache. Remember which images are already here so cleanup keeps them.
+        # This may also keep an image left by a cancelled deploy; the regular
+        # maintenance workflow will remove it later.
+        for arch in amd64 arm64; do
+          if podman image exists "${IMAGE_WITH_TAG}_${arch}"; then
+            echo "${IMAGE_WITH_TAG}_${arch} is already in local storage: it won't be removed by this job"
+            echo "PREEXISTING_${arch}=1" >> $GITHUB_ENV
+          fi
+        done
 
     - name: Validate all architecture images exist in registry
       id: validate
@@ -214,9 +254,19 @@ jobs:
         podman manifest push --all ${{ env.IMAGE_WITH_TAG }} docker://${{ env.IMAGE_WITH_TAG }}
 
     - name: Remove local artifacts produced by this deploy
+      if: always()
       run: |
         podman manifest rm ${{ env.IMAGE_WITH_TAG }} 2>/dev/null || true
-        podman rmi --force ${{ env.IMAGE_WITH_TAG }}_amd64 ${{ env.IMAGE_WITH_TAG }}_arm64 2>/dev/null || true
+        # Only the copies this job pulled: the ones that were already here are
+        # kept for the build cache (see the coordinate-resolution step above).
+        for arch in amd64 arm64; do
+          preexisting="PREEXISTING_${arch}"
+          if [ -n "${!preexisting:-}" ]; then
+            echo "Keeping ${IMAGE_WITH_TAG}_${arch}: it was in local storage before this job"
+            continue
+          fi
+          podman rmi --force "${IMAGE_WITH_TAG}_${arch}" 2>/dev/null || true
+        done
 
     - name: Comment on PR with deployed image
       if: github.event_name == 'pull_request'
@@ -226,3 +276,11 @@ jobs:
         message: |
           Test image deployed to the registry: `${{ env.IMAGE_WITH_TAG }}`
           Create a container from it with: `wkdev-create --version ${{ env.REGISTRY_TAG }}`
+
+    # See comment on this same step for the build: job
+    # Keep it as the last step: a drift failure shouldn't rob the PR author of the image comment above.
+    - name: Fail if this runner is missing from the maintenance matrix
+      if: always() && steps.checkout.outcome == 'success'
+      env:
+        RUNNER_NAME: ${{ runner.name }}
+      run: ./.github/scripts/assert-runner-in-maintenance-matrix.sh

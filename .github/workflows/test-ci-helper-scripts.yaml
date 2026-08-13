@@ -1,0 +1,29 @@
+name: Test CI helper scripts
+
+# Regression tests for the scripts in .github/scripts. They stub podman and
+# the disk tools, so they run in seconds on a hosted runner and touch nothing
+# outside a temp directory. Also triggered by changes to the maintenance
+# workflow, because the assert-runner test validates its real matrix.
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/**'
+      - '.github/workflows/podman-storage-maintenance.yaml'
+      - '.github/workflows/test-ci-helper-scripts.yaml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Test disk-usage.sh
+      run: ./.github/scripts/tests/test-disk-usage.sh
+
+    - name: Test assert-runner-in-maintenance-matrix.sh
+      run: ./.github/scripts/tests/test-assert-runner-in-maintenance-matrix.sh

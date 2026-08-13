@@ -1,0 +1,181 @@
+name: Podman storage maintenance
+
+# Reclaims podman storage on the self-hosted runners: a full podman storage
+# wipe (podman system reset) followed by a rebuild of the image so the build
+# cache stays warm.
+#
+# It runs from two entry points:
+#   - schedule: daily threshold-check, so a runner that filled up gets
+#     reset at most ~24 hours later
+#   - manual workflow_dispatch (optionally with force=true to reset even
+#     when free space is above the threshold)
+#
+# Unless forced, each job first checks free space against the threshold in
+# .github/scripts/disk-usage.sh and exits early doing nothing but reporting
+# disk stats when there is enough space.
+
+on:
+  schedule:
+    # GitHub Actions cron is in UTC. Run the check every night late.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Reset even if free disk space is above the threshold'
+        type: boolean
+        default: false
+
+env:
+  IMAGE_NAME: wkdev-sdk
+
+jobs:
+  system-reset-and-rebuild:
+    strategy:
+      fail-fast: false
+      # GitHub doesn't support automatically running a job on every runner, so each runner to maintain
+      # must be listed here explicitly. `runner` here is an additional unique label that must be added
+      # to that specific runner in the GitHub UI (Settings -> Actions -> Runners -> <runner> -> Labels)
+      #
+      # IMPORTANT: the unique label MUST be exactly the runner's NAME as shown in the runners list.
+      # The image build workflow checks runner.name against the `runner:` values below (see
+      # scripts/assert-runner-in-maintenance-matrix.sh) and fails its job when the machine it ran
+      # on is missing from this list, so drift can't go unnoticed.
+      # IMPORTANT: When adding a new runner: add its name as a label in the GitHub UI and list it here.
+      # IMPORTANT: When decommissioning a runner remove its entry promptly: a matrix entry whose
+      # label matches no online runner keeps its job queued for ~24h per run. Only that runner's
+      # own maintenance is affected (the concurrency group is per-runner), but the stuck jobs
+      # clutter the Actions view until the entry is removed.
+      matrix:
+        include:
+          - arch: amd64
+            runner: igalia-runner-wkdev-amd64-1
+          - arch: amd64
+            runner: igalia-runner-wkdev-amd64-2
+          - arch: arm64
+            runner: igalia-runner-wkdev-arm64-1
+          - arch: arm64
+            runner: igalia-runner-wkdev-arm64-2
+    runs-on: [self-hosted, "${{ matrix.runner }}"]
+    # Serialize maintenance per machine (an overlapping run, e.g. a manual
+    # dispatch while the scheduled run is active, queues instead). Per-runner
+    # groups on purpose: a job stuck waiting for one unreachable runner must
+    # not delay the maintenance of the healthy ones.
+    concurrency:
+      group: podman-storage-maintenance-${{ matrix.runner }}
+      cancel-in-progress: false
+    # Backstop for a hung reset or rebuild; queue time waiting for an offline
+    # runner is not covered by this (GitHub caps that at ~24h).
+    timeout-minutes: 360
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+    # The unique per-runner label decides where this job lands, and the label
+    # assignment in the GitHub UI can drift: if this machine carries another
+    # machine's label, that other machine is never maintained while this one
+    # is reset twice - and the build-side audit cannot notice, because it
+    # only checks that runner names are listed in the matrix. Verify the
+    # name/label pairing before anything else: everything below, starting
+    # with the storage reset, must run on the machine the matrix names.
+    - name: Fail unless this job landed on the machine its matrix entry names
+      env:
+        RUNNER_NAME: ${{ runner.name }}
+        MATRIX_RUNNER: ${{ matrix.runner }}
+      run: |
+        if [ "$RUNNER_NAME" != "$MATRIX_RUNNER" ]; then
+          echo "::error title=Maintenance job landed on the wrong machine::The matrix entry '${MATRIX_RUNNER}' ran on runner '${RUNNER_NAME}', so the unique label '${MATRIX_RUNNER}' is attached to the wrong machine in the runner settings (Settings -> Actions -> Runners). Fix the label assignment: until then '${MATRIX_RUNNER}' is never maintained and '${RUNNER_NAME}' is maintained twice."
+          exit 1
+        fi
+        echo "Runner name '${RUNNER_NAME}' matches its matrix entry."
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Disk usage before reset
+      # Snapshots live in runner.temp, which the runner empties at the start
+      # of every job: snapshots leftover from a previous run can never leak
+      # into the uploaded artifact, no matter which steps run or fail.
+      # Tolerate a failing snapshot (podman too broken to report stats): the
+      # check step below fails the same way then, and its failure is what
+      # triggers the reset that repairs podman.
+      run: |
+        ./.github/scripts/disk-usage.sh snapshot "${RUNNER_TEMP}/disk-beforesystemreset.txt" "BEFORE SYSTEM RESET (${{ matrix.runner }})" \
+          || echo "continuing to the check step regardless"
+
+    - name: Check whether a reset is needed
+      id: check
+      # The else branch catches both a low-disk result and a check that
+      # *errored* (exit 2: podman broken by corrupted storage): both mean
+      # this machine needs the reset.
+      run: |
+        if [ "${{ inputs.force }}" = "true" ]; then
+          echo "Reset forced via workflow_dispatch input."
+          echo "reset=true" >> $GITHUB_OUTPUT
+        elif ./.github/scripts/disk-usage.sh check; then
+          echo "reset=false" >> $GITHUB_OUTPUT
+          {
+            echo "## Podman storage maintenance (${{ matrix.runner }})"
+            echo
+            echo "Free disk space is above the threshold: reset skipped."
+          } >> $GITHUB_STEP_SUMMARY
+        else
+          echo "reset=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Reset podman storage
+      if: steps.check.outputs.reset == 'true'
+      # Unlike prune, a full reset also reclaims buildah leftovers and corrupted
+      # storage; the runners are CI-dedicated, so losing volumes/networks is fine
+      run: podman system reset --force
+
+    - name: Log in to GitHub Container Registry
+      if: steps.check.outputs.reset == 'true'
+      # The reset wipes the runtime dir where the login credentials are stored, so do the login after the reset
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+    - name: Disk usage after reset
+      if: steps.check.outputs.reset == 'true'
+      # No failure tolerance from here on: after the reset podman and the
+      # filesystem inspection must work, so a failing snapshot means the
+      # reset did not fix this machine. Failure of only the optional du
+      # measurement of the graphroot does not fail the snapshot: it is
+      # recorded as PODMAN_SIZE=unknown and only makes the podman storage
+      # deltas that need it read "not measured" in the comparison below.
+      run: ./.github/scripts/disk-usage.sh snapshot "${RUNNER_TEMP}/disk-aftersystemreset.txt" "AFTER SYSTEM RESET (${{ matrix.runner }})"
+
+    - name: Rebuild image to warm the build cache
+      if: steps.check.outputs.reset == 'true'
+      # Same shared build script as the image build workflow: the cache is
+      # only warm if both build the exact same way.
+      run: |
+        VERSION=$(./scripts/helpers/print-sdk-version)
+        ./.github/scripts/build-wkdev-sdk-image.sh "${VERSION}" \
+          "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}:${VERSION}_${{ matrix.arch }}" "${{ matrix.arch }}"
+
+    - name: Disk usage after rebuild and summary
+      if: steps.check.outputs.reset == 'true'
+      # Only the documented skip (exit 2: a snapshot is missing/invalid, e.g.
+      # the before-reset one when podman was broken) is tolerated; any other
+      # compare failure is unexpected and fails the step.
+      run: |
+        ./.github/scripts/disk-usage.sh snapshot "${RUNNER_TEMP}/disk-aftersystemresetandbuild.txt" "AFTER SYSTEM RESET AND BUILD (${{ matrix.runner }})"
+        rc=0
+        ./.github/scripts/disk-usage.sh compare \
+          "${RUNNER_TEMP}/disk-beforesystemreset.txt" \
+          "${RUNNER_TEMP}/disk-aftersystemreset.txt" \
+          "${RUNNER_TEMP}/disk-aftersystemresetandbuild.txt" || rc=$?
+        if [ "$rc" = 2 ]; then
+          echo "comparison skipped, see warning above"
+        elif [ "$rc" != 0 ]; then
+          echo "compare failed unexpectedly (exit $rc)"
+          exit "$rc"
+        fi
+
+    - name: Upload disk usage snapshots
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: disk-snapshots-${{ matrix.runner }}
+        path: ${{ runner.temp }}/disk-*systemreset*.txt
+        retention-days: 90

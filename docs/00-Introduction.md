@@ -46,8 +46,7 @@ Install it via your distribution's package manager:
 * Arch Linux: `sudo pacman -S podman`
 * openSUSE Tumbleweed: `sudo zypper install podman`
 
-The SDK is regularly tested with **podman 4.x** and **5.x**. Older versions may work but
-are not actively supported.
+The SDK is regularly tested with **podman 4.x** and **5.x**. Older versions are not supported.
 
 Verify the installation by running:
 

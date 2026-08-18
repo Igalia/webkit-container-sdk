@@ -1,10 +1,13 @@
 # Copyright 2024-2026 Igalia S.L.
 # SPDX-License: MIT
 
-FROM public.ecr.aws/ubuntu/ubuntu:26.04
+FROM public.ecr.aws/ubuntu/ubuntu:26.04@sha256:a6bfcecd9b44b97e02f4605b9b47a25bc575cad89fb05c06b257ed3fa96f3c96
 
 # To change WKDEV_SDK_VERSION ARG variable check the bottom of this file.
 ARG CONTAINER_LOCALE=en_US.UTF-8
+# Ubuntu archive snapshot (UTC). See:
+# https://ubuntu.com/server/docs/how-to/software/snapshot-service
+ARG APT_SNAPSHOT=20260817T120000Z
 # No need to modify these.
 ARG APT_UPDATE="apt-get update"
 ARG APT_BUILDDEP="apt-get --assume-yes build-dep"
@@ -32,10 +35,20 @@ RUN userdel ubuntu
 # podman in podman if both are rootless; since it's no gain in security in the container anyhow, disable it.
 RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/no-sandbox
 
-# Update package list, upgrade to latest version, install necessary packages for
-# early bootstrapping: .deb package configuration + locale generation + curl for downloading GPG keys.
+# snapshot.ubuntu.com presents a Let's Encrypt chain the base image cannot
+# verify yet. Refresh only ca-certificates from the live archive, then pin
+# every snapshot-capable repository (archive, security, ports).
+# Ubuntu 26.04 Release files do not advertise a Snapshots: field, so apt
+# needs the Host URI template or it silently skips the snapshot and later
+# aborts when Types includes both deb and deb-src.
 RUN ${APT_UPDATE} && \
-    ${APT_INSTALL} apt-utils ca-certificates curl dialog libterm-readline-gnu-perl locales unminimize && \
+    ${APT_INSTALL} ca-certificates && \
+    printf '%s\n' \
+        "APT::Snapshot \"${APT_SNAPSHOT}\";" \
+        'Acquire::Snapshots::URI::Host::.ubuntu.com "https://snapshot.ubuntu.com/@PATH@/@SNAPSHOTID@/";' \
+        > /etc/apt/apt.conf.d/50snapshot && \
+    ${APT_UPDATE} && \
+    ${APT_INSTALL} apt-utils curl dialog libterm-readline-gnu-perl locales unminimize && \
     ${APT_UPGRADE} && ${APT_AUTOREMOVE} && \
     ${APT_CLEAN} && ${APT_RM_CACHES}
 

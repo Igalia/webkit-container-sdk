@@ -8,7 +8,7 @@ sysprof libsysprof-6-dev libsysprof-capture-4-dev libpanel-dev
 monado-service monado-cli libopenxr1-monado
 
 # For GStreamer
-libdav1d-dev libopenh264-dev
+libdav1d-dev libopenh264-dev flex bison
 
 # For Epiphany
 gcr4 libgcr-4-dev

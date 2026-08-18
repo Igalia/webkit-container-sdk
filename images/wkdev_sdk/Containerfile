@@ -241,7 +241,7 @@ LABEL org.opencontainers.image.source=https://github.com/Igalia/webkit-container
 # directly. Therefore, changing the version would prevent Podman from reusing
 # the cache for all later RUN commands. See:
 # https://docs.docker.com/reference/dockerfile/#impact-on-build-caching
-ARG WKDEV_SDK_VERSION=2.53-v9-c666b76
+ARG WKDEV_SDK_VERSION=2.53-v10-e1c2c9b
 LABEL org.opencontainers.image.version=${WKDEV_SDK_VERSION}
 
 # Bake the version into the image so the running container can introspect it

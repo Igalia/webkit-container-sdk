@@ -27,7 +27,7 @@
   <meson id="sparkle-cdm">
     <branch repo="github.com"
             checkoutdir="sparkle-cdm"
-            tag="2026.1"
+            tag="2026.2"
             module="Sparkle-CDM/sparkle-cdm"/>
   </meson>
 

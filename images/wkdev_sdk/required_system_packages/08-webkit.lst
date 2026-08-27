@@ -1,0 +1,31 @@
+# Common
+unifdef libharfbuzz-dev libicu-dev libsoup-3.0-dev libepoxy-dev libjxl-dev libxml2-dev
+libmanette-0.2-dev libwoff-dev libgcrypt20-dev zlib1g-dev liblcms2-dev flite1-dev gi-docgen
+libavif-dev libudev-dev libseccomp-dev libwebp-dev
+
+# WPE
+libatk-bridge2.0-dev libcairo2-dev libgbm-dev libdrm-dev libinput-dev
+qt6-declarative-private-dev wayland-protocols
+
+# WebKitGTK
+libgl1-mesa-dev libgtk-3-dev libpango1.0-dev libsecret-1-dev libgtk-4-dev
+
+# For tests
+apache2 binutils fonts-liberation hyphen-de hyphen-en-gb hyphen-en-us libcgi-pm-perl
+psmisc python3-legacy-cgi pulseaudio-utils python3-gi ruby-highline ruby-json time
+cups-daemon dbus-x11 hunspell hunspell-en-gb hunspell-en-us weston xvfb python3-psutil
+
+# Icon themes
+adwaita-icon-theme gnome-icon-theme hicolor-icon-theme
+
+# Cog
+libxcb-cursor-dev libportal-dev libportal-gtk4-dev
+
+# These are dependencies necessary for using webkit-patch.
+git-svn subversion
+
+# These are dependencies necessary for using git-webkit.
+python3-dev
+
+# These are for generate-bundle script
+patchelf p11-kit

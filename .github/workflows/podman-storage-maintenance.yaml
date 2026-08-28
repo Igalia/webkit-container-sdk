@@ -114,14 +114,23 @@ jobs:
           echo "reset=true" >> $GITHUB_OUTPUT
         elif ./.github/scripts/disk-usage.sh check; then
           echo "reset=false" >> $GITHUB_OUTPUT
-          {
-            echo "## Podman storage maintenance (${{ matrix.runner }})"
-            echo
-            echo "Free disk space is above the threshold: reset skipped."
-          } >> $GITHUB_STEP_SUMMARY
         else
           echo "reset=true" >> $GITHUB_OUTPUT
         fi
+
+    - name: Report the disk usage in the job summary
+      run: |
+        set -o pipefail
+        if [ "${{ steps.check.outputs.reset }}" = "true" ]; then
+          state="before the reset"
+        else
+          state="reset skipped"
+        fi
+        ./.github/scripts/disk-usage.sh summary \
+          "${RUNNER_TEMP}/disk-beforesystemreset.txt" \
+          "${{ matrix.runner }}: ${state}" \
+          | tee -a "${GITHUB_STEP_SUMMARY}" \
+          || echo "no disk usage summary for this run (see the snapshot step above)"
 
     - name: Reset podman storage
       if: steps.check.outputs.reset == 'true'
@@ -159,12 +168,20 @@ jobs:
       # the before-reset one when podman was broken) is tolerated; any other
       # compare failure is unexpected and fails the step.
       run: |
+        set -o pipefail
         ./.github/scripts/disk-usage.sh snapshot "${RUNNER_TEMP}/disk-aftersystemresetandbuild.txt" "AFTER SYSTEM RESET AND BUILD (${{ matrix.runner }})"
+        ./.github/scripts/disk-usage.sh summary \
+          "${RUNNER_TEMP}/disk-aftersystemresetandbuild.txt" \
+          "${{ matrix.runner }}: after the reset and rebuild" \
+          | tee -a "${GITHUB_STEP_SUMMARY}" \
+          || echo "no after-reset disk usage summary for this run"
         rc=0
         ./.github/scripts/disk-usage.sh compare \
           "${RUNNER_TEMP}/disk-beforesystemreset.txt" \
           "${RUNNER_TEMP}/disk-aftersystemreset.txt" \
-          "${RUNNER_TEMP}/disk-aftersystemresetandbuild.txt" || rc=$?
+          "${RUNNER_TEMP}/disk-aftersystemresetandbuild.txt" \
+          "${{ matrix.runner }}: what the reset changed" \
+          | tee -a "${GITHUB_STEP_SUMMARY}" || rc=$?
         if [ "$rc" = 2 ]; then
           echo "comparison skipped, see warning above"
         elif [ "$rc" != 0 ]; then

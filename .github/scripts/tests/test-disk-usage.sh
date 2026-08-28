@@ -119,10 +119,9 @@ unset DU_FAKE_SIZE
 assert "unshare and du both fail -> PODMAN_SIZE=unknown" 0 "PODMAN_SIZE=unknown" -- "$SCRIPT" snapshot "$T/out/s3.txt" "L3"
 grep -q "  unknown" "$T/out/s3.txt" && ok "human-readable section shows unknown, not garbage" || bad "unknown not rendered plainly"
 assert "compare with PODMAN_SIZE=unknown still reports FS numbers" 0 "Net space freed" -- "$SCRIPT" compare "$T/out/s3.txt" "$T/out/s2.txt" "$T/out/s2.txt"
-OUT=$("$SCRIPT" compare "$T/out/s3.txt" "$T/out/s2.txt" "$T/out/s2.txt")
+OUT=$("$SCRIPT" compare "$T/out/s3.txt" "$T/out/s2.txt" "$T/out/s2.txt" 2>/dev/null)
 grep -qF "not measured" <<<"$OUT" && ok "podman deltas degrade to 'not measured'" || bad "podman deltas not degraded"
 grep -qE "Removed by reset .*not measured" <<<"$OUT" && ok "podman delta line degraded, not omitted" || bad "podman delta line wrong"
-grep -qF "could not measure the podman storage size" <<<"$OUT" && ok "warning explains the degradation" || bad "degradation warning missing"
 unset DU_FAIL PODMAN_MODE
 
 echo "=== partial du (prints an undercount, exits non-zero) ==="
@@ -162,24 +161,25 @@ OUT=$("$SCRIPT" compare "$T/out/before.txt" "$T/out/afterreset.txt" "$T/out/afte
 expect() { grep -qF "$2" <<<"$OUT" && ok "compare: $1" || bad "compare: $1 (wanted '$2')"; }
 expect "net freed = 330GB"          "330.00GiB"
 expect "build cost = 150GB"         "150.00GiB"
-expect "removed by reset = 480GB"   "Removed by reset (BeforeReset - AfterReset):  480.00GiB"
-expect "net podman change = -330GB" "Net change      (AfterBuild - BeforeReset):   -330.00GiB"
-grep -qE "Before reset: +100.00GiB" <<<"$OUT" && ok "compare: before-reset avail 100GB" || bad "compare: before-reset avail"
+expect "removed by reset = 480GB"   "| Removed by reset (BeforeReset - AfterReset) | 480.00GiB |"
+expect "net podman change = -330GB" "| Podman storage net change (AfterBuild - BeforeReset) | -330.00GiB |"
+grep -qF "| Before reset | 100.00GiB | 500.00GiB |" <<<"$OUT" && ok "compare: per-snapshot row" || bad "compare: per-snapshot row"
 
 echo "=== compare: negative freed (build bigger than what reset freed) ==="
 gen 100 100 "$T/out/n1.txt"; gen 120 10 "$T/out/n2.txt"; gen 90 40 "$T/out/n3.txt"
 OUT=$("$SCRIPT" compare "$T/out/n1.txt" "$T/out/n2.txt" "$T/out/n3.txt")
 grep -qF -- "-10.00GiB" <<<"$OUT" && ok "negative delta rendered with sign" || bad "negative delta rendering"
 
-echo "=== compare: GITHUB_STEP_SUMMARY markdown ==="
-export GITHUB_STEP_SUMMARY="$T/out/summary.md"; : > "$GITHUB_STEP_SUMMARY"
-"$SCRIPT" compare "$T/out/before.txt" "$T/out/afterreset.txt" "$T/out/afterbuild.txt" > /dev/null
-grep -qF "| Net space freed (AfterBuild - BeforeReset) | 330.00GiB |" "$GITHUB_STEP_SUMMARY" && ok "markdown table row correct" || bad "markdown table row"
-grep -qF "## Podman storage maintenance summary" "$GITHUB_STEP_SUMMARY" && ok "markdown header present" || bad "markdown header"
+echo "=== compare: the report is markdown on stdout, nowhere else ==="
+OUT=$("$SCRIPT" compare "$T/out/before.txt" "$T/out/afterreset.txt" "$T/out/afterbuild.txt")
+grep -qF "| Net space freed (AfterBuild - BeforeReset) | 330.00GiB |" <<<"$OUT" && ok "markdown table row correct" || bad "markdown table row"
+grep -qF "## Podman storage maintenance summary" <<<"$OUT" && ok "default heading present" || bad "default heading"
+OUT=$("$SCRIPT" compare "$T/out/before.txt" "$T/out/afterreset.txt" "$T/out/afterbuild.txt" "runner-9: what the reset changed")
+grep -qF "## runner-9: what the reset changed" <<<"$OUT" && ok "heading argument honoured" || bad "heading argument ignored"
+export GITHUB_STEP_SUMMARY="$T/out/untouched.md"; : > "$GITHUB_STEP_SUMMARY"
+"$SCRIPT" compare "$T/out/before.txt" "$T/out/afterreset.txt" "$T/out/afterbuild.txt" > /dev/null 2>&1
+[ ! -s "$GITHUB_STEP_SUMMARY" ] && ok "the script never writes to GITHUB_STEP_SUMMARY itself" || bad "script still writes the summary file"
 unset GITHUB_STEP_SUMMARY
-rm -f "$T/out/summary.md"
-"$SCRIPT" compare "$T/out/before.txt" "$T/out/afterreset.txt" "$T/out/afterbuild.txt" > /dev/null
-[ ! -e "$T/out/summary.md" ] && ok "no summary file written when env unset" || bad "summary written without env"
 
 echo "=== compare: degradation is per-delta and keeps measured values ==="
 gen 100 500 "$T/out/g_r.txt"; gen 430 170 "$T/out/g_x.txt"
@@ -188,17 +188,17 @@ OUT=$("$SCRIPT" compare "$T/out/g_b.txt" "$T/out/g_r.txt" "$T/out/g_x.txt"); rc=
 [ "$rc" = 0 ] && ok "degraded compare still exits 0" || bad "degraded compare exit $rc"
 grep -qE "Added by build .*[0-9]+\.[0-9]+.iB" <<<"$OUT" && ok "computable delta keeps a real number" || bad "computable delta was blanked"
 grep -qE "Removed by reset .*not measured" <<<"$OUT" && ok "affected delta says not measured" || bad "affected delta not degraded"
-grep -qE "After  reset: +[0-9]+\.[0-9]+.iB" <<<"$OUT" && ok "measured sizes still shown" || bad "measured sizes were blanked"
-grep -qE "Before reset: +not measured" <<<"$OUT" && ok "unmeasured size labelled consistently" || bad "unmeasured size wording"
+grep -qE "^\| After reset \| [0-9.]+.iB \| [0-9.]+.iB \|$" <<<"$OUT" && ok "measured sizes still shown" || bad "measured sizes were blanked"
+grep -qF "| Before reset | 100.00GiB | not measured |" <<<"$OUT" && ok "unmeasured size labelled consistently" || bad "unmeasured size wording"
 printf 'FS_AVAIL=%s\nPODMAN_SIZE=abc\n' $((100*GB)) > "$T/out/g_bad.txt"
 assert "garbage PODMAN_SIZE -> skip, exit 2 (malformed, not degraded)" 2 "skipping comparison" -- "$SCRIPT" compare "$T/out/g_bad.txt" "$T/out/g_r.txt" "$T/out/g_x.txt"
 
-echo "=== compare: degraded podman metrics reach the step summary ==="
-export GITHUB_STEP_SUMMARY="$T/out/degsum.md"; : > "$GITHUB_STEP_SUMMARY"
-"$SCRIPT" compare "$T/out/s3.txt" "$T/out/s2.txt" "$T/out/s2.txt" > /dev/null
-grep -qF "| Removed by reset (BeforeReset - AfterReset) | not measured |" "$GITHUB_STEP_SUMMARY" && ok "markdown shows 'not measured'" || bad "markdown degradation missing"
-grep -qE "^\| Net space freed .* \| -?[0-9.]+[KMGT]?i?B \|$" "$GITHUB_STEP_SUMMARY" && ok "markdown still reports FS metric" || bad "markdown lost FS metric"
-unset GITHUB_STEP_SUMMARY
+echo "=== compare: the degraded report explains itself in markdown ==="
+OUT=$("$SCRIPT" compare "$T/out/s3.txt" "$T/out/s2.txt" "$T/out/s2.txt" 2>/dev/null)
+grep -qF "| Removed by reset (BeforeReset - AfterReset) | not measured |" <<<"$OUT" && ok "markdown shows 'not measured'" || bad "markdown degradation missing"
+grep -qE "^\| Net space freed .* \| -?[0-9.]+[KMGT]?i?B \|$" <<<"$OUT" && ok "markdown still reports FS metric" || bad "markdown lost FS metric"
+grep -qF "could not measure the podman storage size" <<<"$OUT" && ok "degradation noted in the report" || bad "degradation note missing from the report"
+"$SCRIPT" compare "$T/out/s3.txt" "$T/out/s2.txt" "$T/out/s2.txt" 2>&1 >/dev/null | grep -qF "warning:" && ok "warning goes to stderr" || bad "warning not on stderr"
 
 echo "=== compare: bad inputs ==="
 assert "compare missing 3rd arg -> usage, exit 1" 1 "Usage: .* compare" -- "$SCRIPT" compare "$T/out/before.txt" "$T/out/afterreset.txt"
@@ -213,10 +213,33 @@ printf 'FS_AVAIL=1\nFS_AVAIL=2\nPODMAN_SIZE=3\n' > "$T/out/dup.txt"
 assert "compare with duplicated FS_AVAIL -> skips, exit 2" 2 "skipping comparison" -- "$SCRIPT" compare "$T/out/dup.txt" "$T/out/afterreset.txt" "$T/out/afterbuild.txt"
 OUT=$("$SCRIPT" compare "$T/out/before.txt" "$T/out/afterreset.txt" "$T/out/afterbuild.txt")
 grep -qF "330.00GiB" <<<"$OUT" && ok "valid files still compared after guard added" || bad "guard broke the happy path"
-export GITHUB_STEP_SUMMARY="$T/out/skipsum.md"; : > "$GITHUB_STEP_SUMMARY"
-"$SCRIPT" compare /nope1 /nope2 /nope3 > /dev/null || true
-grep -qF "Comparison skipped" "$GITHUB_STEP_SUMMARY" && ok "skip note written to step summary" || bad "skip note missing from step summary"
+OUT=$("$SCRIPT" compare /nope1 /nope2 /nope3 2>/dev/null) || true
+grep -qF "Comparison skipped" <<<"$OUT" && ok "skip note is part of the report" || bad "skip note missing from the report"
+
+echo "=== summary: the job-summary rendering of one snapshot ==="
+gen 120 610 "$T/out/sum_ok.txt"
+OUT=$("$SCRIPT" summary "$T/out/sum_ok.txt" "runner-1: reset skipped")
+grep -qF "## runner-1: reset skipped" <<<"$OUT"        && ok "heading written"            || bad "heading missing"
+grep -qE "^\| Free space \| 120.00GiB \|$" <<<"$OUT" && ok "free space row"              || bad "free space row missing"
+grep -qE "^\| Podman storage \| 610.00GiB \|$" <<<"$OUT" && ok "podman storage row"      || bad "podman storage row missing"
+grep -qF "to spare" <<<"$OUT"                          && ok "status shows the headroom"  || bad "status row missing"
+grep -qF "<details><summary>Full snapshot</summary>" <<<"$OUT" && ok "raw snapshot collapsed in" || bad "details block missing"
+grep -qF "## podman system df" <<<"$OUT"               && ok "raw snapshot text included" || bad "raw snapshot text missing"
+export GITHUB_STEP_SUMMARY="$T/out/untouched2.md"; : > "$GITHUB_STEP_SUMMARY"
+"$SCRIPT" summary "$T/out/sum_ok.txt" heading > /dev/null 2>&1
+[ ! -s "$GITHUB_STEP_SUMMARY" ] && ok "summary never writes the summary file itself" || bad "summary still writes the file"
 unset GITHUB_STEP_SUMMARY
+
+echo "=== summary: thresholds and degraded values ==="
+assert "the default threshold is reported" 0 "above the 50GiB threshold" -- "$SCRIPT" summary "$T/out/sum_ok.txt" "runner-1"
+export PODMAN_MODE=nounshare DU_FAIL=1
+gen 120 0 "$T/out/sum_unknown.txt"
+unset PODMAN_MODE DU_FAIL
+assert "unmeasured podman size degrades"   0 "Podman storage . not measured" -- "$SCRIPT" summary "$T/out/sum_unknown.txt" "runner-1"
+assert "missing snapshot -> exit 2"        2 "no summary written" -- "$SCRIPT" summary "$T/out/nope.txt" "runner-1"
+printf 'FS_AVAIL=nope\n' > "$T/out/sum_bad.txt"
+assert "snapshot without usable FS_AVAIL -> exit 2" 2 "no summary written" -- "$SCRIPT" summary "$T/out/sum_bad.txt" "runner-1"
+assert "missing arguments -> usage, exit 1" 1 "Usage: .* summary" -- "$SCRIPT" summary
 
 echo "=== human(): numfmt-missing fallback ==="
 mkdir -p "$T/nofmt"

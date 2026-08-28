@@ -3,7 +3,8 @@
 #
 # Usage:
 #   disk-usage.sh snapshot <output-file> <label>
-#   disk-usage.sh compare  <beforereset.txt> <afterreset.txt> <afterbuild.txt>
+#   disk-usage.sh compare  <beforereset.txt> <afterreset.txt> <afterbuild.txt> [heading]
+#   disk-usage.sh summary  <snapshot-file> <heading>
 #   disk-usage.sh check    [min-free-gb]
 #
 # `snapshot` captures filesystem + podman storage usage to <output-file>,
@@ -15,12 +16,19 @@
 # written (and succeeds) with PODMAN_SIZE=unknown.
 #
 # `compare` reads three snapshot files and prints the freed-space /
-# build-cost summary. Also writes a markdown table to $GITHUB_STEP_SUMMARY
-# when present. If any of the three files is missing or has unexpected
+# build-cost table. If any of the three files is missing or has unexpected
 # content, the comparison is skipped with a note explaining why. A snapshot
 # with PODMAN_SIZE=unknown is still accepted: the filesystem metrics are
 # reported normally and only the affected podman storage deltas degrade to
 # "not measured".
+#
+# `summary` renders one snapshot: a small table of the numbers plus the whole
+# snapshot in a collapsed block.
+#
+# Every action writes its report as markdown on stdout and its diagnostics on
+# stderr; where the report goes is the caller's business. The maintenance
+# workflow pipes it through `tee -a "$GITHUB_STEP_SUMMARY"`, which puts it on
+# the run page and in the step log at once.
 #
 # `check` reports whether the free space on the podman graphroot filesystem
 # is at least <min-free-gb> GiB (default: ${DEFAULT_MIN_FREE_GB}). This is the
@@ -167,7 +175,8 @@ action_snapshot() {
 action_compare() {
   local BEFORERESET="${1:?Usage: $0 compare <beforereset> <afterreset> <afterbuild>}"
   local AFTERRESET="${2:?Usage: $0 compare <beforereset> <afterreset> <afterbuild>}"
-  local AFTERBUILD="${3:?Usage: $0 compare <beforereset> <afterreset> <afterbuild>}"
+  local AFTERBUILD="${3:?Usage: $0 compare <beforereset> <afterreset> <afterbuild> [heading]}"
+  local HEADING="${4:-Podman storage maintenance summary}"
 
   # A snapshot may legitimately not exist (snapshot writes no file when
   # podman is broken). Refuse to compare against missing or unexpected
@@ -177,10 +186,8 @@ action_compare() {
     if [[ ! -f "$f" ]] \
         || [[ "$(grep -cE '^FS_AVAIL=[0-9]+$' "$f")" -ne 1 ]] \
         || [[ "$(grep -cE '^PODMAN_SIZE=([0-9]+|unknown)$' "$f")" -ne 1 ]]; then
-      echo "warning: snapshot '$f' is missing or incomplete (was podman broken when it should have been taken?): skipping comparison"
-      if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-        echo "Comparison skipped: snapshot \`$f\` is missing or incomplete." >> "$GITHUB_STEP_SUMMARY"
-      fi
+      echo "warning: snapshot '$f' is missing or incomplete (was podman broken when it should have been taken?): skipping comparison" >&2
+      echo "_Comparison skipped: snapshot \`$f\` is missing or incomplete._"
       return 2
     fi
   done
@@ -200,69 +207,91 @@ action_compare() {
   # graphroot when it was taken). The filesystem numbers above are still
   # valid and are the key metrics, so only the deltas touching an unknown
   # measurement degrade to "not measured".
-  local PODMAN_NET PODMAN_BUILD PODMAN_REMOVED
+  local PODMAN_NET PODMAN_BUILD PODMAN_REMOVED DEGRADED_NOTE=""
   PODMAN_NET=$(delta     "$A_BUILD_PODMAN" "$B_RESET_PODMAN")
   PODMAN_BUILD=$(delta   "$A_BUILD_PODMAN" "$A_RESET_PODMAN")
   PODMAN_REMOVED=$(delta "$B_RESET_PODMAN" "$A_RESET_PODMAN")
   if [[ "${PODMAN_NET}${PODMAN_BUILD}${PODMAN_REMOVED}" == *"not measured"* ]]; then
-    echo "warning: at least one snapshot could not measure the podman storage size: the filesystem numbers below are complete, the affected podman deltas read \"not measured\""
+    echo "warning: at least one snapshot could not measure the podman storage size: the filesystem numbers are complete, the affected podman deltas read \"not measured\"" >&2
+    DEGRADED_NOTE="_At least one snapshot could not measure the podman storage size, so the deltas that need it read \"not measured\"._"
   fi
 
-  cat <<EOF
+  {
+    echo "## ${HEADING}"
+    echo
+    [[ -n "$DEGRADED_NOTE" ]] && { echo "$DEGRADED_NOTE"; echo; }
+    echo "| Metric | Value |"
+    echo "|---|---|"
+    echo "| Net space freed (AfterBuild - BeforeReset) | $(human "$FREED_BY_CYCLE") |"
+    echo "| Build cost (AfterReset - AfterBuild) | $(human "$BUILD_COST") |"
+    echo "| Removed by reset (BeforeReset - AfterReset) | ${PODMAN_REMOVED} |"
+    echo "| Added by build (AfterBuild - AfterReset) | ${PODMAN_BUILD} |"
+    echo "| Podman storage net change (AfterBuild - BeforeReset) | ${PODMAN_NET} |"
+    echo
+    echo "| Snapshot | Free space | Podman storage |"
+    echo "|---|---|---|"
+    echo "| Before reset | $(human "$B_RESET_AVAIL") | $(size "$B_RESET_PODMAN") |"
+    echo "| After reset | $(human "$A_RESET_AVAIL") | $(size "$A_RESET_PODMAN") |"
+    echo "| After build | $(human "$A_BUILD_AVAIL") | $(size "$A_BUILD_PODMAN") |"
+    echo
+  }
+}
 
-============================================================
-            PODMAN STORAGE MAINTENANCE SUMMARY
-============================================================
+action_summary() {
+  local SNAPSHOT="${1:?Usage: $0 summary <snapshot-file> <heading>}"
+  local HEADING="${2:?Usage: $0 summary <snapshot-file> <heading>}"
+  local MIN_FREE_GB="$DEFAULT_MIN_FREE_GB"
 
-Filesystem available space:
-  Before reset:  $(human "$B_RESET_AVAIL")
-  After  reset:  $(human "$A_RESET_AVAIL")
-  After  build:  $(human "$A_BUILD_AVAIL")
-
-Podman storage size (graphroot du):
-  Before reset:  $(size "$B_RESET_PODMAN")
-  After  reset:  $(size "$A_RESET_PODMAN")
-  After  build:  $(size "$A_BUILD_PODMAN")
-
-------------------------------------------------------------
-Key metrics
-------------------------------------------------------------
-
-1) Net space freed by this cycle (AfterBuild vs BeforeReset)
-   $(human "$FREED_BY_CYCLE")
-
-2) How much space the freshly built image needs (AfterReset vs AfterBuild)
-   $(human "$BUILD_COST")
-
-------------------------------------------------------------
-Podman storage deltas (for context)
-------------------------------------------------------------
-
-  Removed by reset (BeforeReset - AfterReset):  ${PODMAN_REMOVED}
-  Added by build  (AfterBuild - AfterReset):    ${PODMAN_BUILD}
-  Net change      (AfterBuild - BeforeReset):   ${PODMAN_NET}
-
-============================================================
-EOF
-
-  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-    {
-      echo "## Podman storage maintenance summary"
-      echo
-      echo "| Metric | Value |"
-      echo "|---|---|"
-      echo "| Net space freed (AfterBuild - BeforeReset) | $(human "$FREED_BY_CYCLE") |"
-      echo "| Build cost (AfterReset - AfterBuild) | $(human "$BUILD_COST") |"
-      echo "| Removed by reset (BeforeReset - AfterReset) | ${PODMAN_REMOVED} |"
-      echo "| Added by build (AfterBuild - AfterReset) | ${PODMAN_BUILD} |"
-      echo "| Podman storage net change (AfterBuild - BeforeReset) | ${PODMAN_NET} |"
-      echo
-      echo "### Filesystem available"
-      echo "- BeforeReset: \`$(human "$B_RESET_AVAIL")\`"
-      echo "- AfterReset:  \`$(human "$A_RESET_AVAIL")\`"
-      echo "- AfterBuild:  \`$(human "$A_BUILD_AVAIL")\`"
-    } >> "$GITHUB_STEP_SUMMARY"
+  # Same rule as compare: FS_AVAIL is what makes a snapshot usable at all.
+  if [[ ! -f "$SNAPSHOT" ]] || [[ "$(grep -cE '^FS_AVAIL=[0-9]+$' "$SNAPSHOT")" -ne 1 ]]; then
+    echo "warning: snapshot '$SNAPSHOT' is missing or has no usable FS_AVAIL: no summary written" >&2
+    return 2
   fi
+
+  local FS_SIZE FS_USED FS_AVAIL PODMAN_SIZE GRAPHROOT
+  FS_SIZE=$(get_val "$SNAPSHOT" FS_SIZE)
+  FS_USED=$(get_val "$SNAPSHOT" FS_USED)
+  FS_AVAIL=$(get_val "$SNAPSHOT" FS_AVAIL)
+  PODMAN_SIZE=$(get_val "$SNAPSHOT" PODMAN_SIZE)
+  GRAPHROOT=$(get_val "$SNAPSHOT" GRAPHROOT)
+
+  local USED_OF="not measured"
+  [[ "$FS_SIZE" =~ ^[0-9]+$ && "$FS_USED" =~ ^[0-9]+$ ]] \
+    && USED_OF="$(human "$FS_USED") of $(human "$FS_SIZE") ($(( 100 * FS_USED / FS_SIZE ))%)"
+
+  # Headroom over the threshold is the number that says how close this
+  # machine is to being reset, which is the point of reading this at all.
+  local HEADROOM STATUS
+  HEADROOM=$(( FS_AVAIL - MIN_FREE_GB * 1024 * 1024 * 1024 ))
+  if (( HEADROOM >= 0 )); then
+    STATUS="above the ${MIN_FREE_GB}GiB threshold, with $(human "$HEADROOM") to spare"
+  else
+    STATUS="**below the ${MIN_FREE_GB}GiB threshold** by $(human "$(( -HEADROOM ))"): a reset is due"
+  fi
+
+  # The whole snapshot goes in a collapsed block (a few KB, far below the
+  # 1MiB job summary limit), so the df / podman system df output that
+  # explains an odd number is one click away instead of a zip download.
+  {
+    echo "## ${HEADING}"
+    echo
+    echo "| Metric | Value |"
+    echo "|---|---|"
+    echo "| Free space | $(human "$FS_AVAIL") |"
+    echo "| Podman storage | $(size "$PODMAN_SIZE") |"
+    echo "| Filesystem used | ${USED_OF} |"
+    echo "| Status | ${STATUS} |"
+    echo "| Graphroot | \`${GRAPHROOT}\` |"
+    echo
+    echo "<details><summary>Full snapshot</summary>"
+    echo
+    echo '```'
+    cat "$SNAPSHOT"
+    echo '```'
+    echo
+    echo "</details>"
+    echo
+  }
 }
 
 action_check() {
@@ -309,6 +338,10 @@ case "$ACTION" in
     shift
     action_compare "$@"
     ;;
+  summary)
+    shift
+    action_summary "$@"
+    ;;
   check)
     shift
     action_check "$@"
@@ -317,7 +350,8 @@ case "$ACTION" in
     cat <<EOF
 Usage:
   $0 snapshot <output-file> <label>
-  $0 compare  <beforereset.txt> <afterreset.txt> <afterbuild.txt>
+  $0 compare  <beforereset.txt> <afterreset.txt> <afterbuild.txt> [heading]
+  $0 summary  <snapshot-file> <heading>
   $0 check    [min-free-gb]   (default: ${DEFAULT_MIN_FREE_GB})
 EOF
     [[ -z "$ACTION" ]] && exit 1 || exit 0

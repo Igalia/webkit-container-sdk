@@ -62,7 +62,7 @@ COPY /cross .
 # Update this commit to run the new versions of the install-dependencies scripts.
 # Note: we are explicit with the commit rather than using "main" so the
 # image is reproducible and issues are more easy to bisect.
-ARG WEBKIT_COMMIT=e6ef72584f2d1153f9d9e51af2f87f5ffc2a8712
+ARG WEBKIT_COMMIT=129c7bc8c6be1a8736bf74a4d8090bf1c9c725cd
 # NB: The armhf binary packages can only be found in ports.ubuntu.com. On
 # aarch64, things are already set up properly (aarch64 also uses
 # ports.ubuntu.com and specifies the architecture). However, on x86_64 the

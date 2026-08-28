@@ -55,30 +55,14 @@ ARG CURL_DOWNLOAD="curl --proto =https --tlsv1.2 --show-error --silent --fail"
 WORKDIR /var/tmp/wkdev-packages
 COPY /required_system_packages/*.lst .
 
-# We unconditionally install the GCC-based cross toolchain for armhf.
-COPY /cross .
-
 # WebKit commit to be used for running Tools/{gtk,wpe}/install-dependencies
 # Update this commit to run the new versions of the install-dependencies scripts.
 # Note: we are explicit with the commit rather than using "main" so the
 # image is reproducible and issues are more easy to bisect.
 ARG WEBKIT_COMMIT=129c7bc8c6be1a8736bf74a4d8090bf1c9c725cd
-# NB: The armhf binary packages can only be found in ports.ubuntu.com. On
-# aarch64, things are already set up properly (aarch64 also uses
-# ports.ubuntu.com and specifies the architecture). However, on x86_64 the
-# default sources point to {archive,securyt}.ubuntu.com. There, we need to
-# generate the corresponding ubuntu-armhf.sources as well as rewrite
-# ubuntu.sources to only use the default sources for amd64.
 RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources && \
-    HOST_ARCH="$(dpkg --print-architecture)" && \
-    sed -r 's@(archive|security).ubuntu.com/ubuntu@ports.ubuntu.com/ubuntu-ports@g' </etc/apt/sources.list.d/ubuntu.sources >/etc/apt/sources.list.d/ubuntu-armhf.sources && \
-    sed -i -r "s/^(Components:.*)/\1\nArchitectures: ${HOST_ARCH}/" /etc/apt/sources.list.d/ubuntu.sources && \
-    sed -i -r 's/^(Components:.*)/\1\nArchitectures: armhf/' /etc/apt/sources.list.d/ubuntu-armhf.sources && \
-    dpkg --add-architecture armhf && \
     ${APT_UPDATE} && \
-    export LST_FILES=*.lst && \
-    if [ "$(uname -m)" = "x86_64" -o "$(uname -m)" = "aarch64" ]; then export LST_FILES="$LST_FILES $(echo armhf/*.lst)"; fi; \
-    for list in $LST_FILES; do \
+    for list in *.lst; do \
         echo ""; \
         echo "#### Installing required packages from ${list}..."; \
         ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}" | tr '\n' ' ') || exit 1; \
@@ -190,10 +174,6 @@ RUN gst-inspect-1.0 audiornnoise && \
     gst-inspect-1.0 pipewiresrc && \
     gst-inspect-1.0 x264enc && \
     gst-inspect-1.0 x265enc
-
-# Place the toolchainfiles in a discoverable location.
-RUN mkdir -p /usr/share/wkdev-sdk/cross/armhf && \
-    cp -r /var/tmp/wkdev-packages/armhf/*.cmake /usr/share/wkdev-sdk/cross/armhf/
 
 # Remove systemd services that would startup by default, when spawning
 # systemd as PID 1 within the container (usually, we don't spawn systemd

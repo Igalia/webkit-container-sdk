@@ -11,6 +11,7 @@
       <dep package="sparkle-cdm"/>
       <dep package="libsoup"/>
       <dep package="openxr"/>
+      <dep package="gi-docgen"/>
     </dependencies>
   </metamodule>
 
@@ -57,6 +58,15 @@
             version="1.16.1"
             hash="sha256:544ae14012f8e7e426b8cb522eb0aaaac831ad7c35601d1cf31d37670e0ebb3b">
     </branch>
+  </meson>
+
+  <meson id="gi-docgen" mesonargs="-Ddevelopment_tests=false">
+    <branch repo="github-tarball"
+            checkoutdir="gi-docgen"
+            module="GNOME/gi-docgen/archive/14294d53a3d7b07a1a5735fad8eb36206b25fc96.tar.gz"
+            rename-tarball="gi-docgen.tar.gz"
+            version="2026.2"
+            hash="sha256:bc3ef2da7ffb2084fb223736a779626ad4c95715b4308cf7ff38562c6016883f"/>
   </meson>
 
   <meson id="libsoup" mesonargs="-Dtests=false">

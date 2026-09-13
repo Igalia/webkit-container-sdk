@@ -72,7 +72,7 @@
   <meson id="libsoup" mesonargs="-Dtests=false">
     <branch repo="github.com"
             checkoutdir="libsoup"
-            module="GNOME/libsoup.git" tag="3.7.2"/>
+            module="GNOME/libsoup.git" tag="3.7.3"/>
   </meson>
 
   <cmake id="openxr">

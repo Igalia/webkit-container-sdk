@@ -70,7 +70,7 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
         echo ""; \
         echo "#### Installing required packages from ${list}..."; \
         ${APT_INSTALL} $(sed -e "s/.*#.*//; /^$/d" "${list}" | tr '\n' ' ') || exit 1; \
-    done; \
+    done && \
     ${APT_BUILDDEP} gst-libav1.0 gst-plugins-bad1.0 gst-plugins-base1.0 \
 	                gst-plugins-good1.0 gst-plugins-ugly1.0 && \
     git init WebKit && cd WebKit && \

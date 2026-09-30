@@ -82,22 +82,45 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
     ${APT_AUTOREMOVE} && \
     ${APT_CLEAN} && ${APT_RM_CACHES}
 
-ARG JHBUILD_COMMIT=16e05af9b58b9e7433ce7417ecd8915beba59133
-COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
-RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git --revision=${JHBUILD_COMMIT} --depth=1 && \
+WORKDIR /jhbuild
+RUN git clone https://gitlab.gnome.org/GNOME/jhbuild.git --branch=pgriffis/multiple-sources && \
     cd jhbuild && \
     ./autogen.sh --prefix=/usr/local && \
     make && \
     make install && \
-    rm -r jhbuild
+    rm -r /jhbuild/jhbuild
+
+COPY /jhbuild/jhbuildrc /etc/xdg/jhbuildrc
+COPY /jhbuild/triggers /usr/local/share/jhbuild/triggers
+COPY /rootfs/etc/ld.so.conf.d/wkdev-sdk.conf /etc/ld.so.conf.d/wkdev-sdk.conf
+COPY /jhbuild/patches /jhbuild/patches
+
+# We split the jhbuild usage into different files to more easily do local builds
+# in cached stages.
+COPY /jhbuild/swift-toolchain.modules /jhbuild/swift-toolchain.modules
+COPY /jhbuild/swift-distribution-extras.cmake /jhbuild/swift-distribution-extras.cmake
+RUN ${APT_UPDATE} && apt-get install -y swiftlang && \
+    export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
+    jhbuild --exit-on-error --no-interact -m /jhbuild/swift-toolchain.modules build swift-toolchain && \
+    apt-get remove -y swiftlang && \
+    rm -r /var/tmp/jhbuild/ /jhbuild/install/lib/swift_static && \
+    ${APT_AUTOREMOVE} && ${APT_CLEAN} && ${APT_RM_CACHES}
+
+COPY /jhbuild/swift-libs.modules /jhbuild/swift-libs.modules
+RUN export JHBUILD_RUN_AS_ROOT=1 WKDEV_IN_IMAGE_BUILD=1 && \
+    jhbuild --exit-on-error --no-interact -m /jhbuild/swift-libs.modules build swift-libs && \
+    rm -r /var/tmp/jhbuild/ && \
+    rm /jhbuild/install/lib/*.a && \
+    rm -r /jhbuild/install/lib/cmake/cmark-gfm /jhbuild/install/lib/cmake/cmark-gfm-extensions /jhbuild/install/lib/cmake/cmark-gfm-config.cmake
+
+# Prevent APT from installing toolchain packages that conflict with the Swift-built
+# LLVM toolchain. This must happen after swiftlang has bootstrapped that toolchain.
+COPY /rootfs/etc/apt/preferences.d/blacklist-llvm-toolchains /etc/apt/preferences.d/blacklist-llvm-toolchains
 
 # Register JHBuild environment
-ENV C_INCLUDE_PATH "/jhbuild/install/include"
 ENV CMAKE_PREFIX_PATH "/jhbuild/install"
-ENV CPLUS_INCLUDE_PATH "/jhbuild/install/include"
 ENV GI_TYPELIB_PATH "/jhbuild/install/lib/girepository-1.0"
 ENV GST_PLUGIN_PATH_1_0 "/jhbuild/install/lib/gstreamer-1.0"
-ENV LDFLAGS "-L/jhbuild/install/lib"
 ENV LD_LIBRARY_PATH "/jhbuild/install/lib"
 ENV PATH "/jhbuild/install/bin:$PATH"
 ENV PKG_CONFIG_PATH "/jhbuild/install/lib/pkgconfig:/jhbuild/install/share/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
@@ -136,29 +159,6 @@ COPY /rootfs/usr/bin/podman-host /usr/bin/podman-host
 COPY /rootfs/etc/ccache.conf /etc/ccache.conf
 
 COPY /jhbuild/extra-projects.modules /jhbuild/extra-projects.modules
-
-# Convenience symlinks for clang tools, the VSCode extension doesn't find these by default.
-COPY --from=scripts /helpers/create-clang-symlinks /tmp/create-clang-symlinks
-RUN /tmp/create-clang-symlinks 18 && rm /tmp/create-clang-symlinks
-
-# Install Swift toolchain (pinned to a stable release for reproducible builds).
-# Upstream provides official builds for x86_64 and aarch64 only.
-# Note: the swiftlang package in Ubuntu 26.04 is not recent enough, so we use the
-# upstream 24.04 binaries which run fine on 26.04.
-ARG SWIFT_VERSION=6.3.2
-ENV PATH="/opt/swift/usr/bin:${PATH}"
-
-RUN case "$(uname -m)" in \
-        x86_64)  SWIFT_ARCH_SUFFIX="" ;; \
-        aarch64) SWIFT_ARCH_SUFFIX="-aarch64" ;; \
-        *) echo "Unsupported architecture for Swift: $(uname -m)" >&2; exit 1 ;; \
-    esac && \
-    mkdir -p /opt/swift && \
-    ${CURL_DOWNLOAD} --location --output /tmp/swift.tar.gz \
-        "https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404${SWIFT_ARCH_SUFFIX}/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04${SWIFT_ARCH_SUFFIX}.tar.gz" && \
-    tar zxf /tmp/swift.tar.gz --strip-components=1 -C /opt/swift && \
-    rm /tmp/swift.tar.gz && \
-    find /opt/swift -type f -exec strip --strip-unneeded '{}' \; 2>/dev/null || true
 
 # Fix Qt6 system packages - missing symlinks in the Ubuntu-provided packages.
 RUN export QT_VERSION=$(qmake6 -query QT_VERSION) && \

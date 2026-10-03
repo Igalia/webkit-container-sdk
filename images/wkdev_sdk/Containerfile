@@ -101,6 +101,7 @@ ENV LDFLAGS "-L/jhbuild/install/lib"
 ENV LD_LIBRARY_PATH "/jhbuild/install/lib"
 ENV PATH "/jhbuild/install/bin:$PATH"
 ENV PKG_CONFIG_PATH "/jhbuild/install/lib/pkgconfig:/jhbuild/install/share/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
+ENV PYTHONPATH "/jhbuild/install/lib/python3/dist-packages"
 ENV XDG_DATA_DIRS "/jhbuild/install/share:/usr/local/share:/usr/share"
 
 COPY /jhbuild/webkit-deps.modules /jhbuild/webkit-deps.modules

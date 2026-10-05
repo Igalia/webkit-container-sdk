@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!DOCTYPE moduleset SYSTEM "moduleset.dtd">
+<?xml-stylesheet type="text/xsl" href="moduleset.xsl"?>
+<moduleset>
+
+  <metamodule id="webkit-sdk-deps">
+    <dependencies>
+      <dep package="clang-tools"/>
+    </dependencies>
+  </metamodule>
+
+  <!-- Please use http/https to access repositories to be friendly to users stuck behind firewalls. -->
+  <repository type="tarball" name="github-tarball"
+      href="https://github.com/"/>
+
+  <cmake
+        id="clang-tools"
+        makeargs="distribution"
+        makeinstallargs="install-distribution-stripped"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra' -DLLVM_DISTRIBUTION_COMPONENTS='clang-format;clang-tidy;clang-apply-replacements;clang-resource-headers;clang-headers;clang-scan-deps'"
+    >
+    <!-- They don't make releases for every version so we have to rely on tags -->
+    <branch
+            repo="github-tarball"
+            checkoutdir="llvm-project"
+            module="https://github.com/swiftlang/llvm-project/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            version="6.3.2"
+            hash="sha256:9c25e21345cbb91d8ed3c695907b1cc7b0d511690060ffb9a23e3744b2198eee"
+        />
+  </cmake>
+
+</moduleset>

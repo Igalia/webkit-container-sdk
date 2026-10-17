@@ -11,7 +11,7 @@ wkdev-sdk-bakery --mode build --verbose
 If you want to build a patched version of a library to the SDK the easiest method is using JHBuild.
 
 The [modulesets](https://gnome.pages.gitlab.gnome.org/jhbuild/moduleset-syntax.html) we use are
-located in `images/wkdev_sdk/jhbuild/webkit-sdk-deps.modules` and you can add a new module there.
+located in `images/wkdev_sdk/jhbuild/` and you can add a new module there.
 
 A simple example of a project with a patch would be:
 
@@ -40,5 +40,5 @@ This only works for tarballs, if you have a git source you can specify a differe
   </meson>
 ```
 
-If you want it to be in the SDK you must then modify the `<metamodule id="webkit-sdk-deps">` element in
-`webkit-sdk-deps.modules`, otherwise it will only be built when a user explicitly runs `jhbuild build ${module}`.
+If you want it to be in the SDK you must then add it to the appropriate metamodule
+(for example `<metamodule id="webkit-deps">` in `webkit-deps.modules`), otherwise it will only be built when a user explicitly runs `jhbuild build ${module}`.

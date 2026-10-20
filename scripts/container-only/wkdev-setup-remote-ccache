@@ -92,7 +92,7 @@ run() {
 
     _log_ "Adding remote_storage section to ${ccache_config}..."
     cat <<EOF >>"${ccache_config}"
-remote_storage = http://${server}:${port}|layout=bazel
+remote_storage = http://${server}:${port}|layout=bazel|connect-timeout=500
 reshare = true
 EOF
 

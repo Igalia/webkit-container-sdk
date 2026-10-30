@@ -86,8 +86,8 @@
             checkoutdir="llvm-project"
             module="swiftlang/llvm-project/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
             rename-tarball="llvm-project-swift-${version}-RELEASE.tar.gz"
-            version="6.3.3"
-            hash="sha256:4e0bfc8045a1036d3a49c65d411ffca1e4b6af117ac2bf5070871f375c097610"
+            version="6.4.2"
+            hash="sha256:f551dffa43b2a7150c35b31fd7d0b823400b029f28c0b5339ee0f88f2684f7ed"
         >
     </branch>
     <branch
@@ -95,8 +95,8 @@
             checkoutdir="cmark"
             module="swiftlang/swift-cmark/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
             rename-tarball="swift-cmark-swift-${version}-RELEASE.tar.gz"
-            version="6.3.3"
-            hash="sha256:c9f981c268b4d2beca1d43878f5dd1d69dc629e62157bc400064d6c6111e2020"
+            version="6.4.2"
+            hash="sha256:e9fb077781f4511103d5e404b7760ee07b688dc95e32f52616883c10ae3e669a"
         >
     </branch>
     <branch
@@ -104,16 +104,16 @@
             checkoutdir="swift-corelibs-libdispatch"
             module="swiftlang/swift-corelibs-libdispatch/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
             rename-tarball="swift-corelibs-libdispatch-swift-${version}-RELEASE.tar.gz"
-            version="6.3.3"
-            hash="sha256:c3a61c08387937622a291e08e64eb4ec0be07f1df252574552641129057951bb"
+            version="6.4.2"
+            hash="sha256:133f011259b8d25efedfa4ac1fa99b9ed340cb5010d8b10f9ba2dbf31b02335e"
         />
     <branch
             repo="github-tarball"
             checkoutdir="swift"
             module="swiftlang/swift/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
             rename-tarball="swift-swift-${version}-RELEASE.tar.gz"
-            version="6.3.3"
-            hash="sha256:a96425b6626ede8518423810450763da541fb28501e27009badb6a6f6534c411"
+            version="6.4.2"
+            hash="sha256:c9c0c37995aa69994807eeb62c1e7e89bdd9f1a366dd8fc98a4bf65753dc6cbb"
         >
       <patch file="swift-install-libdispatch.patch" strip="1"/>
       <patch file="swift-fix-triple.patch" strip="1"/>
@@ -123,16 +123,16 @@
             checkoutdir="swift-syntax"
             module="swiftlang/swift-syntax/archive/refs/tags/${version}.tar.gz"
             rename-tarball="swift-syntax-${version}.tar.gz"
-            version="603.0.2"
-            hash="sha256:4858b54834fae301e36ea63529302d51ce0b4de9da48a465ebab6f6f3d096cf2"
+            version="604.0.0"
+            hash="sha256:a2968b85f4fbac228bfbbab7122ea69154d326cbf666e0bce6d8e9050f39a19d"
     />
     <branch
             repo="github-tarball"
             checkoutdir="swift-experimental-string-processing"
             module="swiftlang/swift-experimental-string-processing/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
             rename-tarball="swift-experimental-string-processing-swift-${version}-RELEASE.tar.gz"
-            version="6.3.3"
-            hash="sha256:1ca338ea222031f5d67fa34922a55111ffb67524197f33a6be0540abaafe0b52"
+            version="6.4.2"
+            hash="sha256:8452bfdeac7f1afb9fe91faeba34f09ad46eb8e3085d345d3839f9ad4b69032b"
     />
   </cmake>
 

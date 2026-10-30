@@ -12,12 +12,15 @@
       <dep package="libsoup"/>
       <dep package="openxr"/>
       <dep package="gi-docgen"/>
+      <dep package="at-spi2-core"/>
     </dependencies>
   </metamodule>
 
   <!-- Please use http/https to access repositories to be friendly to users stuck behind firewalls. -->
   <repository type="tarball" name="wpewebkit.org"
       href="https://wpewebkit.org/releases/"/>
+  <repository type="tarball" name="download.gnome.org"
+      href="https://download.gnome.org/sources/"/>
   <repository type="git" name="freedesktop.org"
       href="https://gitlab.freedesktop.org/"/>
   <repository type="tarball" name="github-tarball"
@@ -73,6 +76,17 @@
     <branch repo="github.com"
             checkoutdir="libsoup"
             module="GNOME/libsoup.git" tag="3.7.3"/>
+  </meson>
+
+  <!-- Ubuntu 26.04 ships at-spi2-core 2.60, which lacks atspi_set_g_main_loop_reentrancy()
+       (added in 2.61). The WebKitGTK accessibility API tests drive their own process through
+       libatspi, so without it their synchronous calls deadlock. -->
+  <meson id="at-spi2-core" mesonargs="-Ddocs=false -Dgtk2_atk_adaptor=false">
+    <branch repo="download.gnome.org"
+            checkoutdir="at-spi2-core"
+            module="at-spi2-core/2.62/at-spi2-core-${version}.tar.xz"
+            version="2.62.0"
+            hash="sha256:03a94f7bf35f300daf2843a37cdf36479a91bc53f59a8ea437c79e25d95d1de3"/>
   </meson>
 
   <cmake id="openxr">

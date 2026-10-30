@@ -9,8 +9,7 @@ tarballdir = '/jhbuild/downloads'
 modulesets_dir = '/jhbuild'
 
 if 'WKDEV_IN_IMAGE_BUILD' in os.environ:
-    # In our image build we put these in a cached directory.
-    checkoutroot = '/jhbuild/checkout'
+    checkoutroot = '/var/tmp/jhbuild/checkout'
     buildroot = '/var/tmp/jhbuild/build'
     tarballdir = '/var/tmp/jhbuild/downloads'
     shallow_clone = True
@@ -22,6 +21,12 @@ use_local_modulesets = True
 # Assume we have sysdeps installed
 check_sysdeps = False
 # List of modulesets to use
-moduleset = [ '/jhbuild/webkit-deps.modules', '/jhbuild/gstreamer.modules', '/jhbuild/extra-projects.modules' ]
+moduleset = [
+    '/jhbuild/swift-toolchain.modules',
+    '/jhbuild/swift-libs.modules',
+    '/jhbuild/webkit-deps.modules',
+    '/jhbuild/gstreamer.modules',
+    '/jhbuild/extra-projects.modules'
+]
 # A list of the modules to build.
-modules = [ 'webkit-deps', 'gstreamer-full' ]
+modules = [ 'webkit-sdk-deps', 'swift-libs', 'webkit-deps', 'gstreamer-full' ]

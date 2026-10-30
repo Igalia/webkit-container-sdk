@@ -1,0 +1,247 @@
+<?xml version="1.0"?>
+<!DOCTYPE moduleset SYSTEM "moduleset.dtd">
+<?xml-stylesheet type="text/xsl" href="moduleset.xsl"?>
+<moduleset>
+
+  <metamodule id="swift-libs">
+    <dependencies>
+      <dep package="swift-foundation"/>
+      <dep package="swift-driver"/>
+      <dep package="swift-format"/>
+    </dependencies>
+  </metamodule>
+
+  <!-- Please use http/https to access repositories to be friendly to users stuck behind firewalls. -->
+  <repository type="tarball" name="github-tarball"
+      href="https://github.com/"/>
+
+ <!-- The unified Swift build bootstraps libdispatch without its Swift
+       overlay. Rebuild it with the completed compiler so Foundation gets the
+       Dispatch module as well as the C runtime. -->
+  <cmake
+        id="swift-libdispatch"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_C_COMPILER=clang
+                   -DCMAKE_LINKER_TYPE=LLD
+                   -DBUILD_SHARED_LIBS=ON
+                   -DENABLE_SWIFT=ON
+                   -DBUILD_TESTING=OFF"
+  >
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-libdispatch--corelibs-libdispatch"
+        module="swiftlang/swift-corelibs-libdispatch/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-corelibs-libdispatch-swift-${version}-RELEASE.tar.gz"
+        version="6.4.2"
+        hash="sha256:133f011259b8d25efedfa4ac1fa99b9ed340cb5010d8b10f9ba2dbf31b02335e"
+    >
+      <patch file="swift-libdispatch-install-cmake.patch" strip="1"/>
+    </branch>
+    <dependencies>
+      <dep package="swift-toolchain"/>
+    </dependencies>
+  </cmake>
+
+  <!-- This is built twice, first just for its macros. -->
+  <cmake
+        id="swift-foundation-macros"
+        cmakedir="Sources/FoundationMacros"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_LINKER_TYPE=LLD
+                   -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+                   -DFETCHCONTENT_SOURCE_DIR_SWIFTSYNTAX=${checkoutroot}/swift-foundation--swift-syntax"
+  >
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation"
+        module="swiftlang/swift-foundation/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-foundation-swift-${version}-RELEASE.tar.gz"
+        version="6.4.2"
+        hash="sha256:c258b3a2c1916fa42ea5cf47a7ff16661c0d4e3968eb57c8a4fab87d651d861b"
+    />
+    <branch
+            repo="github-tarball"
+            checkoutdir="swift-foundation--swift-syntax"
+            module="swiftlang/swift-syntax/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-syntax-${version}.tar.gz"
+            version="604.0.0"
+            hash="sha256:a2968b85f4fbac228bfbbab7122ea69154d326cbf666e0bce6d8e9050f39a19d"
+    />
+    <dependencies>
+      <dep package="swift-toolchain"/>
+    </dependencies>
+  </cmake>
+
+  <cmake
+        id="swift-foundation"
+        cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                   -DCMAKE_C_COMPILER=clang
+                   -DCMAKE_LINKER_TYPE=LLD
+                   -DBUILD_SHARED_LIBS=ON
+                   -DFOUNDATION_BUILD_TOOLS=OFF
+                   -DFOUNDATION_BUILD_NETWORKING=ON
+                   -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+                   -DFETCHCONTENT_SOURCE_DIR_SWIFTSYNTAX=${checkoutroot}/swift-foundation--swift-syntax
+                   -DSwiftFoundation_MACRO=${buildroot}/swift-foundation/lib
+                   -D_SwiftFoundation_SourceDIR=${checkoutroot}/swift-foundation
+                   -D_SwiftFoundationICU_SourceDIR=${checkoutroot}/swift-foundation-icu
+                   -D_SwiftCollections_SourceDIR=${checkoutroot}/swift-foundation--collections"
+  >
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-corelibs-foundation"
+        module="swiftlang/swift-corelibs-foundation/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-corelibs-foundation-swift-${version}-RELEASE.tar.gz"
+        version="6.4.2"
+        hash="sha256:68f72893885bb6b1b5c3bd8118e6796889c51210e6fa82c1103eecb9ecc166e0"
+    />
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation"
+        module="swiftlang/swift-foundation/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-foundation-swift-${version}-RELEASE.tar.gz"
+        version="6.4.2"
+        hash="sha256:c258b3a2c1916fa42ea5cf47a7ff16661c0d4e3968eb57c8a4fab87d651d861b"
+    />
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation-icu"
+        module="swiftlang/swift-foundation-icu/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+        rename-tarball="swift-foundation-icu-swift-${version}-RELEASE.tar.gz"
+        version="6.4.2"
+        hash="sha256:6337f0365f6a76b328488f370ffe88fa974e984487b377c4caceb8892a54fdae"
+    />
+    <branch
+        repo="github-tarball"
+        checkoutdir="swift-foundation--collections"
+        module="apple/swift-collections/archive/refs/tags/${version}.tar.gz"
+        rename-tarball="swift-collections-${version}.tar.gz"
+        version="1.1.6"
+        hash="sha256:2f558b33b6eba5b0c263110d7cb1a11b59d63059e845dc1984c65359e36f29da"
+    />
+    <branch
+            repo="github-tarball"
+            checkoutdir="swift-foundation--swift-syntax"
+            module="swiftlang/swift-syntax/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-syntax-${version}.tar.gz"
+            version="604.0.0"
+            hash="sha256:a2968b85f4fbac228bfbbab7122ea69154d326cbf666e0bce6d8e9050f39a19d"
+    />
+    <dependencies>
+      <dep package="swift-libdispatch"/>
+      <dep package="swift-foundation-macros"/>
+    </dependencies>
+  </cmake>
+
+  <!--
+      Most, but not all, cmake projects in Swift assume it is built statically, I went through
+      them all and made them shared once, it largely works, but we shouldn't maintain that ourselves.
+      So I've tried to respect the defaults of just bundling where it makes sense, I've noted exceptions.
+
+      This sounds nice except that they all continue to install private headers and static libraries that
+      we have to remove anyway.
+
+      Since multiple projects bundle the same source I try to avoid conflicts with `checkoutdir` by prefixing
+      the module name. This avoids mistakes where you patch it for one module and not another.
+  -->
+
+  <!-- Projects like to use this statically except it installs system tools, headers, etc.
+       It's actually a shared project, so let's treat it as such. -->
+  <cmake id="swift-llbuild"
+         cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                    -DCMAKE_CXX_COMPILER=clang++
+                    -DCMAKE_LINKER_TYPE=LLD
+                    -DBUILD_SHARED_LIBS=ON
+                    -DBUILD_TESTING=OFF
+                    -DLLBUILD_SUPPORT_BINDINGS=Swift">
+    <branch repo="github-tarball"
+            checkoutdir="swift-llbuild"
+            module="swiftlang/swift-llbuild/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-llbuild-${version}.tar.gz"
+            version="6.4.2"
+            hash="sha256:74350fec385b7b88a2f225fc7029752afc2b32f3f7953481dc8aa16299afa128">
+      <patch file="swift-llbuild-install-package.patch" strip="1"/>
+      <patch file="swift-llbuild-hide-private-symbols.patch" strip="1"/>
+    </branch>
+    <dependencies>
+      <dep package="swift-foundation"/>
+    </dependencies>
+  </cmake>
+
+  <cmake id="swift-driver"
+         cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                    -DCMAKE_CXX_COMPILER=clang++
+                    -DCMAKE_LINKER_TYPE=LLD
+                    -DBUILD_SHARED_LIBS=OFF
+                    -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+                    -DFETCHCONTENT_SOURCE_DIR_ARGUMENTPARSER=${checkoutroot}/swift-driver--argument-parser
+                    -DFETCHCONTENT_SOURCE_DIR_TOOLSSUPPORTCORE=${checkoutroot}/swift-driver--tools-support-core">
+    <branch repo="github-tarball"
+            checkoutdir="swift-driver"
+            module="swiftlang/swift-driver/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-driver-${version}.tar.gz"
+            version="6.4.2"
+            hash="sha256:7511962f6f0aad7a288f1a3130e8edb5d98ff905545897d71edfe0d287aabf93">
+      <patch file="swift-driver-install-rpath.patch" strip="1"/>
+      <patch file="swift-driver-exclude-vendored-from-install.patch" strip="1"/>
+      <patch file="swift-driver-do-not-install-internal-libraries.patch" strip="1"/>
+    </branch>
+    <branch repo="github-tarball"
+            checkoutdir="swift-driver--argument-parser"
+            module="apple/swift-argument-parser/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-argument-parser-${version}.tar.gz"
+            version="1.6.1"
+            hash="sha256:d2fbb15886115bb2d9bfb63d4c1ddd4080cbb4bfef2651335c5d3b9dd5f3c8ba"/>
+    <branch repo="github-tarball"
+            checkoutdir="swift-driver--tools-support-core"
+            module="swiftlang/swift-tools-support-core/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-tools-support-core-${version}.tar.gz"
+            version="6.4.2"
+            hash="sha256:e4157ca16a5a5b31788c7455a8dddc5b2ed1b747fd523acedba2dd4f735465bf"/>
+    <dependencies>
+      <dep package="swift-llbuild"/>
+    </dependencies>
+  </cmake>
+
+  <cmake id="swift-format"
+         cmakeargs="-DCMAKE_BUILD_TYPE=Release
+                    -DCMAKE_C_COMPILER=clang
+                    -DCMAKE_LINKER_TYPE=LLD
+                    -DBUILD_SHARED_LIBS=OFF
+                    -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+                    -DFETCHCONTENT_SOURCE_DIR_ARGUMENTPARSER=${checkoutroot}/swift-format--argument-parser
+                    -DFETCHCONTENT_SOURCE_DIR_MARKDOWN=${checkoutroot}/swift-format--markdown
+                    -DFETCHCONTENT_SOURCE_DIR_SYNTAX=${checkoutroot}/swift-format--swift-syntax
+                    -Dcmark-gfm_DIR=${prefix}/lib/cmake">
+    <branch repo="github-tarball"
+            checkoutdir="swift-format"
+            module="swiftlang/swift-format/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-format-${version}.tar.gz"
+            version="6.4.2"
+            hash="sha256:20bb8cc56b18928ad87c4f880585b1e631b089057ad2f1e2e396c8b844e3c154">
+      <patch file="swift-format-bundle-dependencies.patch" strip="1"/>
+    </branch>
+    <branch repo="github-tarball"
+            checkoutdir="swift-format--argument-parser"
+            module="apple/swift-argument-parser/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-argument-parser-${version}.tar.gz"
+            version="1.2.3"
+            hash="sha256:4a10bbef290a2167c5cc340b39f1f7ff6a8cf4e1b5433b68548bf5f1e542e908"/>
+    <branch repo="github-tarball"
+            checkoutdir="swift-format--markdown"
+            module="swiftlang/swift-markdown/archive/refs/tags/swift-${version}-RELEASE.tar.gz"
+            rename-tarball="swift-markdown-${version}.tar.gz"
+            version="6.4.2"
+            hash="sha256:ce898c31ea30e3b0bbfb8bb19d1b587d68a2852a1e4033172ed7a4aaa2156cf3"/>
+    <branch repo="github-tarball"
+            checkoutdir="swift-format--swift-syntax"
+            module="swiftlang/swift-syntax/archive/refs/tags/${version}.tar.gz"
+            rename-tarball="swift-syntax-${version}.tar.gz"
+            version="604.0.0"
+            hash="sha256:a2968b85f4fbac228bfbbab7122ea69154d326cbf666e0bce6d8e9050f39a19d"/>
+    <dependencies>
+      <dep package="swift-foundation"/>
+    </dependencies>
+  </cmake>
+
+</moduleset>

@@ -86,6 +86,9 @@ Run `wkdev-update`. It will:
    `:latest` images from before the versioning scheme) are also flagged
    as `OUTDATED` so they can be migrated to a versioned release.
 4. Pull the target image and offer to recreate each outdated container.
+5. List the wkdev-sdk images not used by any container (e.g. old ones left
+   behind after recreating containers) and, if you agree, ask about
+   removing each of them individually.
 
 ## Creating a release
 

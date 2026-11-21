@@ -201,6 +201,75 @@ update_outdated_containers() {
     done
 }
 
+# Lists the wkdev-sdk images not used by any container and, after confirmation, asks
+# before removing each one individually.
+prune_unused_images() {
+
+    _log_ ""
+    _log_ "-> Looking for wkdev-sdk images not used by any container..."
+
+    # Only consider wkdev-sdk images (also untagged ones, e.g. left behind when a
+    # version tag was re-pushed), identified by a label set in the Containerfile.
+    local sdk_image_filter="label=org.opencontainers.image.source=https://github.com/Igalia/webkit-container-sdk"
+
+    # Abort if podman fails - otherwise every image would look unused.
+    local containers_output images_output
+    if ! containers_output="$(run_podman ps --all --format '{{.ImageID}}')" \
+        || ! images_output="$(run_podman images --filter "${sdk_image_filter}" --format '{{.ID}}|{{.Repository}}:{{.Tag}}|{{.Size}}')"; then
+        _log_ "   $(ansi::yellow)Warning: cannot list containers or images - skipping removal of unused images.$(ansi::resetForeground)"
+        return
+    fi
+
+    local -A used_image_ids=()
+    local image_id
+    while read -r image_id; do
+        [ -n "${image_id}" ] && used_image_ids["${image_id:0:12}"]=1
+    done <<< "${containers_output}"
+
+    local -a unused_ids=() unused_names=() unused_sizes=()
+    local name size
+    while IFS='|' read -r image_id name size; do
+        [ -n "${image_id}" ] || continue
+        [ -n "${used_image_ids[${image_id}]-}" ] && continue
+        unused_ids+=("${image_id}")
+        unused_names+=("${name}")
+        unused_sizes+=("${size}")
+    done <<< "${images_output}"
+
+    if [ ${#unused_ids[@]} -eq 0 ]; then
+        _log_ "   No unused wkdev-sdk images found - nothing to remove."
+        return
+    fi
+
+    _log_ ""
+    _log_ "   Found ${#unused_ids[@]} unused wkdev-sdk image(s):"
+    _log_ ""
+    local i
+    for i in "${!unused_ids[@]}"; do
+        _log_ "$(printf '   %s   %-80s   %s' "${unused_ids[${i}]}" "${unused_names[${i}]}" "${unused_sizes[${i}]}")"
+    done
+    _log_ ""
+
+    ask_for_confirmation "   -> Review these images for removal one by one? [y/n] " || return 0
+
+    for i in "${!unused_ids[@]}"; do
+        # Remove tagged images by name (so only that tag is dropped if the image has
+        # several tags). Images without a tag (e.g. '<none>:<none>' or
+        # 'localhost/foo:<none>') can only be removed by id.
+        local target="${unused_names[${i}]}"
+        [[ "${target}" == *":<none>" ]] && target="${unused_ids[${i}]}"
+
+        ask_for_confirmation "   -> Remove $(ansi::bold)${unused_names[${i}]}$(ansi::normal) (${unused_ids[${i}]}, ${unused_sizes[${i}]})? [y/n] " || continue
+        local rmi_output
+        if rmi_output="$(run_podman rmi "${target}" 2>&1)"; then
+            _log_ "      Removed."
+        else
+            _log_ "      $(ansi::yellow)Warning: could not remove '${target}':$(ansi::resetForeground)"
+            _log_ "      ${rmi_output}"
+        fi
+    done
+}
+
 # Main functionality
 run() {
 
@@ -236,6 +305,8 @@ run() {
     run_podman pull "${effective_image}" || _abort_ "Cannot pull image '${effective_image}'"
 
     update_outdated_containers "${effective_version}" "${repo_qualified}"
+
+    prune_unused_images
 
     _log_ ""
     _log_ "-> Finished."

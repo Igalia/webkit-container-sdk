@@ -115,6 +115,35 @@ propagate_environment_variables_from_host() {
     done
 }
 
+# The ssh-agent socket recorded at creation time goes stale when the agent restarts or the
+# user switches agents (e.g. gnome-keyring <-> OpenSSH), so pass the host's current socket,
+# reached through the host directories every container shares.
+propagate_ssh_agent_socket_from_host() {
+
+    [ -n "${SSH_AUTH_SOCK-}" ] || return 0
+
+    local -r host_socket="${SSH_AUTH_SOCK##unix:path=}"
+    [ -S "${host_socket}" ] || return 0
+
+    local container_socket=""
+    if [ -n "${XDG_RUNTIME_DIR-}" ] && [[ "${host_socket}" == "${XDG_RUNTIME_DIR}/"* ]]; then
+        container_socket="/host/run/${host_socket#"${XDG_RUNTIME_DIR}/"}"
+    elif [[ "${host_socket}" == "${HOME}/"* ]]; then
+        local container_host_home
+        container_host_home="$(get_podman_container_environment_value "${container_name}" HOST_HOME)"
+        [ -n "${container_host_home}" ] && container_socket="${container_host_home}/${host_socket#"${HOME}/"}"
+    else
+        # Elsewhere (e.g. /tmp/ssh-*/agent.*): only reachable if its directory was bind-mounted at creation.
+        local created_socket
+        created_socket="$(get_podman_container_environment_value "${container_name}" SSH_AUTH_SOCK)"
+        [ "$(dirname "${host_socket}")" = "$(dirname "${created_socket}")" ] && container_socket="${host_socket}"
+    fi
+
+    if [ -n "${container_socket}" ]; then
+        podman_exec_arguments+=("--env=SSH_AUTH_SOCK=${container_socket}")
+    fi
+}
+
 # Main functionality
 run() {
 
@@ -185,6 +214,7 @@ run() {
     podman_exec_arguments+=("--detach-keys=")
 
     propagate_environment_variables_from_host
+    propagate_ssh_agent_socket_from_host
 
     # Add any additional flags passed by the user
     if [ -n "${additional_flags}" ]; then

@@ -72,6 +72,17 @@ get_podman_container_home_directory_on_host() {
         | head --lines 1
 }
 
+# Get the value of an environment variable set at creation time in an existing container.
+get_podman_container_environment_value() {
+
+    local container_name="${1}"
+    local variable_name="${2}"
+    run_podman inspect --type container --format "{{range .Config.Env}}{{println .}}{{end}}" "${container_name}" 2>/dev/null \
+        | grep "^${variable_name}=" \
+        | sed -e "s/^${variable_name}=//" \
+        | head --lines 1
+}
+
 get_podman_container_shared_directory_on_host() {
 
     get_podman_container_label_value "${1}" "wkdev.shared-dir-path"

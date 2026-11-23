@@ -281,15 +281,23 @@ try_process_journal() {
 try_process_keyring() {
 
     local keyring_directory="${XDG_RUNTIME_DIR}/keyring"
+    local ssh_auth_socket="${keyring_directory}/ssh"
 
     # Respect $SSH_AUTH_SOCK (but strip the "unix:path=" prefix)
-    if [ -v SSH_AUTH_SOCK ]; then
-        keyring_directory=$(dirname "${SSH_AUTH_SOCK##unix:path=}")
+    if [ -n "${SSH_AUTH_SOCK-}" ]; then
+        ssh_auth_socket="${SSH_AUTH_SOCK##unix:path=}"
+        keyring_directory=$(dirname "${ssh_auth_socket}")
     fi
 
     local keyring_directory_exists=$([ -d "${keyring_directory}" ] && echo 1 || echo 0)
-    local podman_argument=("--mount" "type=bind,source=${keyring_directory},destination=${keyring_directory},rslave")
-    podman_argument+=("--env" "SSH_AUTH_SOCK=${keyring_directory}/ssh")
+    local podman_argument=()
+    if [[ "${ssh_auth_socket}" == "${HOME}/"* ]]; then
+        # Reach it through /host/home/<user>; a bind mount would land inside the container home.
+        podman_argument+=("--env" "SSH_AUTH_SOCK=/host/home/${container_user_name}/${ssh_auth_socket#"${HOME}/"}")
+    else
+        podman_argument+=("--mount" "type=bind,source=${keyring_directory},destination=${keyring_directory},rslave")
+        podman_argument+=("--env" "SSH_AUTH_SOCK=${ssh_auth_socket}")
+    fi
     try_process ${1} "Share keyring with container" ${keyring_directory_exists} ${podman_argument[@]}
 }
 

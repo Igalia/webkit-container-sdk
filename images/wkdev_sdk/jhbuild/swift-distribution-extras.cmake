@@ -86,6 +86,7 @@ list(APPEND LLVM_DISTRIBUTION_COMPONENTS
   clang-scan-deps
   clang-include-cleaner
   clang-include-fixer
+  scan-build
 )
 list(REMOVE_DUPLICATES LLVM_DISTRIBUTION_COMPONENTS)
 set(LLVM_DISTRIBUTION_COMPONENTS

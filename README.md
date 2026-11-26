@@ -13,15 +13,15 @@ subdirectory for further information the SDK provides but the guide below will c
 
 ### Prerequisites
 
-The only host-side dependency is [`podman`](https://podman.io). Install it through your distribution's
+The host-side dependencies are [`podman`](https://podman.io) and its rootless user namespace utilities (`uidmap` / `shadow-utils`). Install them through your distribution's
 package manager before continuing with the Quickstart guide:
 
 | Distribution                | Install command                              |
 |-----------------------------|----------------------------------------------|
-| Fedora                      | `sudo dnf install podman`                    |
-| Debian (sid) / Ubuntu 23.04+| `sudo apt install podman`                    |
-| Arch Linux                  | `sudo pacman -S podman`                      |
-| openSUSE Tumbleweed         | `sudo zypper install podman`                 |
+| Fedora                      | `sudo dnf install podman shadow-utils`       |
+| Debian (sid) / Ubuntu 23.04+| `sudo apt install podman uidmap`             |
+| Arch Linux                  | `sudo pacman -S podman shadow`               |
+| openSUSE Tumbleweed         | `sudo zypper install podman shadow`          |
 
 Verify the installation by running:
 

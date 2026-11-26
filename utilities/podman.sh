@@ -14,6 +14,11 @@ fi
 # podman, to control, well, podman. :-)
 verify_executables_exist systemctl
 
+if ! is_running_in_wkdev_sdk_container && [ "${EUID}" -ne 0 ]; then
+    # Rootless podman requires newuidmap and newgidmap for user namespace mappings
+    verify_executables_exist newuidmap newgidmap
+fi
+
 verify_podman_is_acceptable "${podman_executable}"
 
 # Uses host podman no matter if executed within container or on host.

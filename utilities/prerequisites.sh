@@ -7,7 +7,16 @@ does_executable_exist() { command -v "${1}" >/dev/null; }
 verify_executable_exists() {
 
     local executable="${1}"
-    does_executable_exist "${executable}" || _abort_ "Cannot find required '${executable}' executable"
+    if ! does_executable_exist "${executable}"; then
+        case "${executable}" in
+            newuidmap|newgidmap)
+                _abort_ "Cannot find required '${executable}' executable (please install the 'uidmap' or 'shadow-utils' package on host)"
+                ;;
+            *)
+                _abort_ "Cannot find required '${executable}' executable"
+                ;;
+        esac
+    fi
 }
 
 # Returns 0 if version $1 is greater than or equal to $2 (`sort -V` order).
